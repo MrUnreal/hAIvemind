@@ -122,6 +122,30 @@ sequenceDiagram
 | [Model Tiering](docs/model-tiering.md) | All supported models, tiers, costs, escalation chain |
 | [Project Structure](docs/project-structure.md) | File-by-file codebase reference |
 
+## Roadmap
+
+What's coming next for the hivemind:
+
+🧠 **Persistent Skills** — Agents learn reusable scripts (lint, test, deploy) per project. Skills survive across sessions so the hivemind doesn't re-discover how to build/run your stack every time.
+
+🎛️ **Escalation Control Panel** — UI to customize the escalation chain per project. Pin certain tasks to specific models, set cost ceilings, or force free-tier-only mode.
+
+🔀 **Dynamic DAG Rewriting** — Orchestrator detects blocked dependency chains mid-execution and restructures the DAG on the fly — splitting, merging, or reordering tasks without restarting.
+
+🌐 **Multi-Workspace Swarm** — Spawn agents across multiple machines or containers. Distribute work across a cluster, not just local processes.
+
+🧪 **Test-Driven Verification** — Instead of just code review, the verify step generates and runs actual tests. Failures become fix tasks automatically.
+
+🔌 **Pluggable Agent Backends** — Swap Copilot CLI for any agent runtime: Codex, Aider, Open Interpreter, local LLMs via Ollama. Mix backends in the same session.
+
+📜 **Session Replay** — Full timeline scrubber for past sessions. Replay the DAG execution frame-by-frame, inspect every agent's output at any point.
+
+🤝 **Human-in-the-Loop Gates** — Mark tasks as requiring human approval before proceeding. The DAG pauses, you review, approve or redirect.
+
+📦 **Project Templates** — Pre-built skill packs for common stacks (Express API, React app, CLI tool). Hit the ground running with known-good decomposition patterns.
+
+⚡ **Streaming Agent Output** — Live terminal view per agent in the DAG. Click a running node, see its stdout in real-time without waiting for completion.
+
 ## License
 
 MIT
