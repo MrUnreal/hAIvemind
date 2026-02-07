@@ -94,15 +94,20 @@ on('plan:created', (payload) => {
 });
 
 on('agent:status', (payload) => {
-  // Show escalation reasons
-  if (payload.reason) {
-    status(`⚡ ${payload.reason}`);
-  }
-  // Show task completion
-  if (payload.status === 'success' && !completedTasks.value.has(payload.taskId)) {
+  const label = payload.taskLabel || tasks.value.find(t => t.id === payload.taskId)?.label || payload.taskId;
+
+  if (payload.status === 'running') {
+    // Agent assigned to task
+    if (payload.retries === 0) {
+      status(`🐝 "${label}" → ${payload.model} (${payload.modelTier})`);
+    } else {
+      status(`↻ "${label}" retry #${payload.retries} → ${payload.model} (${payload.modelTier}, ${payload.multiplier}×)`);
+    }
+  } else if (payload.status === 'success' && !completedTasks.value.has(payload.taskId)) {
     completedTasks.value.add(payload.taskId);
-    const task = tasks.value.find(t => t.id === payload.taskId);
-    status(`✅ "${task?.label || payload.taskId}" done (${payload.model})`);
+    status(`✅ "${label}" done (${payload.model})`);
+  } else if (payload.status === 'failed') {
+    status(`❌ "${label}" failed on ${payload.model} — will retry`);
   }
 });
 

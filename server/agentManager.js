@@ -59,6 +59,7 @@ export default class AgentManager {
     const agent = {
       id: randomUUID(),
       taskId: task.id,
+      taskLabel: task.label,
       modelTier: tierName,
       model: modelName,
       multiplier: modelConfig.multiplier,
@@ -79,6 +80,7 @@ export default class AgentManager {
     this.broadcast(makeMsg(MSG.AGENT_STATUS, {
       agentId: agent.id,
       taskId: task.id,
+      taskLabel: task.label,
       status: 'running',
       model: modelName,
       modelTier: tierName,
@@ -130,6 +132,7 @@ export default class AgentManager {
         this.broadcast(makeMsg(MSG.AGENT_STATUS, {
           agentId: agent.id,
           taskId: task.id,
+          taskLabel: task.label,
           status: agent.status,
           model: modelName,
           modelTier: tierName,
@@ -152,6 +155,7 @@ export default class AgentManager {
         this.broadcast(makeMsg(MSG.AGENT_STATUS, {
           agentId: agent.id,
           taskId: task.id,
+          taskLabel: task.label,
           status: 'failed',
           model: modelName,
           modelTier: tierName,
