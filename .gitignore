@@ -1,0 +1,7 @@
+node_modules/
+dist/
+.haivemind-workspace/
+.haivemind/
+.playwright-mcp/
+*.log
+test-*.png

@@ -1,0 +1,22 @@
+{
+  "name": "haivemind",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "concurrently \"npm run dev:server\" \"npm run dev:client\"",
+    "dev:mock": "concurrently \"npm run dev:server:mock\" \"npm run dev:client\"",
+    "dev:server": "node --watch server/index.js",
+    "dev:server:mock": "node --watch server/index.js --mock",
+    "dev:client": "cd client && npx vite --open",
+    "build:client": "cd client && npx vite build"
+  },
+  "dependencies": {
+    "express": "^5.1.0",
+    "uuid": "^11.1.0",
+    "ws": "^8.18.0"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2"
+  }
+}
