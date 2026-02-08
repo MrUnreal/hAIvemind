@@ -4,17 +4,18 @@
 
 ## In Progress
 
-| Feature | Status | Notes |
-|---------|--------|-------|
-| **Session Locking** | \ud83d\udee1\ufe0f Planned next | Prevent concurrent sessions on the same project workspace |
+_Phase 1 complete! Moving to Phase 2._
 
 ## Recently Completed (Phase 1: Reliability)
 
 | Feature | Status | Notes |
 |---------|--------|-------|
-| **Critical Bug Fixes** | \u2705 Done | Gated tasks, verify crash handling, path traversal, race conditions |
-| **Process Timeouts** | \u2705 Done | 5min timeout on all CLI spawns, SIGTERM\u2192SIGKILL pattern, processTimeout.js utility |
-| **Error Recovery UX** | \u2705 Done | Error overlay with retry, reconnecting banner, exponential backoff, sessionError state |
+| **Critical Bug Fixes** | ✅ Done | Gated tasks, verify crash handling, path traversal, race conditions |
+| **Process Timeouts** | ✅ Done | 5min timeout on all CLI spawns, SIGTERM→SIGKILL pattern, processTimeout.js utility |
+| **Error Recovery UX** | ✅ Done | Error overlay with retry, reconnecting banner, exponential backoff, sessionError state |
+| **Session Locking** | ✅ Done (self-dev) | workDirLocks Map, acquireLock/releaseLock, health endpoint shows activeLocks |
+| **Memory Management** | ✅ Done (self-dev) | Session eviction (30min), agent output cap (100KB), graceful shutdown, killAll() |
+| **WebSocket Resilience** | ✅ Done (self-dev) | Heartbeat ping-pong, off() handler cleanup, message queuing, reconnect:sync |
 
 ## Planned
 

@@ -37,6 +37,18 @@ const wss = new WebSocketServer({ server, path: '/ws' });
 /** @type {Set<import('ws').WebSocket>} */
 const clients = new Set();
 
+const heartbeatInterval = setInterval(() => {
+  for (const ws of clients) {
+    if (!ws.isAlive) {
+      ws.terminate();
+      clients.delete(ws);
+      continue;
+    }
+    ws.isAlive = false;
+    ws.ping();
+  }
+}, 30000);
+
 function broadcast(msg) {
   const parsed = parseMsg(msg);
   if (parsed && (parsed.type === MSG.TASK_STATUS || parsed.type === MSG.AGENT_STATUS || parsed.type === MSG.VERIFICATION_STATUS)) {
@@ -79,6 +91,12 @@ wss.on('connection', (ws) => {
   clients.add(ws);
   console.log(`[ws] Client connected (${clients.size} total)`);
 
+  ws.isAlive = true;
+
+  ws.on('pong', () => {
+    ws.isAlive = true;
+  });
+
   ws.on('close', () => {
     clients.delete(ws);
     console.log(`[ws] Client disconnected (${clients.size} total)`);
@@ -91,6 +109,10 @@ wss.on('connection', (ws) => {
   });
 });
 
+wss.on('close', () => {
+  clearInterval(heartbeatInterval);
+});
+
 // ── Sessions ──
 /** @type {Map<string, object>} */
 const sessions = new Map();
@@ -100,6 +122,50 @@ const taskToSession = new Map();
 
 /** Active orchestrator contexts (for post-completion chat) */
 const activeContexts = new Map();
+
+const workDirLocks = new Map();
+
+let pruneIntervalId = null;
+
+function pruneCompletedSessions() {
+  const now = Date.now();
+
+  for (const [sessionId, session] of sessions.entries()) {
+    const { status, completedAt } = session || {};
+    if (!completedAt) continue;
+
+    const isFinished = status === 'completed' || status === 'failed';
+    const isExpired = now - completedAt > config.sessionRetentionMs;
+
+    if (isFinished && isExpired) {
+      sessions.delete(sessionId);
+
+      for (const [taskId, mappedSessionId] of taskToSession.entries()) {
+        if (mappedSessionId === sessionId) {
+          taskToSession.delete(taskId);
+        }
+      }
+    }
+  }
+}
+
+function acquireLock(workDir, sessionId, projectSlug) {
+  const existingEntry = workDirLocks.get(workDir);
+  if (existingEntry) {
+    return { locked: true, holder: existingEntry };
+  }
+
+  const entry = { sessionId, projectSlug, lockedAt: Date.now() };
+  workDirLocks.set(workDir, entry);
+  return { locked: false };
+}
+
+function releaseLock(workDir, sessionId) {
+  const entry = workDirLocks.get(workDir);
+  if (entry && entry.sessionId === sessionId) {
+    workDirLocks.delete(workDir);
+  }
+}
 
 async function handleClientMessage(msg, ws) {
   if (msg.type === MSG.SESSION_START) {
@@ -242,6 +308,19 @@ async function handleClientMessage(msg, ws) {
       await handleChatMessage(message, projectSlug);
     }
   }
+  if (msg.type === MSG.RECONNECT_SYNC) {
+    const { projectSlug } = msg.payload || {};
+    const ctx = activeContexts.get(projectSlug);
+    if (ctx) {
+      const session = sessions.get(ctx.sessionId);
+      ws.send(makeMsg(MSG.RECONNECT_SYNC, {
+        projectSlug,
+        plan: ctx.plan,
+        tasks: ctx.taskStatuses,
+        sessionStatus: session?.status,
+      }));
+    }
+  }
   if (msg.type === MSG.GATE_RESPONSE) {
     const { taskId, approved, feedback } = msg.payload || {};
     // Forward gate response to active task runner
@@ -262,6 +341,21 @@ async function startSession(userPrompt, projectSlug, predefinedPlan) {
   }
 
   const { sessionId, workDir, session } = workspace.startSession(projectSlug, userPrompt);
+  const lockResult = acquireLock(workDir, sessionId, projectSlug);
+  if (lockResult.locked) {
+    const lockedAt = new Date(lockResult.holder.lockedAt);
+    const hh = String(lockedAt.getHours()).padStart(2, '0');
+    const mm = String(lockedAt.getMinutes()).padStart(2, '0');
+    const ss = String(lockedAt.getSeconds()).padStart(2, '0');
+    const startedAt = `${hh}:${mm}:${ss}`;
+    broadcast(makeMsg(MSG.SESSION_ERROR, {
+      sessionId,
+      projectSlug,
+      error: `Another session is already running on this workspace (started ${startedAt}, project: ${lockResult.holder.projectSlug})`,
+    }));
+    return;
+  }
+
   /** @type {Array<{timestamp: number, type: 'task:status'|'agent:status'|'verify:status', data: object}>> */
   const timeline = [];
   sessions.set(sessionId, { ...session, workDir, projectSlug, timeline });
@@ -338,6 +432,7 @@ async function startSession(userPrompt, projectSlug, predefinedPlan) {
 
     // Session complete — keep context alive for chat
     stored.status = 'completed';
+    stored.completedAt = Date.now();
     const costSummaryData = agentManager.getCostSummary?.() || null;
 
     // Store context for post-completion chat
@@ -364,11 +459,15 @@ async function startSession(userPrompt, projectSlug, predefinedPlan) {
       costSummary: costSummaryData,
       timeline,
     });
+    releaseLock(workDir, sessionId);
 
   } catch (err) {
     console.error(`[session] Error: ${err.message}`);
     const stored = sessions.get(sessionId);
-    if (stored) stored.status = 'failed';
+    if (stored) {
+      stored.status = 'failed';
+      stored.completedAt = Date.now();
+    }
 
     broadcast(makeMsg(MSG.SESSION_ERROR, {
       sessionId,
@@ -377,6 +476,7 @@ async function startSession(userPrompt, projectSlug, predefinedPlan) {
     }));
 
     workspace.finalizeSession(projectSlug, sessionId, { status: 'failed', timeline });
+    releaseLock(workDir, sessionId);
   }
 }
 
@@ -762,6 +862,7 @@ app.get('/api/health', (req, res) => {
     sessions: sessions.size,
     projects: workspace.listProjects().length,
     clients: clients.size,
+    activeLocks: workDirLocks.size,
   });
 });
 
@@ -808,3 +909,17 @@ server.listen(config.port, () => {
   }
   console.log();
 });
+
+pruneIntervalId = setInterval(pruneCompletedSessions, 5 * 60 * 1000);
+
+function gracefulShutdown() {
+  console.log('Shutting down...');
+  clearInterval(pruneIntervalId);
+  wss.close();
+  server.close(() => {
+    process.exit(0);
+  });
+}
+
+process.on('SIGTERM', gracefulShutdown);
+process.on('SIGINT', gracefulShutdown);

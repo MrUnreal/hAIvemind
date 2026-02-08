@@ -71,6 +71,8 @@ const config = {
 
   agentTimeoutMs: 300000,
   orchestratorTimeoutMs: 300000,
+  sessionRetentionMs: 30 * 60 * 1000,
+  maxAgentOutputBytes: 100 * 1024,
 };
 
 export const agentTimeoutMs = config.agentTimeoutMs;

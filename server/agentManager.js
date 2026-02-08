@@ -169,6 +169,10 @@ export default class AgentManager {
 
       child.stdout.on('data', (data) => {
         const chunk = data.toString();
+        let totalBytes = agent.output.reduce((acc, s) => acc + s.length, 0);
+        while (totalBytes + chunk.length > config.maxAgentOutputBytes && agent.output.length > 0) {
+          totalBytes -= agent.output.shift().length;
+        }
         agent.output.push(chunk);
         this.broadcast(makeMsg(MSG.AGENT_OUTPUT, {
           agentId: agent.id,
@@ -179,6 +183,10 @@ export default class AgentManager {
 
       child.stderr.on('data', (data) => {
         const chunk = data.toString();
+        let totalBytes = agent.output.reduce((acc, s) => acc + s.length, 0);
+        while (totalBytes + chunk.length > config.maxAgentOutputBytes && agent.output.length > 0) {
+          totalBytes -= agent.output.shift().length;
+        }
         agent.output.push(chunk);
         this.broadcast(makeMsg(MSG.AGENT_OUTPUT, {
           agentId: agent.id,
@@ -354,5 +362,13 @@ export default class AgentManager {
         return acc;
       }, {}),
     };
+  }
+
+  killAll() {
+    for (const agent of this.agents.values()) {
+      if (agent.process !== null) {
+        agent.process.kill('SIGTERM');
+      }
+    }
   }
 }

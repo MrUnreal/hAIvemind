@@ -14,95 +14,143 @@ const WS_URL = process.env.HAIVEMIND_WS || 'ws://localhost:3000/ws';
 const MAX_RECONNECT_ATTEMPTS = 10;
 const BASE_RECONNECT_DELAY_MS = 2000;
 const MAX_RECONNECT_DELAY_MS = 30000;
-const SESSION_TIMEOUT_MS = 10 * 60 * 1000; // 10 min per feature
+const SESSION_TIMEOUT_MS = 15 * 60 * 1000; // 15 min per feature
 const features = [
   {
-    featureName: 'process-timeouts',
-    prompt: `Add configurable process timeouts to all CLI spawns in hAIvemind — a Node.js ES module project.
+    featureName: 'session-locking',
+    prompt: `Add session locking to prevent concurrent sessions on the same project workspace in hAIvemind — a Node.js ES module project.
 
 The project structure is:
-- server/orchestrator.js — has decompose(), verify(), plan(), analyzeFailure() functions that spawn child processes via child_process.spawn()
-- server/agentManager.js — has spawn() method that creates agent child processes via child_process.spawn()
-- server/config.js — centralized configuration
+- server/index.js — main server file with Express + WebSocket. Has a startSession() async function, \`sessions\` Map (sessionId → session object), \`taskToSession\` Map, \`activeContexts\` Map. The startSession function calls workspace.startSession() which returns { sessionId, workDir, session }.
+- server/workspace.js — WorkspaceManager class with startSession(), getProject(), etc.
 
-PROBLEM: All child_process.spawn() calls wait indefinitely. A hung copilot CLI process freezes the entire session with no recovery.
+PROBLEM: Two concurrent sessions on the same project will write to the same workDir simultaneously, causing file conflicts and corrupted output. There is NO guard preventing this.
 
 Requirements:
-1. In server/config.js, add timeout configuration:
-   - agentTimeoutMs: 300000 (5 minutes) — timeout for agent processes
-   - orchestratorTimeoutMs: 300000 (5 minutes) — timeout for decompose/verify/plan processes
+1. In server/index.js, add a lock mechanism near the existing session Maps (around line 97):
+   - Add a \`workDirLocks\` Map keyed by workDir (absolute path) → { sessionId, projectSlug, lockedAt: Date.now() }
+   - Add function acquireLock(workDir, sessionId, projectSlug) — returns { locked: false } if acquired, or { locked: true, holder } if another session holds it
+   - Add function releaseLock(workDir, sessionId) — only releases if the caller owns the lock
 
-2. In server/agentManager.js spawn() method:
-   - After spawning the child process, start a setTimeout
-   - If the timeout fires before the process exits, call child.kill('SIGTERM'), wait 5 seconds, then child.kill('SIGKILL') if still alive
-   - Mark the agent as failed with a clear error message: "Agent timed out after X minutes"
-   - Clean up event listeners
+2. In the startSession() function (around line 268):
+   - After calling workspace.startSession() to get the workDir, call acquireLock()
+   - If locked, broadcast a session:error with a clear message: "Another session is already running on this workspace (started HH:MM:SS, project: <slug>)"
+   - Return early without proceeding
 
-3. In server/orchestrator.js, for decompose(), verify(), plan(), and analyzeFailure():
-   - Wrap each spawn in a timeout mechanism
-   - If timeout fires, kill the child process and reject/resolve with a timeout error
-   - For verify(): resolve with { passed: false, issues: ['Verification timed out after X minutes'] }
-   - For decompose(): reject with Error('Decomposition timed out after X minutes')
-   - For plan(): reject with Error('Planning timed out after X minutes')
+3. In the startSession() function's success path (around line 362) and catch block (around line 370):
+   - Call releaseLock(workDir, sessionId) in BOTH the success and error paths
 
-4. Add a utility function in a new file server/processTimeout.js:
-   - export function withTimeout(child, timeoutMs, label) — returns a Promise that rejects on timeout and kills the process
-   - This avoids duplicating timeout logic in every function
+4. Update the /api/health endpoint (around line 780) to include activeLocks: workDirLocks.size
 
 Key constraints:
 - ES modules only (import/export)
-- Do NOT change the function signatures — only add timeout wrapping internally
-- Use config values, not hardcoded timeouts
-- child.kill('SIGTERM') first, then SIGKILL after grace period`,
-    usePlanner: true,
+- Do NOT change any function signatures
+- The lock is in-memory only (no filesystem locks)
+- Keep changes minimal — only add the locking logic`,
+    usePlanner: false,
   },
   {
-    featureName: 'error-recovery-ui',
-    prompt: `Improve error handling and recovery UX in hAIvemind — a Vue 3 + Node.js project.
+    featureName: 'memory-management',
+    prompt: `Add memory management to hAIvemind to prevent unbounded memory growth — a Node.js ES module project.
 
 The project structure is:
-- client/src/App.vue — main application component
-- client/src/composables/useWebSocket.js — WebSocket connection management (singleton, auto-reconnect)
-- client/src/composables/useSession.js — reactive session state
-- client/src/components/FlowCanvas.vue — DAG visualization
-- shared/protocol.js — WebSocket message types
+- server/index.js — main server with \`sessions\` Map<string,object>, \`taskToSession\` Map<string,string>, \`activeContexts\` Map<string,object>, and broadcast() function
+- server/agentManager.js — AgentManager class with \`this.agents\` Map<string,Agent> where each Agent has an \`output\` string array that grows unboundedly and a \`process\` property
+- server/config.js — centralized config object exported as default
 
-PROBLEM: When things go wrong, the user gets no useful feedback:
-- session:error events only console.error, no visible message shown
-- If decompose() fails during planning, the UI shows an infinite spinner forever
-- When WebSocket disconnects, the user can still submit prompts that silently fail
-- No retry mechanism after errors
+PROBLEM: 
+- sessions Map grows forever (each session stores plan, timeline, agents data)
+- taskToSession Map grows forever (every task ID ever created stays)
+- AgentManager instances are created per-session but their agents Map is never cleaned
+- Agent output arrays can grow huge (megabytes of stdout for long-running agents)
+- No graceful shutdown: Ctrl+C leaves orphaned child processes
+- activeContexts Map grows forever (one entry per project slug, but old entries are never removed)
 
 Requirements:
-1. In client/src/App.vue:
-   - Add an error banner/toast that appears when session:error is received
-   - Show the actual error message text from the payload
-   - Add a "Retry" button that resets sessionStatus and shows the prompt input again
-   - When sessionStatus is 'failed', show the error overlay INSTEAD of the planning spinner
-   - Add a "New Session" button visible during error state
+1. In server/config.js, add configuration:
+   - sessionRetentionMs: 30 * 60 * 1000 (30 minutes — how long completed sessions stay in memory)
+   - maxAgentOutputBytes: 100 * 1024 (100KB cap per agent output buffer)
 
-2. In client/src/composables/useWebSocket.js:
-   - Make the send() function return false (and log a warning) if the connection is not open
-   - Add a 'connectionLost' reactive ref that is true while reconnecting
-   - Add exponential backoff to the reconnect logic (2s, 4s, 8s, up to 30s max)
-   - Reset reconnect delay on successful connection
+2. In server/index.js, add a session eviction mechanism:
+   - Add a function pruneCompletedSessions() that iterates \`sessions\` Map:
+     - For each session with status 'completed' or 'failed':
+       - If (Date.now() - session.completedAt) > config.sessionRetentionMs, delete it from sessions
+       - Also clean up its task IDs from taskToSession
+   - Run pruneCompletedSessions() on an interval (every 5 minutes)
+   - Store the interval ID so it can be cleared on shutdown
 
-3. In client/src/App.vue:
-   - Show a "Reconnecting..." overlay when connectionLost is true
-   - Disable the prompt submit button when disconnected
-   - After reconnecting, show a brief "Reconnected" notification
+3. In server/index.js, add a completedAt timestamp:
+   - When a session completes successfully (where stored.status = 'completed' is set), also set stored.completedAt = Date.now()
+   - When a session fails (where stored.status = 'failed' is set), also set stored.completedAt = Date.now()
 
-4. In client/src/composables/useSession.js:
-   - Add a sessionError reactive ref (string or null)
-   - Set it from the session:error handler
-   - Clear it on resetSession() and new session start
+4. In server/agentManager.js, cap agent output:
+   - In the stdout and stderr 'data' handlers (inside the spawn() method), BEFORE pushing to agent.output:
+     - Calculate current total bytes: agent.output.reduce((acc, s) => acc + s.length, 0)
+     - If total exceeds config.maxAgentOutputBytes (import from config.js), drop the oldest entries until under limit
+   - Add a method killAll() that iterates this.agents, and for each agent with a non-null .process property, calls process.kill('SIGTERM')
+
+5. In server/index.js, add graceful shutdown:
+   - Add process.on('SIGTERM', gracefulShutdown) and process.on('SIGINT', gracefulShutdown)
+   - gracefulShutdown(): log "Shutting down...", clear the prune interval, close the WebSocket server, close the HTTP server, process.exit(0)
 
 Key constraints:
-- Vue 3 Composition API with <script setup>
-- ES modules only
-- Dark theme styling consistent with existing (#0d0d14 backgrounds, #1a1a2e borders, #f44336 for errors)
-- No new npm dependencies`,
-    usePlanner: true,
+- ES modules only (import/export), project has "type": "module" in package.json
+- Do NOT change any existing function signatures
+- config.js exports a default object — add new fields to it
+- Be careful with the agent output capping — still broadcast the chunk even if you're trimming the stored buffer`,
+    usePlanner: false,
+  },
+  {
+    featureName: 'ws-resilience',
+    prompt: `Improve WebSocket resilience in hAIvemind — a Vue 3 + Node.js project.
+
+The project structure is:
+- client/src/composables/useWebSocket.js — singleton WebSocket module with connect(), on(), send(), connected ref, connectionLost ref. Uses handlers Map<string, callback[]>. Has exponential backoff reconnect already.
+- server/index.js — WebSocket server with wss (WebSocketServer), clients Set<WebSocket>, broadcast() function. Has sessions Map and activeContexts Map.
+
+CURRENT STATE of useWebSocket.js:
+- It already has: connected ref, connectionLost ref, exponential backoff (2s → 30s), send() returns false if not open
+- handlers Map accumulates duplicate handlers on HMR/reconnect because on() just pushes without dedup
+
+PROBLEMS TO FIX:
+1. Handler accumulation: on() keeps pushing callbacks without any way to remove them. On Vite HMR, the module re-executes and registers duplicate handlers.
+2. No message queuing: messages sent while disconnected are silently dropped (send returns false but caller doesn't retry)
+3. No state re-sync: when a client reconnects mid-session, it has stale state — no mechanism to catch up
+4. Server doesn't detect stale clients: dead WebSocket connections stay in the clients Set until the TCP timeout
+
+Requirements:
+1. In client/src/composables/useWebSocket.js:
+   - Add an off(type, handler) function that removes a specific handler from the handlers Map
+   - Add a pendingMessages array that buffers messages when disconnected
+   - Modify send(): if socket not open, push { type, payload } to pendingMessages (up to 50 max) and return false
+   - On successful reconnect (in socket.onopen), flush pendingMessages by sending each one, then clear the array
+   - Export off alongside on, send, connected, connectionLost
+
+2. In server/index.js:
+   - Add WebSocket heartbeat/ping-pong to detect dead connections:
+     - In the wss 'connection' handler, set ws.isAlive = true
+     - Add ws.on('pong', () => { ws.isAlive = true; })
+     - Set up an interval (every 30 seconds) that iterates clients:
+       - If ws.isAlive === false, terminate the connection (ws.terminate()) and remove from clients Set
+       - Otherwise, set ws.isAlive = false and call ws.ping()
+     - Clear this interval on server close
+   - Add a 'reconnect:sync' message handler:
+     - When client sends { type: 'reconnect:sync', payload: { projectSlug } }
+     - Look up the activeContext for that projectSlug
+     - If found, send back the current session state: plan, task statuses, session status
+     - This lets reconnected clients rebuild their UI state
+
+3. In client/src/composables/useWebSocket.js:
+   - On reconnect (socket.onopen), after flushing pending messages, send a 'reconnect:sync' message if there's an active project
+   - To know the active project, accept an optional getActiveProject callback in useWebSocket() that returns the current projectSlug or null
+
+Key constraints:
+- Vue 3 Composition API, ES modules only
+- useWebSocket.js is a singleton — connect() runs once, not per component
+- The off() function should use Array.filter to remove the exact function reference
+- Keep the existing exponential backoff logic intact
+- shared/protocol.js has MSG constants and makeMsg/parseMsg — add new message types there if needed`,
+    usePlanner: false,
   },
 ];
 

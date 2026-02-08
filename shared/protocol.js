@@ -22,6 +22,7 @@ export const MSG = {
   GATE_REQUEST: 'gate:request',
   ITERATION_START: 'iteration:start',
   ITERATION_COMPLETE: 'iteration:complete',
+  RECONNECT_SYNC: 'reconnect:sync',
 };
 
 export function makeMsg(type, payload) {

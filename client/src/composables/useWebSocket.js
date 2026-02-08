@@ -8,6 +8,8 @@ const connectionLost = ref(false);
 let socket = null;
 let reconnectDelay = 2000;
 const handlers = new Map();
+const pendingMessages = [];
+let getActiveProject = null;
 let initialized = false;
 
 function connect() {
@@ -17,6 +19,21 @@ function connect() {
     connected.value = true;
     connectionLost.value = false;
     reconnectDelay = 2000;
+
+    if (pendingMessages.length) {
+      for (const msg of pendingMessages) {
+        socket.send(JSON.stringify(msg));
+      }
+      pendingMessages.length = 0;
+    }
+
+    if (typeof getActiveProject === 'function') {
+      const projectSlug = getActiveProject();
+      if (projectSlug) {
+        socket.send(JSON.stringify({ type: 'reconnect:sync', payload: { projectSlug } }));
+      }
+    }
+
     console.log('[ws] Connected');
   };
 
@@ -50,19 +67,37 @@ function on(type, handler) {
   handlers.get(type).push(handler);
 }
 
+function off(type, handler) {
+  const cbs = handlers.get(type);
+  if (!cbs) return;
+  const filtered = cbs.filter((cb) => cb !== handler);
+  if (filtered.length === 0) {
+    handlers.delete(type);
+  } else {
+    handlers.set(type, filtered);
+  }
+}
+
 function send(type, payload) {
   if (socket?.readyState !== WebSocket.OPEN) {
     console.warn('[ws] Cannot send, socket not open');
+    if (pendingMessages.length >= 50) {
+      pendingMessages.shift();
+    }
+    pendingMessages.push({ type, payload });
     return false;
   }
   socket.send(JSON.stringify({ type, payload }));
   return true;
 }
 
-export function useWebSocket() {
+export function useWebSocket(getActiveProjectFn) {
+  if (typeof getActiveProjectFn === 'function') {
+    getActiveProject = getActiveProjectFn;
+  }
   if (!initialized) {
     initialized = true;
     connect();
   }
-  return { connected, connectionLost, on, send };
+  return { connected, connectionLost, on, off, send };
 }
