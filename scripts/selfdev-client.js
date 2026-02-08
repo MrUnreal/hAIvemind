@@ -17,34 +17,6 @@ const MAX_RECONNECT_DELAY_MS = 30000;
 const SESSION_TIMEOUT_MS = 10 * 60 * 1000; // 10 min per feature
 const features = [
   {
-    featureName: 'session-replay',
-    prompt: `Implement Session Replay for hAIvemind — a Vue 3 + Node.js project.
-
-The project structure is:
-- server/ — Node.js ES module backend with Express + WebSocket
-- client/src/ — Vue 3 frontend with @vue-flow/core for DAG visualization
-- shared/protocol.js — WebSocket message types
-
-Requirements:
-1. In server/workspace.js, the finalizeSession() method already saves session data to JSON. Enhance it to also persist a timeline array of events with timestamps. Each event should be { timestamp, type, data } — capturing task status changes, agent status changes, and verification results.
-
-2. Add a REST endpoint GET /api/projects/:slug/sessions/:id in server/index.js that returns the full session data including the timeline.
-
-3. Create client/src/components/SessionReplay.vue:
-   - A range input (slider) spanning from session start to session end time
-   - As you scrub, it filters the timeline to show only events up to that point
-   - Shows a simple list of events with timestamps and status badges
-   - Emits the filtered tasks/edges for the parent to display in the DAG
-
-4. In client/src/App.vue, add a "Replay" mode toggle. When active, show SessionReplay alongside the DAG.
-
-Key constraints:
-- Use ES modules (import/export), no require()
-- Vue 3 Composition API with <script setup>
-- No new npm dependencies needed`,
-    usePlanner: true,
-  },
-  {
     featureName: 'project-templates',
     prompt: `Implement Project Templates for hAIvemind — a Vue 3 + Node.js project.
 

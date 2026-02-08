@@ -2,6 +2,8 @@ import express from 'express';
 import { createServer } from 'node:http';
 import { WebSocketServer } from 'ws';
 import { randomUUID } from 'node:crypto';
+import { promises as fs } from 'node:fs';
+import path from 'node:path';
 import config from './config.js';
 import { MSG, makeMsg, parseMsg } from '../shared/protocol.js';
 import AgentManager from './agentManager.js';
@@ -10,6 +12,13 @@ import { decomposeMock } from './mock.js';
 import TaskRunner from './taskRunner.js';
 import WorkspaceManager from './workspace.js';
 import { prepareSelfDevWorkspace, getWorktreeDiffSummary } from './selfDev.js';
+import { readdir, readFile } from 'node:fs/promises';
+import { join, dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+const TEMPLATES_DIR = join(__dirname, '..', 'templates');
 
 const DEMO = process.env.DEMO === '1' || process.argv.includes('--mock');
 
@@ -94,7 +103,7 @@ const activeContexts = new Map();
 
 async function handleClientMessage(msg, ws) {
   if (msg.type === MSG.SESSION_START) {
-    const { prompt, projectSlug } = msg.payload;
+    const { prompt, projectSlug, templateId, variables } = msg.payload || {};
     if (!prompt) {
       ws.send(makeMsg(MSG.SESSION_ERROR, { error: 'No prompt provided' }));
       return;
@@ -103,7 +112,46 @@ async function handleClientMessage(msg, ws) {
       ws.send(makeMsg(MSG.SESSION_ERROR, { error: 'No project selected' }));
       return;
     }
-    await startSession(prompt, projectSlug);
+
+    let predefinedPlan;
+    if (templateId) {
+      try {
+        const templatesDir = path.resolve(process.cwd(), 'templates');
+        const templatePath = path.join(templatesDir, `${templateId}.json`);
+        const raw = await fs.readFile(templatePath, 'utf8');
+        const template = JSON.parse(raw);
+
+        if (!Array.isArray(template.tasks)) {
+          ws.send(makeMsg(MSG.SESSION_ERROR, { error: `Template "${templateId}" is invalid (missing tasks array)` }));
+          return;
+        }
+
+        const vars = variables && typeof variables === 'object' ? variables : {};
+        const tasks = template.tasks.map((task) => {
+          const t = { ...task };
+          if (typeof t.description === 'string' && vars && Object.keys(vars).length > 0) {
+            let desc = t.description;
+            for (const [key, value] of Object.entries(vars)) {
+              const token = `{{${key}}}`;
+              if (desc.includes(token)) {
+                const replacement = value == null ? '' : String(value);
+                desc = desc.split(token).join(replacement);
+              }
+            }
+            t.description = desc;
+          }
+          return t;
+        });
+
+        predefinedPlan = { ...template, tasks };
+      } catch (err) {
+        console.error(`[session] Failed to load template "${templateId}": ${err.message}`);
+        ws.send(makeMsg(MSG.SESSION_ERROR, { error: `Failed to load template "${templateId}"` }));
+        return;
+      }
+    }
+
+    await startSession(prompt, projectSlug, predefinedPlan);
   }
   if (msg.type === MSG.SELFDEV_START) {
     const { featureName, prompt, usePlanner } = msg.payload || {};
@@ -200,7 +248,7 @@ async function handleClientMessage(msg, ws) {
   }
 }
 
-async function startSession(userPrompt, projectSlug) {
+async function startSession(userPrompt, projectSlug, predefinedPlan) {
   // Resolve workspace for this project
   const project = workspace.getProject(projectSlug);
   if (!project) {
@@ -220,12 +268,12 @@ async function startSession(userPrompt, projectSlug) {
   console.log(`${'='.repeat(60)}\n`);
 
   try {
-    // Step 1: Decompose prompt into tasks via orchestrator
+    // Step 1: Decompose prompt into tasks via orchestrator unless a predefined plan was provided
     // Note: file tree injection disabled for now — it causes orchestrator output truncation.
     // Agents have --add-dir and can explore the codebase themselves.
-    const plan = DEMO
+    const plan = predefinedPlan || (DEMO
       ? await decomposeMock(userPrompt)
-      : await decompose(userPrompt, workDir);
+      : await decompose(userPrompt, workDir));
 
     const stored = sessions.get(sessionId);
     stored.plan = plan;
@@ -710,6 +758,33 @@ app.get('/api/health', (req, res) => {
     projects: workspace.listProjects().length,
     clients: clients.size,
   });
+});
+
+app.get('/api/templates', async (req, res) => {
+  try {
+    const entries = await readdir(TEMPLATES_DIR, { withFileTypes: true });
+    const templates = await Promise.all(
+      entries
+        .filter((entry) => entry.isFile() && entry.name.endsWith('.json'))
+        .map(async (entry) => {
+          try {
+            const content = await readFile(join(TEMPLATES_DIR, entry.name), 'utf8');
+            const parsed = JSON.parse(content);
+            const { name, description, stack, variables, tasks } = parsed;
+            const id = entry.name.replace(/\.json$/, '');
+            return { id, name, description, stack, variables, tasks };
+          } catch (err) {
+            console.error(`[templates] Failed to load template ${entry.name}:`, err.message);
+            return null;
+          }
+        }),
+    );
+
+    res.json(templates.filter(Boolean));
+  } catch (err) {
+    console.error('[templates] Error reading templates directory:', err.message);
+    res.status(500).json({ error: 'Failed to load templates' });
+  }
 });
 
 // ── Start server ──

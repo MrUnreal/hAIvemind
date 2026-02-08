@@ -9,7 +9,7 @@ These features have been started via self-development sessions:
 | Feature | Status | Notes |
 |---------|--------|-------|
 | **Session Replay** | ✅ Implemented | Timeline scrubber, event log, DAG state at any point in time |
-| **Project Templates** | 🔧 In Progress | Pre-built decomposition patterns for common stacks |
+| **Project Templates** | ✅ Implemented | 3 JSON templates (Express API, React SPA, CLI tool), /api/templates endpoint, templateId in SESSION_START |
 
 ## Planned
 
@@ -58,14 +58,6 @@ Swap Copilot CLI for any agent runtime: Codex, Aider, Open Interpreter, local LL
 
 ---
 
-### 📦 Project Templates
-Pre-built skill packs for common stacks (Express API, React app, CLI tool). Hit the ground running with known-good decomposition patterns.
-
-**Why it matters:** Decomposing "create a REST API" from scratch wastes an orchestrator call. Templates provide instant task graphs.
-
-**Approach:** JSON templates in `templates/` directory, loaded by server, optionally selected in the UI. Variable substitution for project-specific values.
-
----
 
 ## Completed
 
@@ -82,3 +74,4 @@ Features that have been fully implemented and verified:
 - ✅ **Self-Development Mode** — Evolves own codebase
 - ✅ **Project Isolation** — Per-project workspaces and session history
 - ✅ **Session Replay** — Timeline scrubber for past sessions
+- ✅ **Project Templates** — Pre-built task DAGs for common stacks (Express, React, CLI)

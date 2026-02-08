@@ -1,0 +1,44 @@
+{
+  "name": "CLI Tool",
+  "description": "Node.js command-line application",
+  "stack": "node-cli",
+  "variables": [
+    {
+      "name": "projectName",
+      "label": "Project Name",
+      "default": "my-cli"
+    }
+  ],
+  "tasks": [
+    {
+      "id": "arg-parsing",
+      "label": "Argument Parsing Setup",
+      "description": "Set up command-line argument parsing using commander or yargs.",
+      "dependencies": []
+    },
+    {
+      "id": "commands",
+      "label": "Command Structure",
+      "description": "Define subcommand structure and handlers.",
+      "dependencies": []
+    },
+    {
+      "id": "help",
+      "label": "Help Text",
+      "description": "Implement help text generation and usage information.",
+      "dependencies": []
+    },
+    {
+      "id": "config",
+      "label": "Configuration Loading",
+      "description": "Load configuration from a file and merge with CLI options.",
+      "dependencies": []
+    },
+    {
+      "id": "packaging",
+      "label": "Packaging and Bin Setup",
+      "description": "Configure npm bin entry and package the CLI for distribution.",
+      "dependencies": []
+    }
+  ]
+}

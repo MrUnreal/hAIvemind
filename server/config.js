@@ -67,7 +67,7 @@ const config = {
   workDir: '.haivemind-workspace',
 
   // Server
-  port: 3000,
+  port: Number(process.env.PORT) || 3000,
 };
 
 /**

@@ -1,0 +1,44 @@
+{
+  "name": "Express REST API",
+  "description": "Production-ready Node.js REST API with Express",
+  "stack": "node-express",
+  "variables": [
+    {
+      "name": "projectName",
+      "label": "Project Name",
+      "default": "my-api"
+    }
+  ],
+  "tasks": [
+    {
+      "id": "setup",
+      "label": "Project setup",
+      "description": "Initialize package.json, install Express and common middleware, and create the basic application entry point.",
+      "dependencies": []
+    },
+    {
+      "id": "routes",
+      "label": "Define REST routes",
+      "description": "Create versioned REST endpoints, controllers, and routing structure for core resources.",
+      "dependencies": []
+    },
+    {
+      "id": "auth-middleware",
+      "label": "JWT authentication middleware",
+      "description": "Add JWT-based authentication middleware, token verification, and protected route examples.",
+      "dependencies": []
+    },
+    {
+      "id": "error-handling",
+      "label": "Global error handling",
+      "description": "Implement centralized error handling middleware, request validation, and consistent error responses.",
+      "dependencies": []
+    },
+    {
+      "id": "tests",
+      "label": "Tests and Jest setup",
+      "description": "Configure Jest, add test scripts, and create sample tests for routes and middleware.",
+      "dependencies": []
+    }
+  ]
+}

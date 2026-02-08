@@ -1,0 +1,44 @@
+{
+  "name": "React SPA",
+  "description": "Modern React application with routing and state management",
+  "stack": "react",
+  "variables": [
+    {
+      "name": "projectName",
+      "label": "Project Name",
+      "default": "my-react-app"
+    }
+  ],
+  "tasks": [
+    {
+      "id": "routing",
+      "label": "Routing Setup",
+      "description": "Set up React Router with a basic route structure, including home and not-found pages.",
+      "dependencies": []
+    },
+    {
+      "id": "state",
+      "label": "State Management",
+      "description": "Configure a global state management solution (Redux or Zustand) with an example slice/store.",
+      "dependencies": []
+    },
+    {
+      "id": "api-layer",
+      "label": "API Layer",
+      "description": "Implement a reusable API layer with a fetch wrapper for HTTP requests and basic error handling.",
+      "dependencies": []
+    },
+    {
+      "id": "components",
+      "label": "Base UI Components",
+      "description": "Create shared base UI components such as Button, Layout, and Header for consistent design.",
+      "dependencies": []
+    },
+    {
+      "id": "styles",
+      "label": "Styling",
+      "description": "Configure global styles using CSS or Tailwind, including a base theme and reset/normalize.",
+      "dependencies": []
+    }
+  ]
+}
