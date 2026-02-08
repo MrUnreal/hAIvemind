@@ -143,7 +143,7 @@ export default class WorkspaceManager {
     if (!entry) throw new Error(`Project "${slug}" not found`);
 
     const sessionId = randomUUID();
-    const projectDir = join(this.baseDir, slug);
+    const projectDir = this._getProjectDir(slug);
     const sessionsDir = join(projectDir, '.haivemind', 'sessions');
 
     const session = {
@@ -181,7 +181,7 @@ export default class WorkspaceManager {
    * @param {object} summary - { status, tasks, costSummary }
    */
   finalizeSession(slug, sessionId, summary) {
-    const projectDir = join(this.baseDir, slug);
+    const projectDir = this._getProjectDir(slug);
     const sessionFile = join(projectDir, '.haivemind', 'sessions', `${sessionId}.json`);
 
     if (!existsSync(sessionFile)) return;
@@ -211,7 +211,7 @@ export default class WorkspaceManager {
   getSession(slug, sessionId) {
     const entry = this._registry.projects[slug];
     if (!entry) return null;
-    const dir = entry.linked ? entry.dir : join(this.baseDir, slug);
+    const dir = this._getProjectDir(slug);
     const sessionFile = join(dir, '.haivemind', 'sessions', `${sessionId}.json`);
     if (!existsSync(sessionFile)) return null;
     try {
@@ -227,7 +227,7 @@ export default class WorkspaceManager {
    * @returns {object[]}
    */
   listSessions(slug) {
-    const sessionsDir = join(this.baseDir, slug, '.haivemind', 'sessions');
+    const sessionsDir = join(this._getProjectDir(slug), '.haivemind', 'sessions');
     if (!existsSync(sessionsDir)) return [];
 
     return readdirSync(sessionsDir)
@@ -331,9 +331,14 @@ export default class WorkspaceManager {
     writeFileSync(this.registryPath, JSON.stringify(this._registry, null, 2));
   }
 
-  _readProjectMeta(slug) {
+  /** Resolve the root directory for a project (linked → external dir, created → baseDir/slug) */
+  _getProjectDir(slug) {
     const entry = this._registry.projects[slug];
-    const dir = entry?.linked ? entry.dir : join(this.baseDir, slug);
+    return entry?.linked ? entry.dir : join(this.baseDir, slug);
+  }
+
+  _readProjectMeta(slug) {
+    const dir = this._getProjectDir(slug);
     const metaPath = join(dir, '.haivemind', 'project.json');
     if (existsSync(metaPath)) {
       try {
@@ -346,8 +351,7 @@ export default class WorkspaceManager {
   }
 
   _writeProjectMeta(slug, meta) {
-    const entry = this._registry.projects[slug];
-    const dir = entry?.linked ? entry.dir : join(this.baseDir, slug);
+    const dir = this._getProjectDir(slug);
     const metaPath = join(dir, '.haivemind', 'project.json');
     writeFileSync(metaPath, JSON.stringify(meta, null, 2));
   }

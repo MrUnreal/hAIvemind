@@ -141,6 +141,10 @@ on('verify:status', (payload) => {
   }
 });
 
+on('selfdev:diff', (payload) => {
+  status(`📊 Self-dev diff:\n${payload.diffSummary}`);
+});
+
 // ── Iteration events (chat-triggered) ──
 
 on('iteration:start', (payload) => {

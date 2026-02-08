@@ -5,10 +5,11 @@ import { randomUUID } from 'node:crypto';
 import config from './config.js';
 import { MSG, makeMsg, parseMsg } from '../shared/protocol.js';
 import AgentManager from './agentManager.js';
-import { decompose, verify } from './orchestrator.js';
+import { decompose, verify, plan } from './orchestrator.js';
 import { decomposeMock } from './mock.js';
 import TaskRunner from './taskRunner.js';
 import WorkspaceManager from './workspace.js';
+import { prepareSelfDevWorkspace, getWorktreeDiffSummary } from './selfDev.js';
 
 const DEMO = process.env.DEMO === '1' || process.argv.includes('--mock');
 
@@ -69,10 +70,92 @@ async function handleClientMessage(msg, ws) {
     }
     await startSession(prompt, projectSlug);
   }
+  if (msg.type === MSG.SELFDEV_START) {
+    const { featureName, prompt, usePlanner } = msg.payload || {};
+    if (!prompt) {
+      ws.send(makeMsg(MSG.SESSION_ERROR, { error: 'No prompt provided' }));
+      return;
+    }
+    if (!featureName) {
+      ws.send(makeMsg(MSG.SESSION_ERROR, { error: 'No featureName provided' }));
+      return;
+    }
+    const repoRoot = process.cwd();
+    const worktreePath = prepareSelfDevWorkspace(repoRoot, featureName);
+    const projectSlug = 'haivemind-self-dev';
+    let project = workspace.getProject(projectSlug);
+    if (!project) {
+      try {
+        project = workspace.linkProject(projectSlug, worktreePath);
+      } catch (err) {
+        console.error(`[selfdev] Failed to link self-dev project: ${err.message}`);
+        ws.send(makeMsg(MSG.SESSION_ERROR, { error: `Failed to link self-dev project: ${err.message}` }));
+        return;
+      }
+    }
+
+    // Planner mode: research before implementing
+    if (usePlanner) {
+      try {
+        broadcast(makeMsg(MSG.CHAT_RESPONSE, {
+          projectSlug,
+          role: 'assistant',
+          content: '🧠 Planner mode: researching feature with T3 model...',
+        }));
+        const research = await plan(prompt, worktreePath);
+        broadcast(makeMsg(MSG.PLAN_RESEARCH, { projectSlug, research }));
+        broadcast(makeMsg(MSG.CHAT_RESPONSE, {
+          projectSlug,
+          role: 'assistant',
+          content: `📋 **Plan: ${research.summary}**\n\n` +
+            `Approach: ${research.approach}\n` +
+            `Complexity: ${research.complexity} (~${research.estimatedTasks} tasks)\n` +
+            `Recommendation: ${research.recommendation}\n` +
+            `Risks: ${research.risks?.join(', ') || 'None identified'}\n` +
+            `Files: ${[...(research.affectedFiles || []), ...(research.newFiles || [])].join(', ')}`,
+        }));
+
+        if (research.recommendation === 'defer' || research.recommendation === 'redesign') {
+          broadcast(makeMsg(MSG.CHAT_RESPONSE, {
+            projectSlug,
+            role: 'assistant',
+            content: `⚠️ Planner recommends **${research.recommendation}**: ${research.reasoning}`,
+          }));
+          return;
+        }
+      } catch (err) {
+        console.error(`[planner] Research failed: ${err.message}`);
+        broadcast(makeMsg(MSG.CHAT_RESPONSE, {
+          projectSlug,
+          role: 'assistant',
+          content: `⚠️ Planner research failed, proceeding directly to implementation...`,
+        }));
+      }
+    }
+
+    try {
+      await startSession(prompt, projectSlug);
+    } catch (err) {
+      console.error(`[selfdev] Error during self-dev session: ${err.message}`);
+      ws.send(makeMsg(MSG.SESSION_ERROR, { error: err.message }));
+      return;
+    }
+    const diffSummary = getWorktreeDiffSummary(repoRoot, featureName);
+    broadcast(makeMsg(MSG.SELFDEV_DIFF, { diffSummary }));
+  }
   if (msg.type === MSG.CHAT_MESSAGE) {
     const { message, projectSlug } = msg.payload;
     if (message && projectSlug) {
       await handleChatMessage(message, projectSlug);
+    }
+  }
+  if (msg.type === MSG.GATE_RESPONSE) {
+    const { taskId, approved, feedback } = msg.payload || {};
+    // Forward gate response to active task runner
+    for (const [, ctx] of activeContexts) {
+      if (ctx.taskRunner) {
+        ctx.taskRunner.resolveGate(taskId, approved, feedback);
+      }
     }
   }
 }
@@ -96,6 +179,8 @@ async function startSession(userPrompt, projectSlug) {
 
   try {
     // Step 1: Decompose prompt into tasks via orchestrator
+    // Note: file tree injection disabled for now — it causes orchestrator output truncation.
+    // Agents have --add-dir and can explore the codebase themselves.
     const plan = DEMO
       ? await decomposeMock(userPrompt)
       : await decompose(userPrompt, workDir);
@@ -128,6 +213,11 @@ async function startSession(userPrompt, projectSlug) {
       broadcast(msg);
     };
     const taskRunner = new TaskRunner(plan, agentManager, taskRunnerBroadcast, workDir);
+
+    // Store taskRunner reference for gate responses
+    const earlyCtx = { sessionId, workDir, plan, agentManager, taskRunner, history: [] };
+    activeContexts.set(projectSlug, earlyCtx);
+
     await taskRunner.run();
 
     // Step 3: Verify & Fix Loop — orchestrator reviews and spawns parallel fix agents

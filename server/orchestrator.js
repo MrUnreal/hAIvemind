@@ -2,10 +2,79 @@ import { spawn } from 'node:child_process';
 import { getOrchestratorModel } from './config.js';
 
 /**
+ * Planner mode: Research and evaluate a feature proposal before decomposing.
+ * Uses T3 (expensive) model to deeply analyze the codebase and produce an implementation plan.
+ * Returns: { summary, approach, risks, affectedFiles, estimatedTasks, recommendation }
+ */
+export async function plan(featureDescription, workDir) {
+  const { modelName, modelConfig } = getOrchestratorModel();
+
+  const prompt = `You are a senior software architect evaluating a feature proposal for an existing codebase.
+You have access to the project filesystem via --add-dir. Explore it thoroughly before responding.
+
+## Feature Proposal
+${featureDescription}
+
+## Your Task
+1. Explore the existing codebase structure, key files, and architecture patterns
+2. Evaluate the feature's feasibility, complexity, and impact
+3. Identify which files need modification and what new files are needed
+4. Assess risks and potential breaking changes
+5. Recommend the best implementation approach
+
+Output ONLY valid JSON (no markdown fences, no preamble):
+{
+  "summary": "One-paragraph summary of what this feature does",
+  "approach": "Recommended implementation strategy in 2-3 sentences",
+  "risks": ["risk 1", "risk 2"],
+  "affectedFiles": ["path/to/file.js"],
+  "newFiles": ["path/to/new/file.js"],
+  "estimatedTasks": 5,
+  "complexity": "low|medium|high",
+  "recommendation": "proceed|defer|redesign",
+  "reasoning": "Why this recommendation"
+}`;
+
+  const fullArgs = [...modelConfig.args, prompt, '--silent', '--allow-all', '--add-dir', workDir];
+
+  console.log(`[planner] Researching feature with ${modelName} (${modelConfig.multiplier}× cost)...`);
+
+  return new Promise((resolve, reject) => {
+    let output = '';
+    const child = spawn(modelConfig.cmd, fullArgs, {
+      cwd: workDir,
+      env: { ...process.env },
+    });
+
+    child.stdout.on('data', (data) => { output += data.toString(); });
+    child.stderr.on('data', (data) => {
+      console.error(`[planner:stderr] ${data.toString().trim()}`);
+    });
+
+    child.on('close', (code) => {
+      if (code !== 0) {
+        return reject(new Error(`Planner exited with code ${code}`));
+      }
+      try {
+        const result = parseJsonFromOutput(output);
+        console.log(`[planner] Research complete — ${result.recommendation} (${result.complexity} complexity, ~${result.estimatedTasks} tasks)`);
+        resolve(result);
+      } catch (err) {
+        reject(new Error(`Failed to parse planner output: ${err.message}\n\nRaw output:\n${output.slice(0, 500)}`));
+      }
+    });
+
+    child.on('error', (err) => {
+      reject(new Error(`Failed to spawn planner: ${err.message}`));
+    });
+  });
+}
+
+/**
  * Call the orchestrator (T3) model to decompose a user prompt into tasks.
  * Returns a plan: { tasks: [{ id, label, description, dependencies }] }
  */
-export async function decompose(userPrompt, workDir) {
+export async function decompose(userPrompt, workDir, { fileTree } = {}) {
   const { modelName, modelConfig } = getOrchestratorModel();
 
   const systemPrompt = `You are a senior software architect acting as a project planner for a MASSIVELY PARALLEL execution platform.
@@ -45,30 +114,24 @@ GOOD (parallel):   package.json → [utils.js, service.js, cli.js] → verify
                    (all three middle tasks specify their shared interfaces upfront and run in parallel)
 
 ## Working With Existing Codebases
-You have access to the project's filesystem. Before planning tasks:
-1. EXPLORE the existing project structure — list files, read key modules, understand the architecture.
-2. RESPECT existing patterns — follow the code style, import conventions, and naming used in the project.
-3. For MODIFICATION tasks: reference specific existing files and describe what to change (not just what to create).
-4. For NEW features: identify where new code should live based on the existing structure.
-5. Include an "affectedFiles" list in each task's JSON output so agents know exactly which files to read and modify.
-6. NEVER recreate files that already exist — modify them in place.
-7. The JSON schema for tasks with affectedFiles:
-{
-  "tasks": [
-    {
-      "id": "task-1",
-      "label": "Short label",
-      "description": "Detailed instructions...",
-      "dependencies": [],
-      "affectedFiles": ["path/to/file.js", "path/to/other.js"]
-    }
-  ]
-}`;
+When modifying an existing project (file tree provided below), reference specific files to modify. Include "affectedFiles" in each task. Never recreate existing files.
 
-  const prompt = `${systemPrompt}\n\n## User Request\n\n${userPrompt}`;
+## CRITICAL OUTPUT RULES
+- Your ENTIRE response must be ONLY the JSON object. No text before or after.
+- No markdown fences. No commentary. No "let me look at" preamble. JUST the JSON.
+- Keep each task description under 150 words to stay within output limits.`;
+
+  let prompt = `${systemPrompt}\n\n## User Request\n\n${userPrompt}`;
+
+  // If a file tree is provided, include it so the planner is codebase-aware
+  if (fileTree) {
+    prompt += `\n\n## Existing Project Structure\n\n\`\`\`\n${fileTree}\n\`\`\``;
+  }
+
   // Use --silent for clean output (no stats), --allow-all for non-interactive
-  // --add-dir gives the planner filesystem access to understand existing codebases
-  const fullArgs = [...modelConfig.args, prompt, '--silent', '--allow-all', '--add-dir', workDir];
+  // Note: --add-dir is NOT passed here to avoid output truncation.
+  // Instead, callers can pass fileTree for codebase context.
+  const fullArgs = [...modelConfig.args, prompt, '--silent', '--allow-all'];
 
   console.log(`[orchestrator] Decomposing with ${modelName} (${modelConfig.multiplier}× cost)...`);
 
@@ -118,36 +181,43 @@ export async function verify(plan, workDir) {
 
   const taskList = plan.tasks.map(t => `- ${t.label}: ${t.description}`).join('\n');
 
-  const prompt = `You are a senior software engineer doing a code review.
-All tasks below have been completed by coding agents. Review the workspace and verify:
-1. All expected files exist
-2. No obvious syntax errors
-3. Imports/requires are consistent between files
-4. The project could plausibly run (try npm install, node entry point, etc.)
+  const prompt = `You are a senior software engineer doing a thorough code review with TEST-DRIVEN VERIFICATION.
+All tasks below have been completed by coding agents. Your job:
+
+1. Review the workspace files for correctness
+2. WRITE AND RUN actual tests where possible (e.g. \`node -e "..."\`, \`node --check file.js\`, lint checks)
+3. Try to start/build the project (npm install, node entry point, etc.)
+4. Verify imports/exports consistency between modules
+5. Check for missing files, syntax errors, and integration issues
+
+## Test Strategy
+- For each key module, run \`node --check <file>\` to verify syntax
+- For Node.js projects, try \`node -e "import('./<entry>')"\` to test imports
+- If a package.json has a test script, run it
+- If there are no tests, create a simple smoke test and run it
 
 ## Completed Tasks
 ${taskList}
 
 ## Instructions
-Check the workspace files thoroughly. If you find issues, decompose EACH fix into a separate, independent task.
-Each fix task must be fully self-contained — describe exactly what file to edit, what to change, and why.
-Make fixes as parallel as possible (different files = different tasks).
+Check the workspace files thoroughly. If you find issues, decompose EACH fix into a separate task.
+Include any test files you created in the workspace — they become part of the project.
 
 Output ONLY valid JSON (no markdown fences):
 {
   "passed": true or false,
+  "testsRun": ["description of each test executed"],
   "issues": ["description of each issue found"],
   "followUpTasks": [
     {
       "id": "fix-1",
       "label": "Short description of fix",
-      "description": "Detailed fix instructions — include exact file, what to change, expected result",
+      "description": "Detailed fix instructions",
       "dependencies": []
     }
   ]
 }
-If everything looks good, set passed=true and empty arrays for issues and followUpTasks.
-IMPORTANT: Each fix task should target ONE file or ONE concern. Do NOT bundle multiple fixes into one task.`;
+If everything looks good, set passed=true. Each fix task should target ONE file.`;
 
   const fullArgs = [...modelConfig.args, prompt, '--silent', '--allow-all', '--add-dir', workDir];
 

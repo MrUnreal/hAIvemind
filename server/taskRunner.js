@@ -22,17 +22,34 @@ export default class TaskRunner {
     this.taskStates = new Map();
     this.running = 0;
 
+    /** Gate resolvers — pending human approval callbacks */
+    this._gateResolvers = new Map();
+
     // Initialize task states
     for (const task of plan.tasks) {
       this.taskStates.set(task.id, {
         task,
-        status: 'pending',
+        status: task.gate ? 'gated' : 'pending',
         retries: 0,
         agentIds: [],
         failureReports: [],
         startedAt: null,
         completedAt: null,
       });
+    }
+  }
+
+  /**
+   * Resolve a human-in-the-loop gate (approve or reject a task).
+   * @param {string} taskId
+   * @param {boolean} approved
+   * @param {string} [feedback] - Optional feedback/redirect instructions
+   */
+  resolveGate(taskId, approved, feedback) {
+    const resolver = this._gateResolvers.get(taskId);
+    if (resolver) {
+      resolver({ approved, feedback });
+      this._gateResolvers.delete(taskId);
     }
   }
 
@@ -60,12 +77,48 @@ export default class TaskRunner {
       });
 
       if (depsOk) {
+        // Handle gated tasks — request human approval before scheduling
+        if (state.status === 'gated') {
+          this._requestGateApproval(state);
+          continue;
+        }
         eligible.push(state);
       }
     }
 
     const launches = eligible.map(state => this._launchTask(state));
     await Promise.allSettled(launches);
+  }
+
+  /**
+   * Request human approval for a gated task.
+   */
+  async _requestGateApproval(state) {
+    this.broadcast(makeMsg(MSG.GATE_REQUEST, {
+      taskId: state.task.id,
+      label: state.task.label,
+      description: state.task.description,
+    }));
+
+    // Wait for human response
+    const { approved, feedback } = await new Promise((resolve) => {
+      this._gateResolvers.set(state.task.id, resolve);
+    });
+
+    if (approved) {
+      state.status = 'pending';
+      if (feedback) {
+        state.task.description += `\n\n## Human Feedback\n${feedback}`;
+      }
+      this._broadcastTaskStatus(state);
+      await this._scheduleEligible();
+    } else {
+      state.status = 'blocked';
+      state.completedAt = Date.now();
+      this._broadcastTaskStatus(state);
+      this._checkCompletion();
+      await this._scheduleEligible();
+    }
   }
 
   /**
