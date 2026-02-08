@@ -1,5 +1,6 @@
 import { spawn } from 'node:child_process';
-import { getOrchestratorModel } from './config.js';
+import config, { getOrchestratorModel } from './config.js';
+import { withTimeout } from './processTimeout.js';
 
 /**
  * Planner mode: Research and evaluate a feature proposal before decomposing.
@@ -8,6 +9,8 @@ import { getOrchestratorModel } from './config.js';
  */
 export async function plan(featureDescription, workDir) {
   const { modelName, modelConfig } = getOrchestratorModel();
+  const timeoutMs = config.orchestratorTimeoutMs;
+  const timeoutMinutes = Math.round(timeoutMs / 60000);
 
   const prompt = `You are a senior software architect evaluating a feature proposal for an existing codebase.
 You have access to the project filesystem via --add-dir. Explore it thoroughly before responding.
@@ -41,6 +44,7 @@ Output ONLY valid JSON (no markdown fences, no preamble):
 
   return new Promise((resolve, reject) => {
     let output = '';
+    let timedOut = false;
     const child = spawn(modelConfig.cmd, fullArgs, {
       cwd: workDir,
       env: { ...process.env },
@@ -51,7 +55,17 @@ Output ONLY valid JSON (no markdown fences, no preamble):
       console.error(`[planner:stderr] ${data.toString().trim()}`);
     });
 
+    withTimeout(child, timeoutMs, 'Planner').catch((err) => {
+      if (err instanceof Error && err.message.includes('timed out')) {
+        timedOut = true;
+        reject(new Error(`Planning timed out after ${timeoutMinutes} minutes`));
+      }
+    });
+
     child.on('close', (code) => {
+      if (timedOut) {
+        return;
+      }
       if (code !== 0) {
         return reject(new Error(`Planner exited with code ${code}`));
       }
@@ -65,6 +79,9 @@ Output ONLY valid JSON (no markdown fences, no preamble):
     });
 
     child.on('error', (err) => {
+      if (timedOut) {
+        return;
+      }
       reject(new Error(`Failed to spawn planner: ${err.message}`));
     });
   });
@@ -76,6 +93,8 @@ Output ONLY valid JSON (no markdown fences, no preamble):
  */
 export async function decompose(userPrompt, workDir, { fileTree } = {}) {
   const { modelName, modelConfig } = getOrchestratorModel();
+  const timeoutMs = config.orchestratorTimeoutMs;
+  const timeoutMinutes = Math.round(timeoutMs / 60000);
 
   const systemPrompt = `You are a senior software architect acting as a project planner for a MASSIVELY PARALLEL execution platform.
 Given a user's project request, decompose it into concrete, implementable tasks that can run with MAXIMUM PARALLELISM.
@@ -137,6 +156,7 @@ When modifying an existing project (file tree provided below), reference specifi
 
   return new Promise((resolve, reject) => {
     let output = '';
+    let timedOut = false;
 
     const child = spawn(modelConfig.cmd, fullArgs, {
       cwd: workDir,
@@ -151,7 +171,17 @@ When modifying an existing project (file tree provided below), reference specifi
       console.error(`[orchestrator:stderr] ${data.toString().trim()}`);
     });
 
+    withTimeout(child, timeoutMs, 'Orchestrator decomposition').catch((err) => {
+      if (err instanceof Error && err.message.includes('timed out')) {
+        timedOut = true;
+        reject(new Error(`Decomposition timed out after ${timeoutMinutes} minutes`));
+      }
+    });
+
     child.on('close', (code) => {
+      if (timedOut) {
+        return;
+      }
       if (code !== 0) {
         return reject(new Error(`Orchestrator exited with code ${code}`));
       }
@@ -167,6 +197,9 @@ When modifying an existing project (file tree provided below), reference specifi
     });
 
     child.on('error', (err) => {
+      if (timedOut) {
+        return;
+      }
       reject(new Error(`Failed to spawn orchestrator: ${err.message}`));
     });
   });
@@ -178,6 +211,8 @@ When modifying an existing project (file tree provided below), reference specifi
  */
 export async function verify(plan, workDir) {
   const { modelConfig } = getOrchestratorModel();
+  const timeoutMs = config.orchestratorTimeoutMs;
+  const timeoutMinutes = Math.round(timeoutMs / 60000);
 
   const taskList = plan.tasks.map(t => `- ${t.label}: ${t.description}`).join('\n');
 
@@ -225,6 +260,7 @@ If everything looks good, set passed=true. Each fix task should target ONE file.
 
   return new Promise((resolve) => {
     let output = '';
+    let timedOut = false;
     const child = spawn(modelConfig.cmd, fullArgs, {
       cwd: workDir,
       env: { ...process.env },
@@ -233,7 +269,18 @@ If everything looks good, set passed=true. Each fix task should target ONE file.
     child.stdout.on('data', (data) => { output += data.toString(); });
     child.stderr.on('data', () => {});
 
+    withTimeout(child, timeoutMs, 'Verification').catch((err) => {
+      if (err instanceof Error && err.message.includes('timed out')) {
+        timedOut = true;
+        console.warn(`[orchestrator] Verification timed out after ${timeoutMinutes} minutes`);
+        resolve({ passed: false, issues: [`Verification timed out after ${timeoutMinutes} minutes`], followUpTasks: [] });
+      }
+    });
+
     child.on('close', (code) => {
+      if (timedOut) {
+        return;
+      }
       try {
         const result = parseJsonFromOutput(output);
         console.log(`[orchestrator] Verification: ${result.passed ? 'PASSED' : 'FAILED'} (${result.issues?.length || 0} issues)`);
@@ -246,6 +293,9 @@ If everything looks good, set passed=true. Each fix task should target ONE file.
     });
 
     child.on('error', (err) => {
+      if (timedOut) {
+        return;
+      }
       console.error(`[orchestrator] Verification process error: ${err.message}`);
       resolve({ passed: false, issues: [`Verification process crashed: ${err.message}`], followUpTasks: [] });
     });
@@ -257,6 +307,8 @@ If everything looks good, set passed=true. Each fix task should target ONE file.
  */
 export async function analyzeFailure(task, agentOutput, workDir) {
   const { modelConfig } = getOrchestratorModel();
+  const timeoutMs = config.orchestratorTimeoutMs;
+  const timeoutMinutes = Math.round(timeoutMs / 60000);
 
   const prompt = `You are analyzing a failed coding task. Given the task description and the agent's output,
 produce a structured failure report as JSON.
@@ -283,6 +335,7 @@ Analyze the failure and output ONLY valid JSON (no markdown fences):
 
   return new Promise((resolve) => {
     let output = '';
+    let timedOut = false;
     const child = spawn(modelConfig.cmd, fullArgs, {
       cwd: workDir,
       env: { ...process.env },
@@ -291,7 +344,24 @@ Analyze the failure and output ONLY valid JSON (no markdown fences):
     child.stdout.on('data', (data) => { output += data.toString(); });
     child.stderr.on('data', () => {});
 
+    withTimeout(child, timeoutMs, 'Failure analysis').catch((err) => {
+      if (err instanceof Error && err.message.includes('timed out')) {
+        timedOut = true;
+        console.warn(`[orchestrator] Failure analysis timed out after ${timeoutMinutes} minutes`);
+        resolve({
+          failedTaskId: task.id,
+          summary: `Timed out after ${timeoutMinutes} minutes while analyzing failure`,
+          upstreamTaskId: null,
+          suggestedFix: 'Retry failure analysis with a longer timeout or inspect logs manually',
+          category: 'unknown',
+        });
+      }
+    });
+
     child.on('close', () => {
+      if (timedOut) {
+        return;
+      }
       try {
         resolve(parseJsonFromOutput(output));
       } catch {
@@ -306,6 +376,9 @@ Analyze the failure and output ONLY valid JSON (no markdown fences):
     });
 
     child.on('error', () => {
+      if (timedOut) {
+        return;
+      }
       resolve({
         failedTaskId: task.id,
         summary: 'Orchestrator spawn failed',

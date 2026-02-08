@@ -68,7 +68,13 @@ const config = {
 
   // Server
   port: Number(process.env.PORT) || 3000,
+
+  agentTimeoutMs: 300000,
+  orchestratorTimeoutMs: 300000,
 };
+
+export const agentTimeoutMs = config.agentTimeoutMs;
+export const orchestratorTimeoutMs = config.orchestratorTimeoutMs;
 
 /**
  * Get the model config for a given retry count.

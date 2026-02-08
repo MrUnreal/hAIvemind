@@ -17,31 +17,91 @@ const MAX_RECONNECT_DELAY_MS = 30000;
 const SESSION_TIMEOUT_MS = 10 * 60 * 1000; // 10 min per feature
 const features = [
   {
-    featureName: 'project-templates',
-    prompt: `Implement Project Templates for hAIvemind — a Vue 3 + Node.js project.
+    featureName: 'process-timeouts',
+    prompt: `Add configurable process timeouts to all CLI spawns in hAIvemind — a Node.js ES module project.
 
 The project structure is:
-- server/ — Node.js ES module backend with Express + WebSocket
-- client/src/ — Vue 3 frontend
-- shared/protocol.js — message types
+- server/orchestrator.js — has decompose(), verify(), plan(), analyzeFailure() functions that spawn child processes via child_process.spawn()
+- server/agentManager.js — has spawn() method that creates agent child processes via child_process.spawn()
+- server/config.js — centralized configuration
+
+PROBLEM: All child_process.spawn() calls wait indefinitely. A hung copilot CLI process freezes the entire session with no recovery.
 
 Requirements:
-1. Create a templates/ directory with 3 JSON template files:
-   - templates/express-api.json — REST API tasks (setup, routes, auth middleware, error handling, tests)
-   - templates/react-app.json — React SPA tasks (routing, state, API layer, components, styles)
-   - templates/cli-tool.json — CLI tool tasks (arg parsing, commands, help, config, packaging)
+1. In server/config.js, add timeout configuration:
+   - agentTimeoutMs: 300000 (5 minutes) — timeout for agent processes
+   - orchestratorTimeoutMs: 300000 (5 minutes) — timeout for decompose/verify/plan processes
 
-2. Each template: { "name": "...", "description": "...", "stack": "...", "variables": [{"name": "projectName", "label": "Project Name", "default": "my-app"}], "tasks": [...] }
-   Tasks follow same schema as decompose output: { id, label, description, dependencies: [] }
+2. In server/agentManager.js spawn() method:
+   - After spawning the child process, start a setTimeout
+   - If the timeout fires before the process exits, call child.kill('SIGTERM'), wait 5 seconds, then child.kill('SIGKILL') if still alive
+   - Mark the agent as failed with a clear error message: "Agent timed out after X minutes"
+   - Clean up event listeners
 
-3. Add GET /api/templates endpoint in server/index.js — reads templates/ dir, returns array of templates.
+3. In server/orchestrator.js, for decompose(), verify(), plan(), and analyzeFailure():
+   - Wrap each spawn in a timeout mechanism
+   - If timeout fires, kill the child process and reject/resolve with a timeout error
+   - For verify(): resolve with { passed: false, issues: ['Verification timed out after X minutes'] }
+   - For decompose(): reject with Error('Decomposition timed out after X minutes')
+   - For plan(): reject with Error('Planning timed out after X minutes')
 
-4. In SESSION_START handler in server/index.js, accept optional templateId in payload. If provided, load template, substitute variables, skip decompose(), use template tasks directly.
+4. Add a utility function in a new file server/processTimeout.js:
+   - export function withTimeout(child, timeoutMs, label) — returns a Promise that rejects on timeout and kills the process
+   - This avoids duplicating timeout logic in every function
 
 Key constraints:
+- ES modules only (import/export)
+- Do NOT change the function signatures — only add timeout wrapping internally
+- Use config values, not hardcoded timeouts
+- child.kill('SIGTERM') first, then SIGKILL after grace period`,
+    usePlanner: true,
+  },
+  {
+    featureName: 'error-recovery-ui',
+    prompt: `Improve error handling and recovery UX in hAIvemind — a Vue 3 + Node.js project.
+
+The project structure is:
+- client/src/App.vue — main application component
+- client/src/composables/useWebSocket.js — WebSocket connection management (singleton, auto-reconnect)
+- client/src/composables/useSession.js — reactive session state
+- client/src/components/FlowCanvas.vue — DAG visualization
+- shared/protocol.js — WebSocket message types
+
+PROBLEM: When things go wrong, the user gets no useful feedback:
+- session:error events only console.error, no visible message shown
+- If decompose() fails during planning, the UI shows an infinite spinner forever
+- When WebSocket disconnects, the user can still submit prompts that silently fail
+- No retry mechanism after errors
+
+Requirements:
+1. In client/src/App.vue:
+   - Add an error banner/toast that appears when session:error is received
+   - Show the actual error message text from the payload
+   - Add a "Retry" button that resets sessionStatus and shows the prompt input again
+   - When sessionStatus is 'failed', show the error overlay INSTEAD of the planning spinner
+   - Add a "New Session" button visible during error state
+
+2. In client/src/composables/useWebSocket.js:
+   - Make the send() function return false (and log a warning) if the connection is not open
+   - Add a 'connectionLost' reactive ref that is true while reconnecting
+   - Add exponential backoff to the reconnect logic (2s, 4s, 8s, up to 30s max)
+   - Reset reconnect delay on successful connection
+
+3. In client/src/App.vue:
+   - Show a "Reconnecting..." overlay when connectionLost is true
+   - Disable the prompt submit button when disconnected
+   - After reconnecting, show a brief "Reconnected" notification
+
+4. In client/src/composables/useSession.js:
+   - Add a sessionError reactive ref (string or null)
+   - Set it from the session:error handler
+   - Clear it on resetSession() and new session start
+
+Key constraints:
+- Vue 3 Composition API with <script setup>
 - ES modules only
-- JSON files in templates/ directory
-- Tasks in templates must be valid decompose output format`,
+- Dark theme styling consistent with existing (#0d0d14 backgrounds, #1a1a2e borders, #f44336 for errors)
+- No new npm dependencies`,
     usePlanner: true,
   },
 ];

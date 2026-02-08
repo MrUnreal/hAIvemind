@@ -8,6 +8,9 @@ import { ref, reactive, computed } from 'vue';
 /** @type {'idle'|'planning'|'running'|'completed'|'failed'} */
 export const sessionStatus = ref('idle');
 
+/** @type {import('vue').Ref<string|null>} - top-level session error message */
+export const sessionError = ref(null);
+
 /** @type {import('vue').Ref<string|null>} */
 export const activeSessionId = ref(null);
 
@@ -62,6 +65,7 @@ export const taskAgentMap = computed(() => {
 
 export function resetSession() {
   sessionStatus.value = 'idle';
+  sessionError.value = null;
   activeSessionId.value = null;
   tasks.value = [];
   edges.value = [];

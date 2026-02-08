@@ -3,8 +3,10 @@ import { ref } from 'vue';
 const WS_URL = `${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${window.location.host}/ws`;
 
 const connected = ref(false);
+const connectionLost = ref(false);
 /** @type {WebSocket|null} */
 let socket = null;
+let reconnectDelay = 2000;
 const handlers = new Map();
 let initialized = false;
 
@@ -13,13 +15,17 @@ function connect() {
 
   socket.onopen = () => {
     connected.value = true;
+    connectionLost.value = false;
+    reconnectDelay = 2000;
     console.log('[ws] Connected');
   };
 
   socket.onclose = () => {
     connected.value = false;
-    console.log('[ws] Disconnected, reconnecting in 2s...');
-    setTimeout(connect, 2000);
+    connectionLost.value = true;
+    console.log(`[ws] Disconnected, reconnecting in ${reconnectDelay / 1000}s...`);
+    setTimeout(connect, reconnectDelay);
+    reconnectDelay = Math.min(reconnectDelay * 2, 30000);
   };
 
   socket.onmessage = (event) => {
@@ -45,9 +51,12 @@ function on(type, handler) {
 }
 
 function send(type, payload) {
-  if (socket?.readyState === WebSocket.OPEN) {
-    socket.send(JSON.stringify({ type, payload }));
+  if (socket?.readyState !== WebSocket.OPEN) {
+    console.warn('[ws] Cannot send, socket not open');
+    return false;
   }
+  socket.send(JSON.stringify({ type, payload }));
+  return true;
 }
 
 export function useWebSocket() {
@@ -55,5 +64,5 @@ export function useWebSocket() {
     initialized = true;
     connect();
   }
-  return { connected, on, send };
+  return { connected, connectionLost, on, send };
 }

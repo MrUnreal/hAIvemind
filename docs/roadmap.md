@@ -6,8 +6,15 @@
 
 | Feature | Status | Notes |
 |---------|--------|-------|
-| **Harden the Core** | 🔧 In Progress | Fix critical bugs, add process timeouts, race condition guards |
-| **Error Recovery UX** | 🔧 In Progress | Visible error messages, planning failure handling, retry buttons |
+| **Session Locking** | \ud83d\udee1\ufe0f Planned next | Prevent concurrent sessions on the same project workspace |
+
+## Recently Completed (Phase 1: Reliability)
+
+| Feature | Status | Notes |
+|---------|--------|-------|
+| **Critical Bug Fixes** | \u2705 Done | Gated tasks, verify crash handling, path traversal, race conditions |
+| **Process Timeouts** | \u2705 Done | 5min timeout on all CLI spawns, SIGTERM\u2192SIGKILL pattern, processTimeout.js utility |
+| **Error Recovery UX** | \u2705 Done | Error overlay with retry, reconnecting banner, exponential backoff, sessionError state |
 
 ## Planned
 

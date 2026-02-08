@@ -1,6 +1,7 @@
 import { spawn } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
 import config, { getModelForRetry } from './config.js';
+import { withTimeout } from './processTimeout.js';
 import { MSG, makeMsg } from '../shared/protocol.js';
 import { spawnMockAgent } from './mock.js';
 
@@ -102,6 +103,70 @@ export default class AgentManager {
 
       agent.process = child;
 
+      /** @type {NodeJS.Timeout | null} */
+      let timeoutId = null;
+      let settled = false;
+
+      const clearAgentTimeout = () => {
+        if (timeoutId) {
+          clearTimeout(timeoutId);
+          timeoutId = null;
+        }
+      };
+
+      const onClose = (code) => {
+        if (settled) return;
+        settled = true;
+        clearAgentTimeout();
+
+        agent.finishedAt = Date.now();
+        agent.status = code === 0 ? 'success' : 'failed';
+        agent.process = null;
+
+        console.log(`[agent:${agent.id.slice(0, 8)}] Exited with code ${code} → ${agent.status}`);
+
+        this.broadcast(makeMsg(MSG.AGENT_STATUS, {
+          agentId: agent.id,
+          taskId: task.id,
+          taskLabel: task.label,
+          status: agent.status,
+          model: modelName,
+          modelTier: tierName,
+          multiplier: modelConfig.multiplier,
+          retries: retryIndex,
+          reason,
+        }));
+
+        resolve(agent);
+      };
+
+      const onError = (err) => {
+        if (settled) return;
+        settled = true;
+        clearAgentTimeout();
+
+        agent.finishedAt = Date.now();
+        agent.status = 'failed';
+        agent.output.push(`[spawn error] ${err.message}`);
+        agent.process = null;
+
+        console.error(`[agent:${agent.id.slice(0, 8)}] Spawn error: ${err.message}`);
+
+        this.broadcast(makeMsg(MSG.AGENT_STATUS, {
+          agentId: agent.id,
+          taskId: task.id,
+          taskLabel: task.label,
+          status: 'failed',
+          model: modelName,
+          modelTier: tierName,
+          multiplier: modelConfig.multiplier,
+          retries: retryIndex,
+          reason,
+        }));
+
+        resolve(agent);
+      };
+
       child.stdout.on('data', (data) => {
         const chunk = data.toString();
         agent.output.push(chunk);
@@ -123,6 +188,7 @@ export default class AgentManager {
       });
 
       child.on('close', (code) => {
+        return onClose(code);
         agent.finishedAt = Date.now();
         agent.status = code === 0 ? 'success' : 'failed';
         agent.process = null;
@@ -145,6 +211,7 @@ export default class AgentManager {
       });
 
       child.on('error', (err) => {
+        return onError(err);
         agent.finishedAt = Date.now();
         agent.status = 'failed';
         agent.output.push(`[spawn error] ${err.message}`);
@@ -166,6 +233,52 @@ export default class AgentManager {
 
         resolve(agent);
       });
+
+      timeoutId = setTimeout(() => {
+        if (settled) return;
+        settled = true;
+
+        const minutes = config.agentTimeoutMs / 60000;
+        const timeoutMessage = `Agent timed out after ${minutes} minutes`;
+
+        agent.finishedAt = Date.now();
+        agent.status = 'failed';
+        agent.output.push(timeoutMessage);
+        agent.process = null;
+
+        child.removeAllListeners('close');
+        child.removeAllListeners('error');
+
+        try {
+          child.kill('SIGTERM');
+        } catch {
+          // Ignore if process already exited.
+        }
+
+        setTimeout(() => {
+          try {
+            child.kill('SIGKILL');
+          } catch {
+            // Ignore if process already exited.
+          }
+        }, 5000);
+
+        console.warn(`[agent:${agent.id.slice(0, 8)}] ${timeoutMessage}`);
+
+        this.broadcast(makeMsg(MSG.AGENT_STATUS, {
+          agentId: agent.id,
+          taskId: task.id,
+          taskLabel: task.label,
+          status: 'failed',
+          model: modelName,
+          modelTier: tierName,
+          multiplier: modelConfig.multiplier,
+          retries: retryIndex,
+          reason,
+        }));
+
+        resolve(agent);
+      }, config.agentTimeoutMs);
     });
   }
 

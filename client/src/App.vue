@@ -36,11 +36,24 @@
     <!-- Step 2b: Enter prompt -->
     <PromptInput
       v-else-if="sessionStatus === 'idle' && showPrompt"
+      :disabled="!connected"
       @submit="onSubmit"
     />
 
     <!-- Step 3: Active/loaded session workspace -->
     <div v-else class="workspace">
+      <!-- Error overlay -->
+      <div v-if="sessionStatus === 'failed'" class="error-overlay">
+        <div class="error-card">
+          <span class="error-icon">❌</span>
+          <h2>Session Failed</h2>
+          <p class="error-message">{{ sessionError || 'An unknown error occurred' }}</p>
+          <div class="error-actions">
+            <button class="error-btn retry" @click="retrySession">🔄 Retry</button>
+            <button class="error-btn home" @click="goToProject">← Back to Project</button>
+          </div>
+        </div>
+      </div>
       <div class="workspace-main">
         <FlowCanvas class="flow-area" />
         <SessionReplay
@@ -79,6 +92,13 @@
         </div>
       </div>
     </div>
+    <!-- Reconnecting overlay -->
+    <div v-if="connectionLost" class="reconnect-overlay">
+      <div class="reconnect-card">
+        <span class="reconnect-spinner">🔌</span>
+        <span>Reconnecting...</span>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -94,6 +114,7 @@ import OrchestratorChat from './components/OrchestratorChat.vue';
 import { useWebSocket } from './composables/useWebSocket.js';
 import {
   sessionStatus,
+  sessionError,
   activeSessionId,
   tasks,
   edges,
@@ -114,7 +135,7 @@ import {
   fetchSessions,
 } from './composables/useProjects.js';
 
-const { connected, on, send } = useWebSocket();
+const { connected, connectionLost, on, send } = useWebSocket();
 const showPrompt = ref(false);
 const sideTab = ref('agent');
 const sidePanelCollapsed = ref(true);
@@ -266,11 +287,20 @@ function onReplayStateUpdate(state) {
 }
 
 function onSubmit(prompt) {
-  if (!activeProject.value) return;
+  if (!activeProject.value || !connected.value) return;
   replayMode.value = false;
+  sessionError.value = null;
   sessionStatus.value = 'planning';
   showPrompt.value = false;
   send('session:start', { prompt, projectSlug: activeProject.value.slug });
+}
+
+const lastPrompt = ref('');
+
+function retrySession() {
+  sessionError.value = null;
+  sessionStatus.value = 'idle';
+  showPrompt.value = true;
 }
 
 function goHome() {
@@ -462,5 +492,102 @@ function goToProject() {
 .side-content {
   flex: 1;
   overflow: hidden;
+}
+
+.error-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(13, 13, 20, 0.85);
+  backdrop-filter: blur(4px);
+}
+
+.error-card {
+  background: #1a1a2e;
+  border: 1px solid #f44336;
+  border-radius: 12px;
+  padding: 32px 40px;
+  text-align: center;
+  max-width: 480px;
+}
+
+.error-icon {
+  font-size: 36px;
+}
+
+.error-card h2 {
+  margin: 12px 0 8px;
+  font-size: 18px;
+  color: #f44336;
+}
+
+.error-message {
+  color: #aaa;
+  font-size: 13px;
+  margin-bottom: 20px;
+  word-break: break-word;
+}
+
+.error-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+}
+
+.error-btn {
+  padding: 8px 20px;
+  border-radius: 8px;
+  border: 1px solid #333;
+  font-size: 13px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.error-btn.retry {
+  background: #f5c542;
+  color: #111;
+  border-color: #f5c542;
+}
+.error-btn.retry:hover {
+  background: #e0b33a;
+}
+.error-btn.home {
+  background: #1a1a2e;
+  color: #ccc;
+}
+.error-btn.home:hover {
+  background: #252540;
+}
+
+.reconnect-overlay {
+  position: fixed;
+  top: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 100;
+}
+
+.reconnect-card {
+  background: #1a1a2e;
+  border: 1px solid #f5c542;
+  border-radius: 8px;
+  padding: 8px 20px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: #f5c542;
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+.workspace {
+  position: relative;
 }
 </style>
