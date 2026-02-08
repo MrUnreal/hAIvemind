@@ -35,6 +35,9 @@ export const costSummary = ref(null);
 /** @type {import('vue').Ref<object[]>} - event log for this session */
 export const eventLog = ref([]);
 
+/** @type {import('vue').Ref<object[]>} - raw timeline events for this session */
+export const timeline = ref([]);
+
 export const selectedAgent = computed(() => {
   if (!selectedAgentId.value) return null;
   return agentMap.get(selectedAgentId.value) || null;
@@ -68,6 +71,7 @@ export function resetSession() {
   selectedAgentId.value = null;
   costSummary.value = null;
   eventLog.value = [];
+  timeline.value = [];
 }
 
 /** Push a human-readable event into the log */
@@ -134,6 +138,7 @@ export async function loadSession(projectSlug, sessionId) {
     }
 
     costSummary.value = session.costSummary || null;
+    timeline.value = Array.isArray(session.timeline) ? session.timeline : [];
     sessionStatus.value = session.status || 'completed';
 
     // Build event log from agent data

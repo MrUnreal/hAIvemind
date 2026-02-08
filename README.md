@@ -5,7 +5,7 @@
 <h1 align="center">hAIvemind</h1>
 
 <p align="center">
-  <strong>Many small agents. One hivemind. Self-evolving.</strong><br>
+  <strong>Many small agents. One hAIvemind. Self-evolving.</strong><br>
   Massively parallel AI coding orchestrator powered by GitHub Copilot CLI
 </p>
 
@@ -17,11 +17,11 @@
   <img src="https://img.shields.io/badge/Self--Evolving-🧬-blueviolet" alt="Self-Evolving">
 </p>
 
-> **Every feature in this codebase was developed by hAIvemind's own orchestrator.** No manually written code is present — the platform decomposes its own feature requests, spawns agents to implement them, verifies the results, and merges passing changes. The hivemind builds itself.
+> **Every feature in this codebase was developed by hAIvemind's own orchestrator.** No manually written code is present — the platform decomposes its own feature requests, spawns agents to implement them, verifies the results, and merges passing changes. The hAIvemind builds itself.
 
 ---
 
-Describe what you want. The hivemind decomposes it, spins up parallel agents, verifies the result, fixes issues autonomously, and lets you iterate — all from a visual DAG.
+Describe what you want. The hAIvemind decomposes it, spins up parallel agents, verifies the result, fixes issues autonomously, and lets you iterate — all from a visual DAG.
 
 ```mermaid
 graph LR
@@ -108,7 +108,7 @@ sequenceDiagram
 
 ## Features
 
-Every feature below was built by the hivemind's own orchestrator — decomposed, executed in parallel, verified, and merged autonomously.
+Every feature below was built by the hAIvemind's own orchestrator — decomposed, executed in parallel, verified, and merged autonomously.
 
 🐝 **Maximum Parallelism** — Every independent task runs at once. 7 tasks? 7 simultaneous agents.
 
@@ -145,24 +145,14 @@ Every feature below was built by the hivemind's own orchestrator — decomposed,
 | [Architecture](docs/architecture.md) | System design, component breakdown, data flow |
 | [Model Tiering](docs/model-tiering.md) | All supported models, tiers, costs, escalation chain |
 | [Project Structure](docs/project-structure.md) | File-by-file codebase reference |
+| [Roadmap](docs/roadmap.md) | Feature backlog and status tracking |
+| [Definition of Done](docs/definition-of-done.md) | Quality standards and self-dev rules |
 
 ## Roadmap
 
-Features the hivemind will build for itself next:
+The hAIvemind develops its own features. Next up: persistent skills, escalation control panel, dynamic DAG rewriting, pluggable agent backends, and more.
 
-🧠 **Persistent Skills** — Agents learn reusable scripts (lint, test, deploy) per project. Skills survive across sessions so the hivemind doesn't re-discover how to build/run your stack every time.
-
-🎛️ **Escalation Control Panel** — UI to customize the escalation chain per project. Pin certain tasks to specific models, set cost ceilings, or force free-tier-only mode.
-
-🔀 **Dynamic DAG Rewriting** — Orchestrator detects blocked dependency chains mid-execution and restructures the DAG on the fly — splitting, merging, or reordering tasks without restarting.
-
-🌐 **Multi-Workspace Swarm** — Spawn agents across multiple machines or containers. Distribute work across a cluster, not just local processes.
-
-🔌 **Pluggable Agent Backends** — Swap Copilot CLI for any agent runtime: Codex, Aider, Open Interpreter, local LLMs via Ollama. Mix backends in the same session.
-
-📜 **Session Replay** — Full timeline scrubber for past sessions. Replay the DAG execution frame-by-frame, inspect every agent's output at any point.
-
-📦 **Project Templates** — Pre-built skill packs for common stacks (Express API, React app, CLI tool). Hit the ground running with known-good decomposition patterns.
+See [docs/roadmap.md](docs/roadmap.md) for the full feature backlog with status tracking.
 
 ## License
 

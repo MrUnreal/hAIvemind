@@ -92,8 +92,9 @@ export default class WorkspaceManager {
    */
   listProjects() {
     return Object.values(this._registry.projects).map(entry => {
-      const meta = this._readProjectMeta(entry.slug);
-      return { ...entry, ...meta, dir: join(this.baseDir, entry.slug) };
+      const meta = entry.linked ? {} : this._readProjectMeta(entry.slug);
+      const dir = this._getProjectDir(entry.slug);
+      return { ...meta, ...entry, dir };
     });
   }
 
@@ -106,8 +107,9 @@ export default class WorkspaceManager {
     const entry = this._registry.projects[slug];
     if (!entry) return null;
 
-    const meta = this._readProjectMeta(slug);
-    return { ...entry, ...meta, dir: join(this.baseDir, slug) };
+    const meta = entry.linked ? {} : this._readProjectMeta(slug);
+    const dir = this._getProjectDir(slug);
+    return { ...meta, ...entry, dir };
   }
 
   /**
@@ -193,6 +195,7 @@ export default class WorkspaceManager {
     session.edges = summary.edges || [];
     session.agents = summary.agents || {};
     session.costSummary = summary.costSummary || null;
+    session.timeline = summary.timeline || [];
 
     writeFileSync(sessionFile, JSON.stringify(session, null, 2));
 

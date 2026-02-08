@@ -13,6 +13,14 @@
         <span v-if="costSummary" class="cost-badge">
           💰 {{ costSummary.totalPremiumRequests }}× premium requests
         </span>
+        <button
+          v-if="sessionStatus !== 'idle'"
+          class="replay-btn"
+          :class="{ active: replayMode }"
+          @click="replayMode = !replayMode"
+        >
+          🔄 Replay
+        </button>
       </div>
     </header>
 
@@ -33,7 +41,17 @@
 
     <!-- Step 3: Active/loaded session workspace -->
     <div v-else class="workspace">
-      <FlowCanvas class="flow-area" />
+      <div class="workspace-main">
+        <FlowCanvas class="flow-area" />
+        <SessionReplay
+          v-if="replayMode"
+          class="replay-panel"
+          :timeline="timeline"
+          :session-start="sessionStart"
+          :session-end="sessionEnd"
+          @update:replayState="onReplayStateUpdate"
+        />
+      </div>
       <div class="side-panel" :class="{ collapsed: sidePanelCollapsed }">
         <div class="side-tabs">
           <button
@@ -65,16 +83,18 @@
 </template>
 
 <script setup>
-import { ref, onMounted, watch } from 'vue';
+import { ref, onMounted, watch, computed } from 'vue';
 import ProjectPicker from './components/ProjectPicker.vue';
 import PromptInput from './components/PromptInput.vue';
 import FlowCanvas from './components/FlowCanvas.vue';
+import SessionReplay from './components/SessionReplay.vue';
 import AgentDetail from './components/AgentDetail.vue';
 import SessionHistory from './components/SessionHistory.vue';
 import OrchestratorChat from './components/OrchestratorChat.vue';
 import { useWebSocket } from './composables/useWebSocket.js';
 import {
   sessionStatus,
+  activeSessionId,
   tasks,
   edges,
   taskStatusMap,
@@ -83,6 +103,8 @@ import {
   selectedAgentId,
   costSummary,
   resetSession,
+  timeline,
+  loadSession,
 } from './composables/useSession.js';
 import {
   activeProject,
@@ -96,6 +118,9 @@ const { connected, on, send } = useWebSocket();
 const showPrompt = ref(false);
 const sideTab = ref('agent');
 const sidePanelCollapsed = ref(true);
+const replayMode = ref(false);
+const liveTasksSnapshot = ref(null);
+const liveEdgesSnapshot = ref(null);
 
 // Auto-open agent panel when a node is clicked
 watch(selectedAgentId, (val) => {
@@ -105,9 +130,54 @@ watch(selectedAgentId, (val) => {
   }
 });
 
+watch(replayMode, async (enabled) => {
+  if (enabled) {
+    liveTasksSnapshot.value = tasks.value.slice();
+    liveEdgesSnapshot.value = edges.value.slice();
+
+    if (
+      activeProject.value &&
+      activeSessionId.value &&
+      (!timeline.value || timeline.value.length === 0)
+    ) {
+      await loadSession(activeProject.value.slug, activeSessionId.value);
+    }
+  } else {
+    if (liveTasksSnapshot.value) {
+      tasks.value = liveTasksSnapshot.value;
+    }
+    if (liveEdgesSnapshot.value) {
+      edges.value = liveEdgesSnapshot.value;
+    }
+    liveTasksSnapshot.value = null;
+    liveEdgesSnapshot.value = null;
+  }
+});
+
+const sessionStart = computed(() => {
+  if (!timeline.value || timeline.value.length === 0) return 0;
+  const times = timeline.value
+    .map((e) => (typeof e.timestamp === 'number' ? e.timestamp : null))
+    .filter((t) => t != null);
+  if (times.length === 0) return 0;
+  return Math.min(...times);
+});
+
+const sessionEnd = computed(() => {
+  if (!timeline.value || timeline.value.length === 0) return sessionStart.value || 0;
+  const times = timeline.value
+    .map((e) => (typeof e.timestamp === 'number' ? e.timestamp : null))
+    .filter((t) => t != null);
+  if (times.length === 0) return sessionStart.value || 0;
+  return Math.max(...times);
+});
+
 // ── WS event handlers ──
 
 on('plan:created', (payload) => {
+  if (payload.sessionId) {
+    activeSessionId.value = payload.sessionId;
+  }
   if (payload.append) {
     // Iterative: append new tasks/edges to existing DAG
     tasks.value = [...tasks.value, ...payload.tasks];
@@ -176,20 +246,42 @@ on('verify:status', (payload) => {
   // Handled by OrchestratorChat
 });
 
+function onReplayStateUpdate(state) {
+  if (!replayMode.value) return;
+
+  const hasTasks = state && Array.isArray(state.filteredTasks) && state.filteredTasks.length > 0;
+  const hasEdges = state && Array.isArray(state.filteredEdges) && state.filteredEdges.length > 0;
+
+  if (hasTasks) {
+    tasks.value = state.filteredTasks;
+  } else if (liveTasksSnapshot.value) {
+    tasks.value = liveTasksSnapshot.value;
+  }
+
+  if (hasEdges) {
+    edges.value = state.filteredEdges;
+  } else if (liveEdgesSnapshot.value) {
+    edges.value = liveEdgesSnapshot.value;
+  }
+}
+
 function onSubmit(prompt) {
   if (!activeProject.value) return;
+  replayMode.value = false;
   sessionStatus.value = 'planning';
   showPrompt.value = false;
   send('session:start', { prompt, projectSlug: activeProject.value.slug });
 }
 
 function goHome() {
+  replayMode.value = false;
   resetSession();
   clearProject();
   showPrompt.value = false;
 }
 
 function goToProject() {
+  replayMode.value = false;
   resetSession();
   showPrompt.value = false;
 }
@@ -271,14 +363,41 @@ function goToProject() {
   color: #f5c542;
 }
 
+.replay-btn {
+  background: #1a1a2e;
+  border: 1px solid #333;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  color: #ccc;
+  cursor: pointer;
+}
+.replay-btn.active {
+  background: #f5c542;
+  border-color: #f5c542;
+  color: #111;
+}
+
 .workspace {
   display: flex;
   flex: 1;
   overflow: hidden;
 }
 
+.workspace-main {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+}
+
 .flow-area {
   flex: 1;
+}
+
+.replay-panel {
+  flex: 0 0 260px;
+  border-top: 1px solid #222;
 }
 
 .side-panel {

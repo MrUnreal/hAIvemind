@@ -29,9 +29,41 @@ const wss = new WebSocketServer({ server, path: '/ws' });
 const clients = new Set();
 
 function broadcast(msg) {
+  const parsed = parseMsg(msg);
+  if (parsed && (parsed.type === MSG.TASK_STATUS || parsed.type === MSG.AGENT_STATUS || parsed.type === MSG.VERIFICATION_STATUS)) {
+    recordTimelineEvent(parsed.type, parsed.payload);
+  }
   for (const ws of clients) {
     if (ws.readyState === ws.OPEN) ws.send(msg);
   }
+}
+
+/**
+ * Record timeline events for a session.
+ * @param {string} msgType
+ * @param {any} payload
+ */
+function recordTimelineEvent(msgType, payload) {
+  let sessionId;
+
+  if (msgType === MSG.VERIFICATION_STATUS) {
+    sessionId = payload?.sessionId;
+  } else if (msgType === MSG.TASK_STATUS || msgType === MSG.AGENT_STATUS) {
+    const taskId = payload?.taskId;
+    if (!taskId) return;
+    sessionId = taskToSession.get(taskId);
+  }
+
+  if (!sessionId) return;
+
+  const session = sessions.get(sessionId);
+  if (!session || !session.timeline) return;
+
+  session.timeline.push({
+    timestamp: Date.now(),
+    type: msgType,
+    data: payload || {},
+  });
 }
 
 wss.on('connection', (ws) => {
@@ -53,6 +85,9 @@ wss.on('connection', (ws) => {
 // ── Sessions ──
 /** @type {Map<string, object>} */
 const sessions = new Map();
+
+/** Map from taskId to sessionId for timeline attribution */
+const taskToSession = new Map();
 
 /** Active orchestrator contexts (for post-completion chat) */
 const activeContexts = new Map();
@@ -81,16 +116,21 @@ async function handleClientMessage(msg, ws) {
       return;
     }
     const repoRoot = process.cwd();
-    const worktreePath = prepareSelfDevWorkspace(repoRoot, featureName);
-    const projectSlug = 'haivemind-self-dev';
+    const projectSlug = `selfdev-${featureName}`;
+
+    // Create a dedicated project pointing at the repo root
     let project = workspace.getProject(projectSlug);
     if (!project) {
       try {
-        project = workspace.linkProject(projectSlug, worktreePath);
+        project = workspace.linkProject(projectSlug, repoRoot);
       } catch (err) {
-        console.error(`[selfdev] Failed to link self-dev project: ${err.message}`);
-        ws.send(makeMsg(MSG.SESSION_ERROR, { error: `Failed to link self-dev project: ${err.message}` }));
-        return;
+        // If slug collision, just reuse existing
+        project = workspace.getProject(projectSlug);
+        if (!project) {
+          console.error(`[selfdev] Failed to link project: ${err.message}`);
+          ws.send(makeMsg(MSG.SESSION_ERROR, { error: err.message }));
+          return;
+        }
       }
     }
 
@@ -100,9 +140,9 @@ async function handleClientMessage(msg, ws) {
         broadcast(makeMsg(MSG.CHAT_RESPONSE, {
           projectSlug,
           role: 'assistant',
-          content: '🧠 Planner mode: researching feature with T3 model...',
+          content: `🔬 Planner mode: researching "${featureName}" with T3 model...`,
         }));
-        const research = await plan(prompt, worktreePath);
+        const research = await plan(prompt, repoRoot);
         broadcast(makeMsg(MSG.PLAN_RESEARCH, { projectSlug, research }));
         broadcast(makeMsg(MSG.CHAT_RESPONSE, {
           projectSlug,
@@ -140,8 +180,8 @@ async function handleClientMessage(msg, ws) {
       ws.send(makeMsg(MSG.SESSION_ERROR, { error: err.message }));
       return;
     }
-    const diffSummary = getWorktreeDiffSummary(repoRoot, featureName);
-    broadcast(makeMsg(MSG.SELFDEV_DIFF, { diffSummary }));
+    // Report changes
+    broadcast(makeMsg(MSG.SELFDEV_DIFF, { featureName, projectSlug }));
   }
   if (msg.type === MSG.CHAT_MESSAGE) {
     const { message, projectSlug } = msg.payload;
@@ -169,7 +209,9 @@ async function startSession(userPrompt, projectSlug) {
   }
 
   const { sessionId, workDir, session } = workspace.startSession(projectSlug, userPrompt);
-  sessions.set(sessionId, { ...session, workDir, projectSlug });
+  /** @type {Array<{timestamp: number, type: 'task:status'|'agent:status'|'verify:status', data: object}>> */
+  const timeline = [];
+  sessions.set(sessionId, { ...session, workDir, projectSlug, timeline });
 
   console.log(`\n${'='.repeat(60)}`);
   console.log(`[session] New session: ${sessionId.slice(0, 8)}`);
@@ -188,6 +230,13 @@ async function startSession(userPrompt, projectSlug) {
     const stored = sessions.get(sessionId);
     stored.plan = plan;
     stored.status = 'running';
+
+    // Index tasks for timeline attribution
+    if (Array.isArray(plan.tasks)) {
+      for (const task of plan.tasks) {
+        if (task?.id) taskToSession.set(task.id, sessionId);
+      }
+    }
 
     // Build edges for the graph from dependencies
     const edges = [];
@@ -260,6 +309,7 @@ async function startSession(userPrompt, projectSlug) {
       edges,
       agents: agentManager.getSessionSnapshot(),
       costSummary: costSummaryData,
+      timeline,
     });
 
   } catch (err) {
@@ -273,7 +323,7 @@ async function startSession(userPrompt, projectSlug) {
       error: err.message,
     }));
 
-    workspace.finalizeSession(projectSlug, sessionId, { status: 'failed' });
+    workspace.finalizeSession(projectSlug, sessionId, { status: 'failed', timeline });
   }
 }
 
@@ -318,6 +368,11 @@ async function runVerifyFixLoop({ sessionId, projectSlug, plan, edges, agentMana
       id: `fix-${++fixCounter.n}-${t.id}`,
       dependencies: t.dependencies.map(d => `fix-${fixCounter.n}-${d}`),
     }));
+
+    // Index fix tasks for timeline attribution
+    for (const task of fixTasks) {
+      if (task?.id) taskToSession.set(task.id, sessionId);
+    }
 
     // Find current leaf task IDs (tasks nobody depends on)
     const depTargets = new Set(plan.tasks.flatMap(t => t.dependencies || []));
@@ -452,6 +507,12 @@ async function handleChatMessage(message, projectSlug) {
 
     // ── Build edges ──
     const allNewTasks = [promptNode, ...plan.tasks];
+
+    // Index iteration tasks for timeline attribution
+    for (const task of allNewTasks) {
+      if (task?.id) taskToSession.set(task.id, ctx.sessionId);
+    }
+
     const allNewEdges = [];
     for (const task of allNewTasks) {
       for (const depId of (task.dependencies || [])) {
