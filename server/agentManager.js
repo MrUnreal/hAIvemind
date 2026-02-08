@@ -173,7 +173,11 @@ export default class AgentManager {
     let prompt = `You are an expert software engineer. Complete the following task:\n\n`;
     prompt += `## Task: ${task.label}\n\n`;
     prompt += `${task.description}\n\n`;
-    prompt += `Create or modify files as needed. Be thorough and complete.\n`;
+    prompt += `Modify existing files in place when they exist. Only create new files when necessary. Be thorough and complete.\n`;
+
+    if (task.affectedFiles?.length) {
+      prompt += `\n## Key Files\nFocus on these files: ${task.affectedFiles.join(', ')}\n`;
+    }
 
     if (extraContext) {
       prompt += `\n## Additional Context (from previous failures)\n\n${extraContext}\n`;

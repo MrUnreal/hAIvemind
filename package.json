@@ -5,8 +5,10 @@
   "type": "module",
   "scripts": {
     "dev": "concurrently \"npm run dev:server\" \"npm run dev:client\"",
+    "dev:stable": "concurrently \"npm run dev:server:stable\" \"npm run dev:client\"",
     "dev:mock": "concurrently \"npm run dev:server:mock\" \"npm run dev:client\"",
     "dev:server": "node --watch server/index.js",
+    "dev:server:stable": "node server/index.js",
     "dev:server:mock": "node --watch server/index.js --mock",
     "dev:client": "cd client && npx vite --open",
     "build:client": "cd client && npx vite build"

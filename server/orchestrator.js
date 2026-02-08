@@ -42,11 +42,33 @@ Think of yourself as an architect specifying contracts/interfaces upfront so bui
 
 BAD (sequential): package.json → utils.js → service.js → cli.js → verify
 GOOD (parallel):   package.json → [utils.js, service.js, cli.js] → verify
-                   (all three middle tasks specify their shared interfaces upfront and run in parallel)`;
+                   (all three middle tasks specify their shared interfaces upfront and run in parallel)
+
+## Working With Existing Codebases
+You have access to the project's filesystem. Before planning tasks:
+1. EXPLORE the existing project structure — list files, read key modules, understand the architecture.
+2. RESPECT existing patterns — follow the code style, import conventions, and naming used in the project.
+3. For MODIFICATION tasks: reference specific existing files and describe what to change (not just what to create).
+4. For NEW features: identify where new code should live based on the existing structure.
+5. Include an "affectedFiles" list in each task's JSON output so agents know exactly which files to read and modify.
+6. NEVER recreate files that already exist — modify them in place.
+7. The JSON schema for tasks with affectedFiles:
+{
+  "tasks": [
+    {
+      "id": "task-1",
+      "label": "Short label",
+      "description": "Detailed instructions...",
+      "dependencies": [],
+      "affectedFiles": ["path/to/file.js", "path/to/other.js"]
+    }
+  ]
+}`;
 
   const prompt = `${systemPrompt}\n\n## User Request\n\n${userPrompt}`;
   // Use --silent for clean output (no stats), --allow-all for non-interactive
-  const fullArgs = [...modelConfig.args, prompt, '--silent', '--allow-all'];
+  // --add-dir gives the planner filesystem access to understand existing codebases
+  const fullArgs = [...modelConfig.args, prompt, '--silent', '--allow-all', '--add-dir', workDir];
 
   console.log(`[orchestrator] Decomposing with ${modelName} (${modelConfig.multiplier}× cost)...`);
 
