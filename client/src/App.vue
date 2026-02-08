@@ -24,6 +24,38 @@
       </div>
     </header>
 
+    <!-- Connection + error status overlays -->
+    <div v-if="reconnecting" class="status-overlay reconnecting-overlay">
+      <div class="status-banner reconnecting-banner">
+        <span class="status-dot pulse red"></span>
+        <span>Connection lost. Reconnecting...</span>
+      </div>
+    </div>
+
+    <div v-if="reconnectedNotification" class="status-toast reconnected-toast">
+      <div class="status-banner reconnected-banner">
+        <span>✅ Reconnected</span>
+      </div>
+    </div>
+
+    <div
+      v-if="sessionStatus === 'failed' || sessionError"
+      class="status-overlay error-overlay"
+    >
+      <div class="error-card">
+        <div class="error-header">
+          <span class="error-title">Something went wrong</span>
+          <p class="error-message">
+            {{ sessionError || 'The orchestrator hit an error while planning or running this session.' }}
+          </p>
+        </div>
+        <div class="error-actions">
+          <button class="error-btn primary" @click="retrySession">Retry</button>
+          <button class="error-btn secondary" @click="startNewSession">New Session</button>
+        </div>
+      </div>
+    </div>
+
     <!-- Step 1: Pick or create a project -->
     <ProjectPicker v-if="!hasActiveProject" />
 
@@ -36,24 +68,12 @@
     <!-- Step 2b: Enter prompt -->
     <PromptInput
       v-else-if="sessionStatus === 'idle' && showPrompt"
-      :disabled="!connected"
+      :connected="connected"
       @submit="onSubmit"
     />
 
     <!-- Step 3: Active/loaded session workspace -->
     <div v-else class="workspace">
-      <!-- Error overlay -->
-      <div v-if="sessionStatus === 'failed'" class="error-overlay">
-        <div class="error-card">
-          <span class="error-icon">❌</span>
-          <h2>Session Failed</h2>
-          <p class="error-message">{{ sessionError || 'An unknown error occurred' }}</p>
-          <div class="error-actions">
-            <button class="error-btn retry" @click="retrySession">🔄 Retry</button>
-            <button class="error-btn home" @click="goToProject">← Back to Project</button>
-          </div>
-        </div>
-      </div>
       <div class="workspace-main">
         <FlowCanvas class="flow-area" />
         <SessionReplay
@@ -90,13 +110,6 @@
           <AgentDetail v-if="sideTab === 'agent'" />
           <OrchestratorChat v-show="sideTab === 'chat'" />
         </div>
-      </div>
-    </div>
-    <!-- Reconnecting overlay -->
-    <div v-if="connectionLost" class="reconnect-overlay">
-      <div class="reconnect-card">
-        <span class="reconnect-spinner">🔌</span>
-        <span>Reconnecting...</span>
       </div>
     </div>
   </div>
@@ -142,6 +155,9 @@ const sidePanelCollapsed = ref(true);
 const replayMode = ref(false);
 const liveTasksSnapshot = ref(null);
 const liveEdgesSnapshot = ref(null);
+const reconnecting = ref(false);
+const reconnectedNotification = ref(false);
+let reconnectedTimeoutId = null;
 
 // Auto-open agent panel when a node is clicked
 watch(selectedAgentId, (val) => {
@@ -172,6 +188,22 @@ watch(replayMode, async (enabled) => {
     }
     liveTasksSnapshot.value = null;
     liveEdgesSnapshot.value = null;
+  }
+});
+
+watch(connectionLost, (now, prev) => {
+  if (!prev && now) {
+    reconnecting.value = true;
+  } else if (prev && !now) {
+    reconnecting.value = false;
+    reconnectedNotification.value = true;
+    if (reconnectedTimeoutId) {
+      clearTimeout(reconnectedTimeoutId);
+    }
+    reconnectedTimeoutId = setTimeout(() => {
+      reconnectedNotification.value = false;
+      reconnectedTimeoutId = null;
+    }, 3000);
   }
 });
 
@@ -242,7 +274,8 @@ on('session:complete', (payload) => {
 
 on('session:error', (payload) => {
   sessionStatus.value = 'failed';
-  console.error('Session error:', payload.error);
+  sessionError.value = payload?.error || 'An unexpected error occurred during this session.';
+  console.error('Session error:', payload?.error || payload);
 });
 
 on('iteration:start', (payload) => {
@@ -295,11 +328,13 @@ function onSubmit(prompt) {
   send('session:start', { prompt, projectSlug: activeProject.value.slug });
 }
 
-const lastPrompt = ref('');
-
 function retrySession() {
-  sessionError.value = null;
-  sessionStatus.value = 'idle';
+  resetSession();
+  showPrompt.value = true;
+}
+
+function startNewSession() {
+  resetSession();
   showPrompt.value = true;
 }
 
@@ -494,100 +529,140 @@ function goToProject() {
   overflow: hidden;
 }
 
+/* Session + connection status overlays */
+.status-overlay {
+  position: fixed;
+  left: 0;
+  right: 0;
+  z-index: 40;
+}
+
+.reconnecting-overlay {
+  top: 60px;
+  display: flex;
+  justify-content: center;
+  pointer-events: none;
+}
+
 .error-overlay {
-  position: absolute;
-  inset: 0;
-  z-index: 50;
+  top: 0;
+  bottom: 0;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(13, 13, 20, 0.85);
+  background: rgba(13, 13, 20, 0.94);
   backdrop-filter: blur(4px);
 }
 
-.error-card {
-  background: #1a1a2e;
-  border: 1px solid #f44336;
-  border-radius: 12px;
-  padding: 32px 40px;
-  text-align: center;
-  max-width: 480px;
+.status-toast {
+  position: fixed;
+  right: 24px;
+  bottom: 24px;
+  z-index: 45;
 }
 
-.error-icon {
-  font-size: 36px;
+.status-banner {
+  background: #0d0d14;
+  border: 1px solid #1a1a2e;
+  color: #ddd;
+  padding: 8px 16px;
+  border-radius: 999px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
 }
 
-.error-card h2 {
-  margin: 12px 0 8px;
-  font-size: 18px;
+.status-banner.reconnecting-banner {
+  border-color: #f44336;
   color: #f44336;
 }
 
+.status-banner.reconnected-banner {
+  border-color: #4caf50;
+  color: #6ecf6e;
+}
+
+.error-card {
+  background: #0d0d14;
+  border: 1px solid #1a1a2e;
+  border-radius: 16px;
+  padding: 24px 28px;
+  max-width: 520px;
+  width: calc(100% - 48px);
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.8);
+}
+
+.error-header {
+  margin-bottom: 16px;
+}
+
+.error-title {
+  display: block;
+  font-size: 16px;
+  font-weight: 600;
+  color: #f44336;
+  margin-bottom: 6px;
+}
+
 .error-message {
-  color: #aaa;
-  font-size: 13px;
-  margin-bottom: 20px;
-  word-break: break-word;
+  margin: 0;
+  font-size: 14px;
+  color: #ccc;
 }
 
 .error-actions {
   display: flex;
-  gap: 12px;
-  justify-content: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 4px;
 }
 
 .error-btn {
-  padding: 8px 20px;
-  border-radius: 8px;
-  border: 1px solid #333;
-  font-size: 13px;
+  padding: 8px 18px;
+  font-size: 14px;
+  font-weight: 500;
+  border-radius: 999px;
   cursor: pointer;
-  transition: background 0.2s;
+  border: 1px solid transparent;
+  background: transparent;
+  color: #e0e0e0;
 }
-.error-btn.retry {
-  background: #f5c542;
-  color: #111;
+
+.error-btn.primary {
+  background: #f44336;
+  border-color: #f44336;
+  color: #0d0d14;
+}
+
+.error-btn.primary:hover {
+  background: #ff6659;
+  border-color: #ff6659;
+}
+
+.error-btn.secondary {
+  border-color: #1a1a2e;
+  background: #111118;
+}
+
+.error-btn.secondary:hover {
   border-color: #f5c542;
 }
-.error-btn.retry:hover {
-  background: #e0b33a;
-}
-.error-btn.home {
-  background: #1a1a2e;
-  color: #ccc;
-}
-.error-btn.home:hover {
-  background: #252540;
+
+.status-dot.pulse {
+  box-shadow: 0 0 0 0 rgba(244, 67, 54, 0.7);
+  animation: status-pulse 1.2s infinite;
 }
 
-.reconnect-overlay {
-  position: fixed;
-  top: 16px;
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 100;
-}
-
-.reconnect-card {
-  background: #1a1a2e;
-  border: 1px solid #f5c542;
-  border-radius: 8px;
-  padding: 8px 20px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 13px;
-  color: #f5c542;
-  animation: pulse 1.5s ease-in-out infinite;
-}
-
-@keyframes pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.5; }
-}
-
-.workspace {
-  position: relative;
+@keyframes status-pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(244, 67, 54, 0.7);
+  }
+  70% {
+    box-shadow: 0 0 0 10px rgba(244, 67, 54, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(244, 67, 54, 0);
+  }
 }
 </style>

@@ -10,11 +10,11 @@
         rows="5"
         @keydown.ctrl.enter="submit"
         @keydown.meta.enter="submit"
-        :disabled="planning"
+        :disabled="planning || !props.connected"
       ></textarea>
 
       <div class="actions">
-        <button @click="submit" :disabled="!prompt.trim() || planning" class="btn-primary">
+        <button @click="submit" :disabled="!prompt.trim() || planning || !props.connected" class="btn-primary">
           {{ planning ? '🔄 Planning...' : '🐝 Build' }}
         </button>
         <span class="hint">Ctrl+Enter to submit</span>
@@ -38,15 +38,25 @@
 </template>
 
 <script setup>
-import { ref } from 'vue';
+import { ref, watch } from 'vue';
 import { sessionStatus } from '../composables/useSession.js';
 
 const emit = defineEmits(['submit']);
+const props = defineProps({
+  connected: {
+    type: Boolean,
+    default: true,
+  },
+});
 const prompt = ref('');
 const planning = ref(false);
 
+watch(sessionStatus, (status) => {
+  planning.value = status === 'planning';
+});
+
 function submit() {
-  if (!prompt.value.trim() || planning.value) return;
+  if (!prompt.value.trim() || planning.value || !props.connected) return;
   planning.value = true;
   emit('submit', prompt.value.trim());
 }
