@@ -5,3 +5,5 @@ dist/
 .playwright-mcp/
 *.log
 test-*.png
+test-results/
+playwright-report/
