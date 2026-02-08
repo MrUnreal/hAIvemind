@@ -233,19 +233,21 @@ If everything looks good, set passed=true. Each fix task should target ONE file.
     child.stdout.on('data', (data) => { output += data.toString(); });
     child.stderr.on('data', () => {});
 
-    child.on('close', () => {
+    child.on('close', (code) => {
       try {
         const result = parseJsonFromOutput(output);
         console.log(`[orchestrator] Verification: ${result.passed ? 'PASSED' : 'FAILED'} (${result.issues?.length || 0} issues)`);
         resolve(result);
       } catch {
-        console.log(`[orchestrator] Could not parse verification output, assuming passed`);
-        resolve({ passed: true, issues: [], followUpTasks: [] });
+        // If we can't parse output, verification did NOT pass — don't assume success
+        console.warn(`[orchestrator] Could not parse verification output (exit code ${code}), marking as failed`);
+        resolve({ passed: false, issues: ['Verification process produced unparseable output'], followUpTasks: [] });
       }
     });
 
-    child.on('error', () => {
-      resolve({ passed: true, issues: [], followUpTasks: [] });
+    child.on('error', (err) => {
+      console.error(`[orchestrator] Verification process error: ${err.message}`);
+      resolve({ passed: false, issues: [`Verification process crashed: ${err.message}`], followUpTasks: [] });
     });
   });
 }

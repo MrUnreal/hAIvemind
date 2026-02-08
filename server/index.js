@@ -115,6 +115,11 @@ async function handleClientMessage(msg, ws) {
 
     let predefinedPlan;
     if (templateId) {
+      // Sanitize templateId — alphanumeric, hyphens, and underscores only
+      if (!/^[a-zA-Z0-9_-]+$/.test(templateId)) {
+        ws.send(makeMsg(MSG.SESSION_ERROR, { error: 'Invalid template ID (alphanumeric, hyphens, underscores only)' }));
+        return;
+      }
       try {
         const templatesDir = path.resolve(process.cwd(), 'templates');
         const templatePath = path.join(templatesDir, `${templateId}.json`);

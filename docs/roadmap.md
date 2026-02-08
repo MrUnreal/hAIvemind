@@ -1,67 +1,113 @@
 # hAIvemind Roadmap
 
-> Features the hAIvemind will build for itself. Items move to the main feature list in the README once implemented and verified.
+> Features the hAIvemind will build for itself. Prioritized by impact — reliability before ambition.
 
 ## In Progress
 
-These features have been started via self-development sessions:
-
 | Feature | Status | Notes |
 |---------|--------|-------|
-| **Session Replay** | ✅ Implemented | Timeline scrubber, event log, DAG state at any point in time |
-| **Project Templates** | ✅ Implemented | 3 JSON templates (Express API, React SPA, CLI tool), /api/templates endpoint, templateId in SESSION_START |
+| **Harden the Core** | 🔧 In Progress | Fix critical bugs, add process timeouts, race condition guards |
+| **Error Recovery UX** | 🔧 In Progress | Visible error messages, planning failure handling, retry buttons |
 
 ## Planned
 
-### 🧠 Persistent Skills
-Agents learn reusable scripts (lint, test, deploy) per project. Skills survive across sessions so the hAIvemind doesn't re-discover how to build/run your stack every time.
+### Phase 1: Reliability & Correctness
 
-**Why it matters:** Currently every session starts cold. Agents re-learn the project's toolchain from scratch — wasteful when the project hasn't changed.
+#### 🛡️ Process Timeouts
+All CLI spawns (decompose, verify, plan, agents) wrapped with configurable timeouts. Kill on expiry instead of hanging forever.
 
-**Approach:** Store discovered build/test/lint commands as `.haivemind/skills.json`. Feed them to agents as prior knowledge in `_buildPrompt()`.
+**Why it matters:** A single hung `copilot` CLI process currently freezes the entire session with no recovery path. This is the #1 reliability risk.
 
----
-
-### 🎛️ Escalation Control Panel
-UI to customize the escalation chain per project. Pin certain tasks to specific models, set cost ceilings, or force free-tier-only mode.
-
-**Why it matters:** Different projects have different quality/cost tradeoffs. A throwaway prototype shouldn't burn T3 credits.
-
-**Approach:** Per-project settings in `workspace.js`, exposed via REST API, wired to a Vue component with dropdowns and toggles.
+**Approach:** Wrap all `spawn()` calls with a timeout (default 5min). Use `child.kill()` on expiry. Agent timeout → fail → retry with escalation. Orchestrator timeout → session error.
 
 ---
 
-### 🔀 Dynamic DAG Rewriting
-Orchestrator detects blocked dependency chains mid-execution and restructures the DAG on the fly — splitting, merging, or reordering tasks without restarting.
+#### 🔒 Session Locking
+Prevent concurrent sessions on the same project workspace. Queue or reject if another session is already writing to the same `workDir`.
 
-**Why it matters:** Sometimes a task that seemed sequential can be parallelized once prior work reveals the actual shape of the code.
+**Why it matters:** Two sessions writing to the same directory simultaneously causes file conflicts and corrupted output.
 
-**Approach:** Monitor DAG execution in `taskRunner.js`. When a task exceeds a time threshold and has no true data dependency on its blocker, fork it.
-
----
-
-### 🌐 Multi-Workspace Swarm
-Spawn agents across multiple machines or containers. Distribute work across a cluster, not just local processes.
-
-**Why it matters:** Local CPU/memory limits cap parallelism. Distributing agents unlocks true horizontal scaling.
-
-**Approach:** Agent manager abstraction layer — local subprocess vs. remote Docker/SSH agent. Orchestrator doesn't care where agents run.
+**Approach:** Lock Map keyed by `workDir`. `startSession()` checks lock before proceeding, releases on completion/failure. Return clear error to client if locked.
 
 ---
 
-### 🔌 Pluggable Agent Backends
-Swap Copilot CLI for any agent runtime: Codex, Aider, Open Interpreter, local LLMs via Ollama. Mix backends in the same session.
+#### 📡 WebSocket Resilience
+Message queuing during disconnect, exponential backoff reconnect, state re-sync on reconnect, handler cleanup.
+
+**Why it matters:** Messages sent during disconnect are silently dropped. Reconnected clients have stale state. No way to recover mid-session.
+
+**Approach:** Buffer `send()` calls while disconnected, flush on reconnect. Add `off()` to prevent handler duplication on HMR. Emit connect/disconnect events. Server sends current session state on reconnect.
+
+---
+
+#### 🧹 Memory Management
+Evict completed sessions from in-memory Maps. Cap agent output buffers. Clean up orphaned processes on shutdown.
+
+**Why it matters:** `sessions`, `taskToSession`, and `agentManager.agents` Maps grow indefinitely. Long-running servers accumulate dead data.
+
+**Approach:** Prune sessions after N minutes. `AgentManager.killAll()` for graceful shutdown. Cap output to last 100KB per agent. `process.on('SIGTERM')` cleanup handler.
+
+---
+
+### Phase 2: Intelligence & UX
+
+#### 🧠 Persistent Skills
+Agents learn reusable scripts (lint, test, deploy) per project. Skills survive across sessions.
+
+**Why it matters:** Every session starts cold. Agents re-learn the project's toolchain from scratch.
+
+**Approach:** Store discovered build/test/lint commands as `.haivemind/skills.json`. Feed to agents as prior knowledge in `_buildPrompt()`.
+
+---
+
+#### 🎛️ Escalation Control Panel
+UI to customize the escalation chain per project. Pin tasks to models, set cost ceilings, force free-tier-only mode.
+
+**Why it matters:** Different projects have different quality/cost tradeoffs.
+
+**Approach:** Per-project settings in `workspace.js`, REST API, Vue component.
+
+---
+
+#### 📊 Self-Reflection & Metrics
+After each session, capture what worked, what failed, time/cost profiles, and lessons learned.
+
+**Why it matters:** Without reflection data, the hAIvemind can't improve its own decomposition or model selection.
+
+**Approach:** Post-session analysis stored in `.haivemind/reflections/`. Feeds into persistent skills and prompt improvements.
+
+---
+
+### Phase 3: Scaling & Extensibility
+
+#### 🔀 Dynamic DAG Rewriting
+Detect blocked dependency chains mid-execution and restructure the DAG on the fly.
+
+**Why it matters:** Some tasks that seemed sequential can be parallelized once prior work reveals the shape.
+
+**Approach:** Monitor in `taskRunner.js`. When a task exceeds a time threshold with no true data dependency on its blocker, fork it.
+
+---
+
+#### 🔌 Pluggable Agent Backends
+Swap Copilot CLI for any agent runtime: Codex, Aider, Open Interpreter, local LLMs via Ollama.
 
 **Why it matters:** Lock-in to one CLI tool limits model choice and capabilities.
 
-**Approach:** Agent backend interface in `agentManager.js` — `spawn(prompt, workDir) → { stdout, exitCode }`. Copilot CLI is one implementation.
+**Approach:** Agent backend interface — `spawn(prompt, workDir) → { stdout, exitCode }`. Copilot CLI is one implementation.
 
 ---
 
+#### 🌐 Multi-Workspace Swarm
+Spawn agents across multiple machines or containers.
+
+**Why it matters:** Local CPU/memory limits cap parallelism.
+
+**Approach:** Agent manager abstraction — local subprocess vs. remote Docker/SSH agent.
+
+---
 
 ## Completed
-
-Features that have been fully implemented and verified:
 
 - ✅ **Maximum Parallelism** — All independent tasks run simultaneously
 - ✅ **Live DAG Visualization** — Status colors, runtime timers, edge highlighting, auto-focus

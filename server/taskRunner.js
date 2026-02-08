@@ -68,7 +68,8 @@ export default class TaskRunner {
     const eligible = [];
 
     for (const [taskId, state] of this.taskStates) {
-      if (state.status !== 'pending') continue;
+      // Skip tasks that aren't actionable
+      if (state.status !== 'pending' && state.status !== 'gated') continue;
       if (this.running >= config.maxConcurrency) break;
 
       const depsOk = state.task.dependencies.every(depId => {
@@ -125,6 +126,8 @@ export default class TaskRunner {
    * Launch a single task.
    */
   async _launchTask(state) {
+    // Guard against double-launch from concurrent _scheduleEligible calls
+    if (state.status === 'running') return;
     state.status = 'running';
     state.startedAt = Date.now();
     this.running++;
@@ -135,23 +138,41 @@ export default class TaskRunner {
       .map(r => `Previous failure: ${r.summary}\nSuggested fix: ${r.suggestedFix}`)
       .join('\n\n');
 
-    const agent = await this.agentManager.spawn(
-      state.task,
-      state.retries,
-      this.workDir,
-      extraContext,
-    );
+    try {
+      const agent = await this.agentManager.spawn(
+        state.task,
+        state.retries,
+        this.workDir,
+        extraContext,
+      );
 
-    state.agentIds.push(agent.id);
-    this.running--;
+      state.agentIds.push(agent.id);
 
-    if (agent.status === 'success') {
-      state.status = 'success';
-      state.completedAt = Date.now();
+      if (agent.status === 'success') {
+        state.status = 'success';
+        state.completedAt = Date.now();
+        this._broadcastTaskStatus(state);
+        console.log(`[taskRunner] Task "${state.task.label}" succeeded (${agent.modelTier}, retry ${state.retries})`);
+      } else {
+        await this._handleFailure(state, agent);
+      }
+    } catch (err) {
+      console.error(`[taskRunner] Task "${state.task.label}" spawn error: ${err.message}`);
+      state.failureReports.push({
+        failedTaskId: state.task.id,
+        summary: `Agent spawn error: ${err.message}`,
+        suggestedFix: 'Retry with escalated model',
+        category: 'spawn-error',
+      });
+      state.retries++;
+      if (state.retries >= config.maxRetriesTotal) {
+        state.status = 'blocked';
+      } else {
+        state.status = 'pending';
+      }
       this._broadcastTaskStatus(state);
-      console.log(`[taskRunner] Task "${state.task.label}" succeeded (${agent.modelTier}, retry ${state.retries})`);
-    } else {
-      await this._handleFailure(state, agent);
+    } finally {
+      this.running--;
     }
 
     // Check if all done
