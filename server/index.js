@@ -1253,6 +1253,94 @@ app.get('/api/templates', async (req, res) => {
   }
 });
 
+// ── Backend REST API (Phase 5.8) ──
+import { listBackends } from './backends/index.js';
+import SwarmManager, { createSwarm } from './swarm/index.js';
+
+app.get('/api/backends', (_req, res) => {
+  const names = listBackends();
+  const result = names.map(name => ({
+    name,
+    active: name === config.defaultBackend,
+    config: config.backends?.[name] || {},
+  }));
+  res.json(result);
+});
+
+app.get('/api/backends/active', (_req, res) => {
+  res.json({ name: config.defaultBackend });
+});
+
+app.put('/api/backends/active', (req, res) => {
+  const { name } = req.body || {};
+  if (!name || !listBackends().includes(name)) {
+    return res.status(400).json({ error: `Unknown backend: "${name}". Available: ${listBackends().join(', ')}` });
+  }
+  config.defaultBackend = name;
+  res.json({ ok: true, name });
+});
+
+app.get('/api/backends/:name', (req, res) => {
+  const { name } = req.params;
+  if (!listBackends().includes(name)) {
+    return res.status(404).json({ error: `Backend "${name}" not found` });
+  }
+  res.json({ name, config: config.backends?.[name] || {} });
+});
+
+app.put('/api/backends/:name', (req, res) => {
+  const { name } = req.params;
+  if (!listBackends().includes(name)) {
+    return res.status(404).json({ error: `Backend "${name}" not found` });
+  }
+  if (!config.backends) config.backends = {};
+  config.backends[name] = { ...(config.backends[name] || {}), ...(req.body || {}) };
+  res.json({ ok: true, name, config: config.backends[name] });
+});
+
+// ── Swarm REST API (Phase 5.8) ──
+let swarmInstance = config.swarm?.enabled ? createSwarm(config.swarm) : null;
+
+app.get('/api/swarm', (_req, res) => {
+  res.json({
+    enabled: !!config.swarm?.enabled,
+    totalCapacity: swarmInstance?.totalCapacity() ?? 0,
+    runners: swarmInstance?.runners.map((r, i) => ({
+      index: i,
+      type: r.type,
+      capacity: r.capacity(),
+    })) ?? [],
+    description: swarmInstance?.describe() ?? 'disabled',
+  });
+});
+
+app.put('/api/swarm', (req, res) => {
+  const { enabled } = req.body || {};
+  if (typeof enabled === 'boolean') {
+    if (!config.swarm) config.swarm = { enabled: false, runners: [] };
+    config.swarm.enabled = enabled;
+    if (enabled && !swarmInstance) {
+      swarmInstance = createSwarm(config.swarm);
+    } else if (!enabled) {
+      swarmInstance = null;
+    }
+  }
+  res.json({
+    ok: true,
+    enabled: !!config.swarm?.enabled,
+    totalCapacity: swarmInstance?.totalCapacity() ?? 0,
+  });
+});
+
+app.get('/api/swarm/runners', (_req, res) => {
+  if (!swarmInstance) return res.json([]);
+  res.json(swarmInstance.runners.map((r, i) => ({
+    index: i,
+    type: r.type,
+    capacity: r.capacity(),
+  })));
+});
+
 // ── Plugin REST API (Phase 5.7) ──
 app.get('/api/plugins', (_req, res) => {
   res.json(pluginManager.list());
