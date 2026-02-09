@@ -16,6 +16,18 @@ export default defineConfig({
       use: { browserName: 'chromium' },
     },
   ],
-  // Don't start servers — we start them manually
-  webServer: undefined,
+  webServer: [
+    {
+      command: 'node server/index.js --mock',
+      port: 3000,
+      reuseExistingServer: true,
+      timeout: 15000,
+    },
+    {
+      command: 'cd client && npx vite --port 5173',
+      port: 5173,
+      reuseExistingServer: true,
+      timeout: 15000,
+    },
+  ],
 });

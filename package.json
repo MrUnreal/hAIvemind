@@ -19,6 +19,8 @@
     "dev:server:mock": "node --watch server/index.js --mock",
     "dev:client": "cd client && npx vite --open",
     "build:client": "cd client && npx vite build",
+    "test": "npx playwright test --ignore-snapshots",
+    "test:ci": "npx playwright test --ignore-snapshots --forbid-only --reporter=list",
     "docker:build": "docker build -t haivemind:latest .",
     "docker:up": "docker compose up -d",
     "docker:down": "docker compose down"
