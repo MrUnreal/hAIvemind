@@ -340,6 +340,15 @@ async function startSession(userPrompt, projectSlug, predefinedPlan) {
     return;
   }
 
+  // Phase 2: Load persistent skills and project settings
+  const skills = workspace.getSkills(projectSlug);
+  const settings = workspace.getProjectSettings(projectSlug);
+  const overrides = {
+    escalation: settings.escalation,
+    maxRetriesTotal: settings.maxRetriesTotal,
+    pinnedModels: settings.pinnedModels,
+  };
+
   const { sessionId, workDir, session } = workspace.startSession(projectSlug, userPrompt);
   const lockResult = acquireLock(workDir, sessionId, projectSlug);
   if (lockResult.locked) {
@@ -372,7 +381,7 @@ async function startSession(userPrompt, projectSlug, predefinedPlan) {
     // Agents have --add-dir and can explore the codebase themselves.
     const plan = predefinedPlan || (DEMO
       ? await decomposeMock(userPrompt)
-      : await decompose(userPrompt, workDir));
+      : await decompose(userPrompt, workDir, { skills }));
 
     const stored = sessions.get(sessionId);
     stored.plan = plan;
@@ -401,7 +410,7 @@ async function startSession(userPrompt, projectSlug, predefinedPlan) {
     }));
 
     // Step 2: Execute tasks via TaskRunner
-    const agentManager = new AgentManager(broadcast, DEMO);
+    const agentManager = new AgentManager(broadcast, DEMO, { skills, overrides });
     // Filter out TaskRunner's own session:complete — we send it explicitly after verification
     const taskRunnerBroadcast = (msg) => {
       const parsed = parseMsg(msg);
@@ -427,6 +436,7 @@ async function startSession(userPrompt, projectSlug, predefinedPlan) {
         workDir,
         maxRounds: 3,
         fixCounter: { n: 0 },
+        skills,
       });
     }
 
@@ -461,6 +471,23 @@ async function startSession(userPrompt, projectSlug, predefinedPlan) {
     });
     releaseLock(workDir, sessionId);
 
+    // Phase 2: Post-session analysis — extract skills and generate reflection
+    try {
+      const reflection = generateReflection(plan, agentManager, costSummaryData, session);
+      workspace.saveReflection(projectSlug, sessionId, reflection);
+      broadcast(makeMsg(MSG.REFLECTION_CREATED, { projectSlug, sessionId, reflection }));
+
+      // Extract and save discovered skills from agent outputs
+      const discoveredSkills = extractSkills(agentManager);
+      if (Object.values(discoveredSkills).some(arr => arr.length > 0)) {
+        const merged = workspace.saveSkills(projectSlug, discoveredSkills);
+        broadcast(makeMsg(MSG.SKILLS_UPDATE, { projectSlug, skills: merged }));
+        console.log(`[skills] Updated skills for "${projectSlug}": ${JSON.stringify(discoveredSkills)}`);
+      }
+    } catch (reflErr) {
+      console.warn(`[reflection] Post-session analysis failed: ${reflErr.message}`);
+    }
+
   } catch (err) {
     console.error(`[session] Error: ${err.message}`);
     const stored = sessions.get(sessionId);
@@ -485,7 +512,7 @@ async function startSession(userPrompt, projectSlug, predefinedPlan) {
  * Fix tasks are added as real nodes in the DAG for full visibility.
  * @param {object} opts - { sessionId, projectSlug, plan, edges, agentManager, workDir, maxRounds, fixCounter }
  */
-async function runVerifyFixLoop({ sessionId, projectSlug, plan, edges, agentManager, workDir, maxRounds = 3, fixCounter = { n: 0 } }) {
+async function runVerifyFixLoop({ sessionId, projectSlug, plan, edges, agentManager, workDir, maxRounds = 3, fixCounter = { n: 0 }, skills }) {
   for (let round = 0; round < maxRounds; round++) {
     broadcast(makeMsg(MSG.VERIFICATION_STATUS, {
       sessionId,
@@ -493,7 +520,7 @@ async function runVerifyFixLoop({ sessionId, projectSlug, plan, edges, agentMana
       message: round === 0 ? 'Verifying project integrity...' : `Re-verifying after fixes (round ${round + 1})...`,
     }));
 
-    const verifyResult = await verify(plan, workDir);
+    const verifyResult = await verify(plan, workDir, { skills });
 
     if (verifyResult.passed || !verifyResult.followUpTasks?.length) {
       broadcast(makeMsg(MSG.VERIFICATION_STATUS, {
@@ -693,7 +720,14 @@ async function handleChatMessage(message, projectSlug) {
         dependencies: t.dependencies.filter(d => d !== promptNodeId),
       })),
     };
-    const agentManager = new AgentManager(broadcast, DEMO);
+    const iterSkills = workspace.getSkills(projectSlug);
+    const iterSettings = workspace.getProjectSettings(projectSlug);
+    const iterOverrides = {
+      escalation: iterSettings.escalation,
+      maxRetriesTotal: iterSettings.maxRetriesTotal,
+      pinnedModels: iterSettings.pinnedModels,
+    };
+    const agentManager = new AgentManager(broadcast, DEMO, { skills: iterSkills, overrides: iterOverrides });
     const filteredBroadcast = (msg) => {
       const parsed = parseMsg(msg);
       if (parsed?.type === MSG.SESSION_COMPLETE) return;
@@ -749,6 +783,125 @@ async function handleChatMessage(message, projectSlug) {
       error: err.message,
     }));
   }
+}
+
+// ═══════════════════════════════════════════════════════════
+//  Phase 2: Post-session analysis helpers
+// ═══════════════════════════════════════════════════════════
+
+/**
+ * Generate a reflection summary from a completed session.
+ */
+function generateReflection(plan, agentManager, costSummary, session) {
+  const agents = [...agentManager.agents.values()];
+  const tasks = plan.tasks.filter(t => t.type !== 'prompt');
+
+  const succeeded = agents.filter(a => a.status === 'success');
+  const failed = agents.filter(a => a.status === 'failed');
+  const totalRetries = agents.reduce((sum, a) => sum + a.retries, 0);
+  const duration = session.createdAt
+    ? Date.now() - session.createdAt
+    : null;
+
+  // Identify which tiers were used
+  const tierUsage = {};
+  for (const agent of agents) {
+    tierUsage[agent.modelTier] = (tierUsage[agent.modelTier] || 0) + 1;
+  }
+
+  // Identify tasks that needed escalation (retries > 0 on their last agent)
+  const escalatedTasks = [];
+  const taskAgents = {};
+  for (const agent of agents) {
+    if (!taskAgents[agent.taskId] || agent.retries > taskAgents[agent.taskId].retries) {
+      taskAgents[agent.taskId] = agent;
+    }
+  }
+  for (const [taskId, agent] of Object.entries(taskAgents)) {
+    if (agent.retries > 0) {
+      const task = tasks.find(t => t.id === taskId);
+      escalatedTasks.push({
+        taskId,
+        label: task?.label || taskId,
+        retriesNeeded: agent.retries,
+        finalTier: agent.modelTier,
+      });
+    }
+  }
+
+  return {
+    status: failed.length > succeeded.length ? 'mostly-failed' : 'mostly-succeeded',
+    durationMs: duration,
+    taskCount: tasks.length,
+    agentCount: agents.length,
+    successCount: succeeded.length,
+    failCount: failed.length,
+    retryRate: agents.length > 0 ? +(totalRetries / agents.length).toFixed(2) : 0,
+    tierUsage,
+    escalatedTasks,
+    costSummary: costSummary || null,
+  };
+}
+
+/**
+ * Extract discoverable skills from agent output (build/test/lint commands).
+ */
+function extractSkills(agentManager) {
+  const allOutput = [...agentManager.agents.values()]
+    .flatMap(a => a.output)
+    .join('\n');
+
+  const skills = {
+    buildCommands: [],
+    testCommands: [],
+    lintCommands: [],
+    patterns: [],
+  };
+
+  // Match common command patterns from agent outputs
+  const buildPatterns = [
+    /(?:npm|yarn|pnpm)\s+run\s+build/g,
+    /(?:npm|yarn|pnpm)\s+run\s+dev/g,
+    /tsc\b/g,
+    /vite\s+build/g,
+    /webpack\b/g,
+    /cargo\s+build/g,
+    /go\s+build/g,
+    /make\b(?:\s+\w+)?/g,
+    /python\s+setup\.py\s+build/g,
+    /pip\s+install/g,
+  ];
+
+  const testPatterns = [
+    /(?:npm|yarn|pnpm)\s+(?:run\s+)?test/g,
+    /(?:npx\s+)?(?:jest|vitest|mocha|playwright|pytest|cargo\s+test|go\s+test)/g,
+    /node\s+--test/g,
+  ];
+
+  const lintPatterns = [
+    /(?:npm|yarn|pnpm)\s+run\s+lint/g,
+    /(?:npx\s+)?(?:eslint|prettier|biome|rustfmt)/g,
+  ];
+
+  for (const pat of buildPatterns) {
+    const matches = allOutput.match(pat);
+    if (matches) skills.buildCommands.push(...matches);
+  }
+  for (const pat of testPatterns) {
+    const matches = allOutput.match(pat);
+    if (matches) skills.testCommands.push(...matches);
+  }
+  for (const pat of lintPatterns) {
+    const matches = allOutput.match(pat);
+    if (matches) skills.lintCommands.push(...matches);
+  }
+
+  // Deduplicate
+  skills.buildCommands = [...new Set(skills.buildCommands)];
+  skills.testCommands = [...new Set(skills.testCommands)];
+  skills.lintCommands = [...new Set(skills.lintCommands)];
+
+  return skills;
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -853,6 +1006,50 @@ app.post('/api/projects/:slug/sessions', async (req, res) => {
   if (!prompt) return res.status(400).json({ error: 'No prompt provided' });
   startSession(prompt, req.params.slug);
   res.json({ status: 'started', project: req.params.slug });
+});
+
+// ═══════════════════════════════════════════════════════════
+//  REST API — Phase 2: Skills, Reflections, Settings
+// ═══════════════════════════════════════════════════════════
+
+/** Get project skills */
+app.get('/api/projects/:slug/skills', (req, res) => {
+  const project = workspace.getProject(req.params.slug);
+  if (!project) return res.status(404).json({ error: 'Project not found' });
+  res.json(workspace.getSkills(req.params.slug));
+});
+
+/** Update project skills (merge) */
+app.put('/api/projects/:slug/skills', (req, res) => {
+  const project = workspace.getProject(req.params.slug);
+  if (!project) return res.status(404).json({ error: 'Project not found' });
+  const merged = workspace.saveSkills(req.params.slug, req.body);
+  broadcast(makeMsg(MSG.SKILLS_UPDATE, { projectSlug: req.params.slug, skills: merged }));
+  res.json(merged);
+});
+
+/** Get project reflections */
+app.get('/api/projects/:slug/reflections', (req, res) => {
+  const project = workspace.getProject(req.params.slug);
+  if (!project) return res.status(404).json({ error: 'Project not found' });
+  const limit = parseInt(req.query.limit) || 20;
+  res.json(workspace.getReflections(req.params.slug, limit));
+});
+
+/** Get project settings */
+app.get('/api/projects/:slug/settings', (req, res) => {
+  const project = workspace.getProject(req.params.slug);
+  if (!project) return res.status(404).json({ error: 'Project not found' });
+  res.json(workspace.getProjectSettings(req.params.slug));
+});
+
+/** Update project settings (shallow merge) */
+app.put('/api/projects/:slug/settings', (req, res) => {
+  const project = workspace.getProject(req.params.slug);
+  if (!project) return res.status(404).json({ error: 'Project not found' });
+  const updated = workspace.updateProjectSettings(req.params.slug, req.body);
+  broadcast(makeMsg(MSG.SETTINGS_UPDATE, { projectSlug: req.params.slug, settings: updated }));
+  res.json(updated);
 });
 
 // ── Utility routes ──

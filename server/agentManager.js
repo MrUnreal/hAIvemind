@@ -23,12 +23,18 @@ import { spawnMockAgent } from './mock.js';
  */
 
 export default class AgentManager {
-  /** @param {(msg: string) => void} broadcast
-   *  @param {boolean} [demo=false]
+  /**
+   * @param {(msg: string) => void} broadcast
+   * @param {boolean} [demo=false]
+   * @param {object} [opts]
+   * @param {object} [opts.skills] - Persistent skills for this project
+   * @param {object} [opts.overrides] - Per-project escalation/model overrides
    */
-  constructor(broadcast, demo = false) {
+  constructor(broadcast, demo = false, opts = {}) {
     this.broadcast = broadcast;
     this.demo = demo;
+    this.skills = opts.skills || null;
+    this.overrides = opts.overrides || null;
     /** @type {Map<string, Agent>} */
     this.agents = new Map();
   }
@@ -42,7 +48,7 @@ export default class AgentManager {
    * @returns {Promise<Agent>}
    */
   spawn(task, retryIndex, workDir, extraContext = '') {
-    const { tierName, modelName, modelConfig } = getModelForRetry(retryIndex);
+    const { tierName, modelName, modelConfig } = getModelForRetry(retryIndex, this.overrides, task.label);
 
     // Build human-readable escalation reason
     const reason = this._buildEscalationReason(retryIndex, tierName, modelName);
@@ -195,53 +201,12 @@ export default class AgentManager {
         }));
       });
 
-      child.on('close', (code) => {
-        return onClose(code);
-        agent.finishedAt = Date.now();
-        agent.status = code === 0 ? 'success' : 'failed';
-        agent.process = null;
+      child.on('close', (code) => onClose(code));
 
-        console.log(`[agent:${agent.id.slice(0, 8)}] Exited with code ${code} → ${agent.status}`);
+      child.on('error', (err) => onError(err));
 
-        this.broadcast(makeMsg(MSG.AGENT_STATUS, {
-          agentId: agent.id,
-          taskId: task.id,
-          taskLabel: task.label,
-          status: agent.status,
-          model: modelName,
-          modelTier: tierName,
-          multiplier: modelConfig.multiplier,
-          retries: retryIndex,
-          reason,
-        }));
-
-        resolve(agent);
-      });
-
-      child.on('error', (err) => {
-        return onError(err);
-        agent.finishedAt = Date.now();
-        agent.status = 'failed';
-        agent.output.push(`[spawn error] ${err.message}`);
-        agent.process = null;
-
-        console.error(`[agent:${agent.id.slice(0, 8)}] Spawn error: ${err.message}`);
-
-        this.broadcast(makeMsg(MSG.AGENT_STATUS, {
-          agentId: agent.id,
-          taskId: task.id,
-          taskLabel: task.label,
-          status: 'failed',
-          model: modelName,
-          modelTier: tierName,
-          multiplier: modelConfig.multiplier,
-          retries: retryIndex,
-          reason,
-        }));
-
-        resolve(agent);
-      });
-
+      // Note: dead duplicate handlers removed in Phase 2 cleanup
+      // (previously had unreachable code after return onClose/onError calls)
       timeoutId = setTimeout(() => {
         if (settled) return;
         settled = true;
@@ -298,6 +263,20 @@ export default class AgentManager {
 
     if (task.affectedFiles?.length) {
       prompt += `\n## Key Files\nFocus on these files: ${task.affectedFiles.join(', ')}\n`;
+    }
+
+    // Phase 2: Inject persistent skills as prior knowledge
+    if (this.skills) {
+      const skillLines = [];
+      if (this.skills.buildCommands?.length) skillLines.push(`Build: ${this.skills.buildCommands.join(', ')}`);
+      if (this.skills.testCommands?.length) skillLines.push(`Test: ${this.skills.testCommands.join(', ')}`);
+      if (this.skills.lintCommands?.length) skillLines.push(`Lint: ${this.skills.lintCommands.join(', ')}`);
+      if (this.skills.deployCommands?.length) skillLines.push(`Deploy: ${this.skills.deployCommands.join(', ')}`);
+      if (this.skills.patterns?.length) skillLines.push(`Patterns: ${this.skills.patterns.join('; ')}`);
+
+      if (skillLines.length > 0) {
+        prompt += `\n## Project Knowledge (from previous sessions)\n${skillLines.join('\n')}\n`;
+      }
     }
 
     if (extraContext) {

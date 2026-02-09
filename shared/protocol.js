@@ -23,6 +23,11 @@ export const MSG = {
   ITERATION_START: 'iteration:start',
   ITERATION_COMPLETE: 'iteration:complete',
   RECONNECT_SYNC: 'reconnect:sync',
+
+  // Phase 2 — Intelligence & UX
+  SKILLS_UPDATE: 'skills:update',
+  REFLECTION_CREATED: 'reflection:created',
+  SETTINGS_UPDATE: 'settings:update',
 };
 
 export function makeMsg(type, payload) {

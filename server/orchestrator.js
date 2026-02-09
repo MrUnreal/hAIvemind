@@ -91,7 +91,7 @@ Output ONLY valid JSON (no markdown fences, no preamble):
  * Call the orchestrator (T3) model to decompose a user prompt into tasks.
  * Returns a plan: { tasks: [{ id, label, description, dependencies }] }
  */
-export async function decompose(userPrompt, workDir, { fileTree } = {}) {
+export async function decompose(userPrompt, workDir, { fileTree, skills } = {}) {
   const { modelName, modelConfig } = getOrchestratorModel();
   const timeoutMs = config.orchestratorTimeoutMs;
   const timeoutMinutes = Math.round(timeoutMs / 60000);
@@ -145,6 +145,18 @@ When modifying an existing project (file tree provided below), reference specifi
   // If a file tree is provided, include it so the planner is codebase-aware
   if (fileTree) {
     prompt += `\n\n## Existing Project Structure\n\n\`\`\`\n${fileTree}\n\`\`\``;
+  }
+
+  // Phase 2: Inject persistent skills as project knowledge
+  if (skills) {
+    const skillLines = [];
+    if (skills.buildCommands?.length) skillLines.push(`Build commands: ${skills.buildCommands.join(', ')}`);
+    if (skills.testCommands?.length) skillLines.push(`Test commands: ${skills.testCommands.join(', ')}`);
+    if (skills.lintCommands?.length) skillLines.push(`Lint commands: ${skills.lintCommands.join(', ')}`);
+    if (skills.patterns?.length) skillLines.push(`Known patterns: ${skills.patterns.join('; ')}`);
+    if (skillLines.length > 0) {
+      prompt += `\n\n## Project Knowledge (from previous sessions)\n${skillLines.join('\n')}`;
+    }
   }
 
   // Use --silent for clean output (no stats), --allow-all for non-interactive
@@ -209,12 +221,24 @@ When modifying an existing project (file tree provided below), reference specifi
  * Verify project quality after all tasks are completed.
  * Returns: { passed: boolean, issues: string[], followUpTasks: [] }
  */
-export async function verify(plan, workDir) {
+export async function verify(plan, workDir, { skills } = {}) {
   const { modelConfig } = getOrchestratorModel();
   const timeoutMs = config.orchestratorTimeoutMs;
   const timeoutMinutes = Math.round(timeoutMs / 60000);
 
   const taskList = plan.tasks.map(t => `- ${t.label}: ${t.description}`).join('\n');
+
+  // Phase 2: Build skills hint for verification
+  let skillsHint = '';
+  if (skills) {
+    const lines = [];
+    if (skills.testCommands?.length) lines.push(`Known test commands: ${skills.testCommands.join(', ')}`);
+    if (skills.buildCommands?.length) lines.push(`Known build commands: ${skills.buildCommands.join(', ')}`);
+    if (skills.lintCommands?.length) lines.push(`Known lint commands: ${skills.lintCommands.join(', ')}`);
+    if (lines.length > 0) {
+      skillsHint = `\n\n## Project Knowledge\nUse these known commands when possible:\n${lines.join('\n')}`;
+    }
+  }
 
   const prompt = `You are a senior software engineer doing a thorough code review with TEST-DRIVEN VERIFICATION.
 All tasks below have been completed by coding agents. Your job:
@@ -254,7 +278,10 @@ Output ONLY valid JSON (no markdown fences):
 }
 If everything looks good, set passed=true. Each fix task should target ONE file.`;
 
-  const fullArgs = [...modelConfig.args, prompt, '--silent', '--allow-all', '--add-dir', workDir];
+  // Append skills hint if available
+  const finalPrompt = skillsHint ? prompt + skillsHint : prompt;
+
+  const fullArgs = [...modelConfig.args, finalPrompt, '--silent', '--allow-all', '--add-dir', workDir];
 
   console.log(`[orchestrator] Running verification in ${workDir}...`);
 

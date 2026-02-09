@@ -100,6 +100,18 @@
             💬 Chat
           </button>
           <button
+            :class="['tab-btn', { active: sideTab === 'settings' }]"
+            @click="sideTab = 'settings'; sidePanelCollapsed = false"
+          >
+            ⚙️ Settings
+          </button>
+          <button
+            :class="['tab-btn', { active: sideTab === 'metrics' }]"
+            @click="sideTab = 'metrics'; sidePanelCollapsed = false"
+          >
+            📊 Metrics
+          </button>
+          <button
             class="tab-collapse"
             @click="sidePanelCollapsed = !sidePanelCollapsed"
           >
@@ -109,6 +121,8 @@
         <div v-show="!sidePanelCollapsed" class="side-content">
           <AgentDetail v-if="sideTab === 'agent'" />
           <OrchestratorChat v-show="sideTab === 'chat'" />
+          <SettingsPanel v-if="sideTab === 'settings'" @close="sidePanelCollapsed = true" />
+          <MetricsDashboard v-if="sideTab === 'metrics'" @close="sidePanelCollapsed = true" />
         </div>
       </div>
     </div>
@@ -124,6 +138,8 @@ import SessionReplay from './components/SessionReplay.vue';
 import AgentDetail from './components/AgentDetail.vue';
 import SessionHistory from './components/SessionHistory.vue';
 import OrchestratorChat from './components/OrchestratorChat.vue';
+import SettingsPanel from './components/SettingsPanel.vue';
+import MetricsDashboard from './components/MetricsDashboard.vue';
 import { useWebSocket } from './composables/useWebSocket.js';
 import {
   sessionStatus,
@@ -147,6 +163,12 @@ import {
   sessions,
   fetchSessions,
 } from './composables/useProjects.js';
+import {
+  projectSkills,
+  latestReflection,
+  loadProjectIntelligence,
+  resetProjectIntelligence,
+} from './composables/useProjectSettings.js';
 
 const { connected, connectionLost, on, send } = useWebSocket();
 const showPrompt = ref(false);
@@ -316,6 +338,28 @@ on('verify:status', (payload) => {
   // Handled by OrchestratorChat
 });
 
+// Phase 2: Handle skills + reflection updates
+on('skills:update', (payload) => {
+  if (payload.skills) {
+    projectSkills.value = payload.skills;
+  }
+});
+
+on('reflection:created', (payload) => {
+  if (payload.reflection) {
+    latestReflection.value = payload.reflection;
+  }
+});
+
+// Load Phase 2 intelligence data when project is selected
+watch(activeProject, async (project) => {
+  if (project?.slug) {
+    loadProjectIntelligence(project.slug);
+  } else {
+    resetProjectIntelligence();
+  }
+});
+
 function onReplayStateUpdate(state) {
   if (!replayMode.value) return;
 
@@ -380,6 +424,7 @@ function startNewSession() {
 function goHome() {
   replayMode.value = false;
   resetSession();
+  resetProjectIntelligence();
   clearProject();
   showPrompt.value = false;
 }

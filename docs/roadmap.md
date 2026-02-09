@@ -4,7 +4,15 @@
 
 ## In Progress
 
-_Phase 1 complete! Moving to Phase 2._
+_Phase 2 complete! Moving to Phase 3._
+
+## Recently Completed (Phase 2: Intelligence & UX)
+
+| Feature | Status | Notes |
+|---------|--------|-------|
+| **Persistent Skills** | ✅ Done | `.haivemind/skills.json` per project, auto-extracted from agent output, injected into `_buildPrompt()`, `decompose()`, `verify()` |
+| **Escalation Control Panel** | ✅ Done | Per-project settings (escalation chain, cost ceiling, pinned models), `settings.json`, REST API, SettingsPanel.vue with tabs |
+| **Self-Reflection & Metrics** | ✅ Done | Post-session analysis → `.haivemind/reflections/`, tier usage, escalation tracking, retry rates, MetricsDashboard.vue |
 
 ## Recently Completed (Phase 1: Reliability)
 
@@ -57,32 +65,26 @@ Evict completed sessions from in-memory Maps. Cap agent output buffers. Clean up
 
 ---
 
-### Phase 2: Intelligence & UX
+### Phase 2: Intelligence & UX ✅
 
-#### 🧠 Persistent Skills
+#### 🧠 Persistent Skills ✅
 Agents learn reusable scripts (lint, test, deploy) per project. Skills survive across sessions.
 
-**Why it matters:** Every session starts cold. Agents re-learn the project's toolchain from scratch.
-
-**Approach:** Store discovered build/test/lint commands as `.haivemind/skills.json`. Feed to agents as prior knowledge in `_buildPrompt()`.
+**Implementation:** Skills stored in `.haivemind/skills.json`. Auto-extracted from agent output (regex matching build/test/lint commands). Injected into `_buildPrompt()`, `decompose()`, and `verify()`. REST API: `GET/PUT /api/projects/:slug/skills`. UI: SettingsPanel.vue Skills tab with chip editor.
 
 ---
 
-#### 🎛️ Escalation Control Panel
+#### 🎛️ Escalation Control Panel ✅
 UI to customize the escalation chain per project. Pin tasks to models, set cost ceilings, force free-tier-only mode.
 
-**Why it matters:** Different projects have different quality/cost tradeoffs.
-
-**Approach:** Per-project settings in `workspace.js`, REST API, Vue component.
+**Implementation:** Per-project settings in `.haivemind/settings.json`. `getModelForRetry()` accepts overrides + pinnedModels. REST API: `GET/PUT /api/projects/:slug/settings`. UI: SettingsPanel.vue Escalation tab with chain editor, number inputs, save/reset.
 
 ---
 
-#### 📊 Self-Reflection & Metrics
+#### 📊 Self-Reflection & Metrics ✅
 After each session, capture what worked, what failed, time/cost profiles, and lessons learned.
 
-**Why it matters:** Without reflection data, the hAIvemind can't improve its own decomposition or model selection.
-
-**Approach:** Post-session analysis stored in `.haivemind/reflections/`. Feeds into persistent skills and prompt improvements.
+**Implementation:** `generateReflection()` in `index.js` runs post-session. Stores in `.haivemind/reflections/<sessionId>.json`. Tracks: success/fail counts, retry rates, tier usage, escalated tasks, cost breakdown. REST API: `GET /api/projects/:slug/reflections`. UI: MetricsDashboard.vue with aggregate stats, tier bar charts, and per-session reflection cards.
 
 ---
 
@@ -129,3 +131,6 @@ Spawn agents across multiple machines or containers.
 - ✅ **Project Isolation** — Per-project workspaces and session history
 - ✅ **Session Replay** — Timeline scrubber for past sessions
 - ✅ **Project Templates** — Pre-built task DAGs for common stacks (Express, React, CLI)
+- ✅ **Persistent Skills** — Per-project learned commands, injected into prompts
+- ✅ **Escalation Control Panel** — Per-project model/cost configuration
+- ✅ **Self-Reflection & Metrics** — Post-session analysis with aggregate dashboards

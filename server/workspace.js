@@ -247,6 +247,162 @@ export default class WorkspaceManager {
   }
 
   // ═══════════════════════════════════════════════════════════
+  //  Persistent Skills
+  // ═══════════════════════════════════════════════════════════
+
+  /**
+   * Get discovered skills for a project.
+   * @param {string} slug
+   * @returns {object} skills object (empty defaults if none)
+   */
+  getSkills(slug) {
+    const dir = this._getProjectDir(slug);
+    const skillsPath = join(dir, '.haivemind', 'skills.json');
+    if (existsSync(skillsPath)) {
+      try {
+        return JSON.parse(readFileSync(skillsPath, 'utf-8'));
+      } catch {
+        return this._defaultSkills();
+      }
+    }
+    return this._defaultSkills();
+  }
+
+  /**
+   * Save/merge skills for a project.
+   * @param {string} slug
+   * @param {object} newSkills - partial skills to merge
+   */
+  saveSkills(slug, newSkills) {
+    const dir = this._getProjectDir(slug);
+    const skillsPath = join(dir, '.haivemind', 'skills.json');
+    const existing = this.getSkills(slug);
+
+    // Merge arrays (deduplicate), overwrite scalars
+    for (const key of ['buildCommands', 'testCommands', 'lintCommands', 'deployCommands', 'patterns']) {
+      if (Array.isArray(newSkills[key])) {
+        const merged = [...(existing[key] || []), ...newSkills[key]];
+        existing[key] = [...new Set(merged)];
+      }
+    }
+    existing.updatedAt = Date.now();
+
+    writeFileSync(skillsPath, JSON.stringify(existing, null, 2));
+    return existing;
+  }
+
+  _defaultSkills() {
+    return {
+      buildCommands: [],
+      testCommands: [],
+      lintCommands: [],
+      deployCommands: [],
+      patterns: [],
+      updatedAt: null,
+    };
+  }
+
+  // ═══════════════════════════════════════════════════════════
+  //  Self-Reflection & Metrics
+  // ═══════════════════════════════════════════════════════════
+
+  /**
+   * Save a reflection for a completed session.
+   * @param {string} slug
+   * @param {string} sessionId
+   * @param {object} reflection
+   */
+  saveReflection(slug, sessionId, reflection) {
+    const dir = this._getProjectDir(slug);
+    const reflectionsDir = join(dir, '.haivemind', 'reflections');
+    this._ensureDir(reflectionsDir);
+
+    const data = {
+      sessionId,
+      createdAt: Date.now(),
+      ...reflection,
+    };
+    writeFileSync(
+      join(reflectionsDir, `${sessionId}.json`),
+      JSON.stringify(data, null, 2),
+    );
+    return data;
+  }
+
+  /**
+   * Get all reflections for a project (newest first).
+   * @param {string} slug
+   * @param {number} [limit=20]
+   * @returns {object[]}
+   */
+  getReflections(slug, limit = 20) {
+    const dir = this._getProjectDir(slug);
+    const reflectionsDir = join(dir, '.haivemind', 'reflections');
+    if (!existsSync(reflectionsDir)) return [];
+
+    return readdirSync(reflectionsDir)
+      .filter(f => f.endsWith('.json'))
+      .map(f => {
+        try {
+          return JSON.parse(readFileSync(join(reflectionsDir, f), 'utf-8'));
+        } catch {
+          return null;
+        }
+      })
+      .filter(Boolean)
+      .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0))
+      .slice(0, limit);
+  }
+
+  // ═══════════════════════════════════════════════════════════
+  //  Project Settings (escalation overrides, etc.)
+  // ═══════════════════════════════════════════════════════════
+
+  /**
+   * Get per-project settings.
+   * @param {string} slug
+   * @returns {object}
+   */
+  getProjectSettings(slug) {
+    const dir = this._getProjectDir(slug);
+    const settingsPath = join(dir, '.haivemind', 'settings.json');
+    if (existsSync(settingsPath)) {
+      try {
+        return JSON.parse(readFileSync(settingsPath, 'utf-8'));
+      } catch {
+        return this._defaultSettings();
+      }
+    }
+    return this._defaultSettings();
+  }
+
+  /**
+   * Update per-project settings (shallow merge).
+   * @param {string} slug
+   * @param {object} patch
+   * @returns {object} updated settings
+   */
+  updateProjectSettings(slug, patch) {
+    const dir = this._getProjectDir(slug);
+    const settingsPath = join(dir, '.haivemind', 'settings.json');
+    const existing = this.getProjectSettings(slug);
+    const updated = { ...existing, ...patch, updatedAt: Date.now() };
+    writeFileSync(settingsPath, JSON.stringify(updated, null, 2));
+    return updated;
+  }
+
+  _defaultSettings() {
+    return {
+      escalation: null,         // null = use global default, or ['T0','T0','T1','T2','T3']
+      maxRetriesTotal: null,    // null = use global default
+      maxConcurrency: null,     // null = use global default
+      costCeiling: null,        // null = unlimited, or max premium requests per session
+      pinnedModels: {},         // taskLabel pattern → model name override
+      updatedAt: null,
+    };
+  }
+
+  // ═══════════════════════════════════════════════════════════
   //  External project linking (for existing repos)
   // ═══════════════════════════════════════════════════════════
 

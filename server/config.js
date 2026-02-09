@@ -81,11 +81,25 @@ export const orchestratorTimeoutMs = config.orchestratorTimeoutMs;
 /**
  * Get the model config for a given retry count.
  * @param {number} retryIndex - Current retry index (0-based)
+ * @param {object} [overrides] - Per-project overrides { escalation, pinnedModels }
+ * @param {string} [taskLabel] - Task label for pinned model matching
  * @returns {{ tierName: string, modelName: string, modelConfig: object }}
  */
-export function getModelForRetry(retryIndex) {
-  const idx = Math.min(retryIndex, config.escalation.length - 1);
-  const tierName = config.escalation[idx];
+export function getModelForRetry(retryIndex, overrides, taskLabel) {
+  // Check for pinned model first
+  if (taskLabel && overrides?.pinnedModels) {
+    for (const [pattern, modelName] of Object.entries(overrides.pinnedModels)) {
+      if (taskLabel.toLowerCase().includes(pattern.toLowerCase()) && config.models[modelName]) {
+        const modelConfig = config.models[modelName];
+        return { tierName: modelConfig.tier, modelName, modelConfig };
+      }
+    }
+  }
+
+  const chain = overrides?.escalation || config.escalation;
+  const maxRetries = overrides?.maxRetriesTotal || config.maxRetriesTotal;
+  const idx = Math.min(retryIndex, chain.length - 1);
+  const tierName = chain[idx];
   const modelName = config.tierDefaults[tierName];
   return { tierName, modelName, modelConfig: config.models[modelName] };
 }
