@@ -13,6 +13,7 @@ import TaskRunner from './taskRunner.js';
 import WorkspaceManager from './workspace.js';
 import { prepareSelfDevWorkspace, getWorktreeDiffSummary } from './selfDev.js';
 import { summarizeOutput } from './outputSummarizer.js';
+import { createSnapshot, rollbackToSnapshot, getSnapshotDiff } from './snapshot.js';
 import { readdir, readFile } from 'node:fs/promises';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -378,6 +379,16 @@ async function startSession(userPrompt, projectSlug, predefinedPlan) {
   const timeline = [];
   sessions.set(sessionId, { ...session, workDir, projectSlug, timeline });
 
+  // Phase 5.2: Create pre-session workspace snapshot
+  let snapshot = { type: 'none', ref: '' };
+  try {
+    snapshot = await createSnapshot(workDir, sessionId);
+  } catch (err) {
+    console.warn(`[session] Snapshot creation failed: ${err.message}`);
+  }
+  const stored0Pre = sessions.get(sessionId);
+  if (stored0Pre) stored0Pre.snapshot = snapshot;
+
   console.log(`\n${'='.repeat(60)}`);
   console.log(`[session] New session: ${sessionId.slice(0, 8)}`);
   console.log(`[session] Project:    ${projectSlug} → ${workDir}`);
@@ -501,6 +512,7 @@ async function startSession(userPrompt, projectSlug, predefinedPlan) {
       agents: agentManager.getSessionSnapshot(),
       costSummary: costSummaryData,
       timeline,
+      snapshot, // Phase 5.2: Pre-session snapshot metadata for rollback
     });
     releaseLock(workDir, sessionId);
 
@@ -535,7 +547,7 @@ async function startSession(userPrompt, projectSlug, predefinedPlan) {
       error: err.message,
     }));
 
-    workspace.finalizeSession(projectSlug, sessionId, { status: 'failed', timeline });
+    workspace.finalizeSession(projectSlug, sessionId, { status: 'failed', timeline, snapshot });
     releaseLock(workDir, sessionId);
   }
 }
@@ -1077,6 +1089,49 @@ app.get('/api/projects/:slug/sessions/:sessionId/summaries', (req, res) => {
   }
 
   res.json(Object.values(taskSummaries));
+});
+
+/** Phase 5.2: Rollback a session's workspace changes */
+app.post('/api/projects/:slug/sessions/:sessionId/rollback', async (req, res) => {
+  const project = workspace.getProject(req.params.slug);
+  if (!project) return res.status(404).json({ error: 'Project not found' });
+
+  const session = workspace.getSession(req.params.slug, req.params.sessionId);
+  if (!session) return res.status(404).json({ error: 'Session not found' });
+
+  if (!session.snapshot || session.snapshot.type === 'none') {
+    return res.status(400).json({ error: 'No snapshot available for this session' });
+  }
+
+  const workDir = project.dir;
+  // Don't allow rollback if a session is currently running on this workspace
+  const lockEntry = workDirLocks.get(workDir);
+  if (lockEntry) {
+    return res.status(409).json({ error: 'Cannot rollback while a session is running on this workspace' });
+  }
+
+  const result = await rollbackToSnapshot(workDir, session.snapshot);
+  if (result.success) {
+    res.json({ rolledBack: true, message: result.message });
+  } else {
+    res.status(500).json({ error: result.message });
+  }
+});
+
+/** Phase 5.2: Get diff between pre-session snapshot and current state */
+app.get('/api/projects/:slug/sessions/:sessionId/diff', (req, res) => {
+  const project = workspace.getProject(req.params.slug);
+  if (!project) return res.status(404).json({ error: 'Project not found' });
+
+  const session = workspace.getSession(req.params.slug, req.params.sessionId);
+  if (!session) return res.status(404).json({ error: 'Session not found' });
+
+  if (!session.snapshot || session.snapshot.type !== 'git-tag') {
+    return res.json({ files: [], summary: 'No git snapshot available for diff' });
+  }
+
+  const diff = getSnapshotDiff(project.dir, session.snapshot);
+  res.json(diff || { files: [], summary: 'Unable to compute diff' });
 });
 
 /** Start a session (REST fallback for non-WS clients) */

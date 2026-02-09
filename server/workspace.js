@@ -196,6 +196,7 @@ export default class WorkspaceManager {
     session.agents = summary.agents || {};
     session.costSummary = summary.costSummary || null;
     session.timeline = summary.timeline || [];
+    session.snapshot = summary.snapshot || null; // Phase 5.2: Pre-session snapshot metadata
 
     writeFileSync(sessionFile, JSON.stringify(session, null, 2));
 

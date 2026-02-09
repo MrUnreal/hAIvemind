@@ -68,13 +68,24 @@
             +{{ session.taskSummary.length - 5 }} more
           </span>
         </div>
+
+        <!-- Phase 5.2: Rollback button -->
+        <div class="session-actions" v-if="session.status === 'completed' || session.status === 'failed'">
+          <button
+            class="rollback-btn"
+            @click.stop="onRollback(session.id)"
+            :disabled="rollingBack === session.id"
+          >
+            {{ rollingBack === session.id ? '↩ Rolling back...' : '↩ Rollback' }}
+          </button>
+        </div>
       </div>
     </div>
   </div>
 </template>
 
 <script setup>
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 import {
   activeProject,
   sessions,
@@ -83,6 +94,8 @@ import {
 import { loadSession } from '../composables/useSession.js';
 
 defineEmits(['newSession']);
+
+const rollingBack = ref(null);
 
 const sortedSessions = computed(() => {
   return [...sessions.value].sort((a, b) => (b.startedAt || 0) - (a.startedAt || 0));
@@ -117,6 +130,29 @@ function truncate(s, len) {
 async function onLoadSession(sessionId) {
   if (!activeProject.value) return;
   await loadSession(activeProject.value.slug, sessionId);
+}
+
+// Phase 5.2: Rollback workspace to pre-session state
+async function onRollback(sessionId) {
+  if (!activeProject.value || rollingBack.value) return;
+  if (!confirm('This will reset the workspace to its state before this session. Continue?')) return;
+
+  rollingBack.value = sessionId;
+  try {
+    const res = await fetch(`/api/projects/${activeProject.value.slug}/sessions/${sessionId}/rollback`, {
+      method: 'POST',
+    });
+    const data = await res.json();
+    if (res.ok) {
+      alert(`Rollback successful: ${data.message}`);
+    } else {
+      alert(`Rollback failed: ${data.error}`);
+    }
+  } catch (err) {
+    alert(`Rollback error: ${err.message}`);
+  } finally {
+    rollingBack.value = null;
+  }
 }
 </script>
 
@@ -275,5 +311,29 @@ async function onLoadSession(sessionId) {
 .more {
   font-size: 11px;
   color: #666;
+}
+
+.session-actions {
+  margin-top: 8px;
+  display: flex;
+  gap: 6px;
+}
+
+.rollback-btn {
+  font-size: 11px;
+  padding: 3px 10px;
+  border-radius: 6px;
+  border: 1px solid #f5c542;
+  background: transparent;
+  color: #f5c542;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.rollback-btn:hover:not(:disabled) {
+  background: rgba(245, 197, 66, 0.15);
+}
+.rollback-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 </style>
