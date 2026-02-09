@@ -1095,7 +1095,7 @@ app.get('/api/projects/:slug/analysis', async (req, res) => {
   if (!project) return res.status(404).json({ error: 'Project not found' });
   try {
     const { analyzeWorkspace } = await import('./workspaceAnalyzer.js');
-    const analysis = await analyzeWorkspace(project.path);
+    const analysis = await analyzeWorkspace(project.dir);
     res.json({
       summary: analysis.summary,
       fileTree: analysis.fileTree,
