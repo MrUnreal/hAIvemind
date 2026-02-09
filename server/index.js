@@ -16,6 +16,7 @@ import WorkspaceManager from './workspace.js';
 import { summarizeOutput } from './outputSummarizer.js';
 import { createSnapshot, rollbackToSnapshot, getSnapshotDiff } from './snapshot.js';
 import PluginManager from './pluginManager.js';
+import log, { createLogger } from './logger.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -105,7 +106,7 @@ function recordTimelineEvent(msgType, payload) {
 
 wss.on('connection', (ws) => {
   clients.add(ws);
-  console.log(`[ws] Client connected (${clients.size} total)`);
+  log.info(`[ws] Client connected (${clients.size} total)`);
 
   ws.isAlive = true;
 
@@ -115,7 +116,7 @@ wss.on('connection', (ws) => {
 
   ws.on('close', () => {
     clients.delete(ws);
-    console.log(`[ws] Client disconnected (${clients.size} total)`);
+    log.info(`[ws] Client disconnected (${clients.size} total)`);
   });
 
   ws.on('message', (raw) => {
@@ -232,7 +233,7 @@ async function handleClientMessage(msg, ws) {
 
         predefinedPlan = { ...template, tasks };
       } catch (err) {
-        console.error(`[session] Failed to load template "${templateId}": ${err.message}`);
+        log.error(`[session] Failed to load template "${templateId}": ${err.message}`);
         ws.send(makeMsg(MSG.SESSION_ERROR, { error: `Failed to load template "${templateId}"` }));
         return;
       }
@@ -262,7 +263,7 @@ async function handleClientMessage(msg, ws) {
         // If slug collision, just reuse existing
         project = workspace.getProject(projectSlug);
         if (!project) {
-          console.error(`[selfdev] Failed to link project: ${err.message}`);
+          log.error(`[selfdev] Failed to link project: ${err.message}`);
           ws.send(makeMsg(MSG.SESSION_ERROR, { error: err.message }));
           return;
         }
@@ -299,7 +300,7 @@ async function handleClientMessage(msg, ws) {
           return;
         }
       } catch (err) {
-        console.error(`[planner] Research failed: ${err.message}`);
+        log.error(`[planner] Research failed: ${err.message}`);
         broadcast(makeMsg(MSG.CHAT_RESPONSE, {
           projectSlug,
           role: 'assistant',
@@ -311,7 +312,7 @@ async function handleClientMessage(msg, ws) {
     try {
       await startSession(prompt, projectSlug);
     } catch (err) {
-      console.error(`[selfdev] Error during self-dev session: ${err.message}`);
+      log.error(`[selfdev] Error during self-dev session: ${err.message}`);
       ws.send(makeMsg(MSG.SESSION_ERROR, { error: err.message }));
       return;
     }
@@ -393,16 +394,16 @@ async function startSession(userPrompt, projectSlug, predefinedPlan) {
   try {
     snapshot = await createSnapshot(workDir, sessionId);
   } catch (err) {
-    console.warn(`[session] Snapshot creation failed: ${err.message}`);
+    log.warn(`[session] Snapshot creation failed: ${err.message}`);
   }
   const stored0Pre = sessions.get(sessionId);
   if (stored0Pre) stored0Pre.snapshot = snapshot;
 
-  console.log(`\n${'='.repeat(60)}`);
-  console.log(`[session] New session: ${sessionId.slice(0, 8)}`);
-  console.log(`[session] Project:    ${projectSlug} → ${workDir}`);
-  console.log(`[session] Prompt:     "${userPrompt.slice(0, 100)}..."`);
-  console.log(`${'='.repeat(60)}\n`);
+  log.info(`\n${'='.repeat(60)}`);
+  log.info(`[session] New session: ${sessionId.slice(0, 8)}`);
+  log.info(`[session] Project:    ${projectSlug} → ${workDir}`);
+  log.info(`[session] Prompt:     "${userPrompt.slice(0, 100)}..."`);
+  log.info(`${'='.repeat(60)}\n`);
 
   try {
     // Step 1: Analyze workspace for context injection (Phase 4)
@@ -411,9 +412,9 @@ async function startSession(userPrompt, projectSlug, predefinedPlan) {
       try {
         const { analyzeWorkspace } = await import('./workspaceAnalyzer.js');
         workspaceAnalysis = await analyzeWorkspace(workDir);
-        console.log(`[session] Workspace analysis: ${workspaceAnalysis.summary}`);
+        log.info(`[session] Workspace analysis: ${workspaceAnalysis.summary}`);
       } catch (err) {
-        console.warn(`[session] Workspace analysis failed (non-fatal): ${err.message}`);
+        log.warn(`[session] Workspace analysis failed (non-fatal): ${err.message}`);
       }
     }
 
@@ -536,14 +537,14 @@ async function startSession(userPrompt, projectSlug, predefinedPlan) {
       if (Object.values(discoveredSkills).some(arr => arr.length > 0)) {
         const merged = workspace.saveSkills(projectSlug, discoveredSkills);
         broadcast(makeMsg(MSG.SKILLS_UPDATE, { projectSlug, skills: merged }));
-        console.log(`[skills] Updated skills for "${projectSlug}": ${JSON.stringify(discoveredSkills)}`);
+        log.info(`[skills] Updated skills for "${projectSlug}": ${JSON.stringify(discoveredSkills)}`);
       }
     } catch (reflErr) {
-      console.warn(`[reflection] Post-session analysis failed: ${reflErr.message}`);
+      log.warn(`[reflection] Post-session analysis failed: ${reflErr.message}`);
     }
 
   } catch (err) {
-    console.error(`[session] Error: ${err.message}`);
+    log.error(`[session] Error: ${err.message}`);
     const stored = sessions.get(sessionId);
     if (stored) {
       stored.status = 'failed';
@@ -652,7 +653,7 @@ async function runVerifyFixLoop({ sessionId, projectSlug, plan, edges, agentMana
     await fixRunner.run();
     fixRunner.cleanup();
 
-    console.log(`[verify-fix] Round ${round + 1} fixes applied — re-verifying...`);
+    log.info(`[verify-fix] Round ${round + 1} fixes applied — re-verifying...`);
   }
 
   // Exhausted rounds
@@ -711,7 +712,7 @@ async function handleChatMessage(message, projectSlug) {
       `The user now requests:\n${message}\n\n` +
       `Decompose ONLY the new work needed. Do NOT recreate tasks that have already been done.`;
 
-    console.log(`[iteration ${iterNum}] Decomposing: "${message.slice(0, 80)}..."`);
+    log.info(`[iteration ${iterNum}] Decomposing: "${message.slice(0, 80)}..."`);
 
     const plan = DEMO
       ? await decomposeMock(contextPrompt)
@@ -765,7 +766,7 @@ async function handleChatMessage(message, projectSlug) {
       iterationId: iterNum,
     }));
 
-    console.log(`[iteration ${iterNum}] ${plan.tasks.length} tasks → executing...`);
+    log.info(`[iteration ${iterNum}] ${plan.tasks.length} tasks → executing...`);
 
     // ── Execute with TaskRunner (suppress its session:complete) ──
     // Strip prompt-node dependency so TaskRunner can resolve the DAG
@@ -832,10 +833,10 @@ async function handleChatMessage(message, projectSlug) {
       costSummary: iterCostSummary,
     }));
 
-    console.log(`[iteration ${iterNum}] Complete`);
+    log.info(`[iteration ${iterNum}] Complete`);
 
   } catch (err) {
-    console.error(`[iteration ${iterNum}] Error:`, err.message);
+    log.error(`[iteration ${iterNum}] Error:`, err.message);
     broadcast(makeMsg(MSG.CHAT_RESPONSE, {
       projectSlug,
       role: 'assistant',
@@ -1240,7 +1241,7 @@ app.get('/api/templates', async (req, res) => {
             const id = entry.name.replace(/\.json$/, '');
             return { id, name, description, stack, variables, tasks };
           } catch (err) {
-            console.error(`[templates] Failed to load template ${entry.name}:`, err.message);
+            log.error(`[templates] Failed to load template ${entry.name}:`, err.message);
             return null;
           }
         }),
@@ -1248,7 +1249,7 @@ app.get('/api/templates', async (req, res) => {
 
     res.json(templates.filter(Boolean));
   } catch (err) {
-    console.error('[templates] Error reading templates directory:', err.message);
+    log.error('[templates] Error reading templates directory:', err.message);
     res.status(500).json({ error: 'Failed to load templates' });
   }
 });
@@ -1382,30 +1383,30 @@ import('node:fs').then(({ existsSync }) => {
     app.get(/^(?!\/api|\/ws).*/, (_req, res) => {
       res.sendFile(join(clientDist, 'index.html'));
     });
-    console.log('[server] Serving built client from client/dist/');
+    log.info('[server] Serving built client from client/dist/');
   }
 });
 
 // ── Start server ──
 server.listen(config.port, () => {
   const projects = workspace.listProjects();
-  console.log(`\n🐝 hAIvemind server running on http://localhost:${config.port}`);
-  if (DEMO) console.log('   ⚡ DEMO MODE — using mock agents');
-  console.log(`   WebSocket: ws://localhost:${config.port}/ws`);
-  console.log(`   Orchestrator: ${config.tierDefaults[config.orchestratorTier]} (${config.orchestratorTier})`);
-  console.log(`   Escalation:   ${config.escalation.join(' → ')}`);
-  console.log(`   Projects:     ${projects.length} registered`);
+  log.info(`\n🐝 hAIvemind server running on http://localhost:${config.port}`);
+  if (DEMO) log.info('   ⚡ DEMO MODE — using mock agents');
+  log.info(`   WebSocket: ws://localhost:${config.port}/ws`);
+  log.info(`   Orchestrator: ${config.tierDefaults[config.orchestratorTier]} (${config.orchestratorTier})`);
+  log.info(`   Escalation:   ${config.escalation.join(' → ')}`);
+  log.info(`   Projects:     ${projects.length} registered`);
   if (projects.length) {
     for (const p of projects) {
-      console.log(`     • ${p.slug} — ${p.name}${p.linked ? ' (linked)' : ''}`);
+      log.info(`     • ${p.slug} — ${p.name}${p.linked ? ' (linked)' : ''}`);
     }
   }
-  console.log();
+  log.info();
 
   // Phase 5.7: Load plugins at startup
   if (config.plugins?.autoLoad !== false) {
     pluginManager.loadAll().catch(err => {
-      console.warn(`[plugins] Auto-load failed: ${err.message}`);
+      log.warn(`[plugins] Auto-load failed: ${err.message}`);
     });
   }
 });
@@ -1418,14 +1419,14 @@ pruneIntervalId = setInterval(pruneCompletedSessions, 5 * 60 * 1000);
     const interruptedDir = join(workspace.baseDir, '.haivemind', 'interrupted');
     const files = await fs.readdir(interruptedDir).catch(() => []);
     if (files.length > 0) {
-      console.log(`[recovery] Found ${files.length} interrupted session(s)`);
+      log.info(`[recovery] Found ${files.length} interrupted session(s)`);
     }
     for (const file of files) {
       if (!file.endsWith('.json')) continue;
       try {
         const raw = await fs.readFile(join(interruptedDir, file), 'utf-8');
         const data = JSON.parse(raw);
-        console.log(`  ↳ ${data.sessionId?.slice(0, 8)} (${data.projectSlug}) — ${data.incompleteTasks?.length || 0} incomplete tasks`);
+        log.info(`  ↳ ${data.sessionId?.slice(0, 8)} (${data.projectSlug}) — ${data.incompleteTasks?.length || 0} incomplete tasks`);
       } catch { /* skip corrupt files */ }
     }
   } catch { /* no interrupted dir, fine */ }
@@ -1484,7 +1485,7 @@ app.post('/api/interrupted-sessions/:id/resume', async (req, res) => {
 
     // Fire and forget — the session runs asynchronously
     startSession(resumePrompt, data.projectSlug).catch(err => {
-      console.error(`[recovery] Failed to resume session ${data.sessionId}: ${err.message}`);
+      log.error(`[recovery] Failed to resume session ${data.sessionId}: ${err.message}`);
     });
 
     res.json({ resumed: true, projectSlug: data.projectSlug, incompleteTasks: incompleteTasks.length });
@@ -1494,7 +1495,7 @@ app.post('/api/interrupted-sessions/:id/resume', async (req, res) => {
 });
 
 async function gracefulShutdown() {
-  console.log('\n🛑 Graceful shutdown initiated...');
+  log.info('\n🛑 Graceful shutdown initiated...');
 
   // 1. Warn connected clients
   broadcast(makeMsg(MSG.SHUTDOWN_WARNING, { message: 'Server is shutting down', timestamp: Date.now() }));
@@ -1534,19 +1535,19 @@ async function gracefulShutdown() {
       const filePath = join(interruptedDir, `${sessionId}.json`);
       await fs.writeFile(filePath, JSON.stringify(snapshot, null, 2));
       savedCount++;
-      console.log(`  💾 Saved interrupted session: ${sessionId.slice(0, 8)} (${incompleteTasks.length} incomplete tasks)`);
+      log.info(`  💾 Saved interrupted session: ${sessionId.slice(0, 8)} (${incompleteTasks.length} incomplete tasks)`);
 
       // Release workspace lock
       if (session.workDir) {
         releaseLock(session.workDir, sessionId);
       }
     } catch (err) {
-      console.error(`  ❌ Failed to save session ${sessionId.slice(0, 8)}: ${err.message}`);
+      log.error(`  ❌ Failed to save session ${sessionId.slice(0, 8)}: ${err.message}`);
     }
   }
 
   if (savedCount > 0) {
-    console.log(`  📁 ${savedCount} session(s) saved to ${interruptedDir}`);
+    log.info(`  📁 ${savedCount} session(s) saved to ${interruptedDir}`);
   }
 
   // 3. Kill all running agents across all active contexts
@@ -1563,7 +1564,7 @@ async function gracefulShutdown() {
 
   // Wait for agent kills with a timeout
   if (killPromises.length > 0) {
-    console.log(`  🔪 Killing ${killPromises.length} agent manager(s)...`);
+    log.info(`  🔪 Killing ${killPromises.length} agent manager(s)...`);
     await Promise.allSettled(killPromises);
   }
 
@@ -1577,13 +1578,13 @@ async function gracefulShutdown() {
   // 5. Close connections
   wss.close();
   server.close(() => {
-    console.log('  ✅ Server shutdown complete\n');
+    log.info('  ✅ Server shutdown complete\n');
     process.exit(0);
   });
 
   // Force exit after 10 seconds if graceful close hangs
   setTimeout(() => {
-    console.error('  ⚠️  Forced exit after timeout');
+    log.error('  ⚠️  Forced exit after timeout');
     process.exit(1);
   }, 10000).unref();
 }

@@ -3,6 +3,7 @@ dist/
 .haivemind-workspace/
 .haivemind/
 .playwright-mcp/
+.env
 *.log
 test-*.png
 test-results/

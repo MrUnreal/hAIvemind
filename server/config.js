@@ -6,8 +6,32 @@
 // Multiplier source: https://docs.github.com/en/copilot/concepts/billing/copilot-requests#model-multipliers
 // Coding rankings informed by: Aider polyglot leaderboard, LM Arena coding
 
+import { readFileSync, existsSync } from 'node:fs';
+import { join, dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+// ── Load .env (no external dependency) ──
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const envPath = join(__dirname, '..', '.env');
+if (existsSync(envPath)) {
+  for (const line of readFileSync(envPath, 'utf8').split('\n')) {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith('#')) continue;
+    const eq = trimmed.indexOf('=');
+    if (eq === -1) continue;
+    const key = trimmed.slice(0, eq).trim();
+    const val = trimmed.slice(eq + 1).trim().replace(/^["']|["']$/g, '');
+    if (!(key in process.env)) process.env[key] = val;  // don't override real env
+  }
+}
+
+/** Read an env var with an optional default. */
+function env(key, fallback) { return process.env[key] ?? fallback; }
+function envInt(key, fallback) { const v = process.env[key]; return v != null ? Number(v) : fallback; }
+function envBool(key, fallback) { const v = process.env[key]; return v != null ? v === 'true' || v === '1' : fallback; }
+
 // ── Resolve the copilot binary path ──
-const COPILOT_CMD = process.env.COPILOT_CMD || 'copilot';
+const COPILOT_CMD = env('COPILOT_CMD', 'copilot');
 
 const config = {
   models: {
@@ -59,45 +83,45 @@ const config = {
   // The orchestrator / planner model tier
   orchestratorTier: 'T3',
 
-  maxRetriesTotal: 5,
-  maxCrossAgentLoops: 3,
-  maxConcurrency: 3,
+  maxRetriesTotal: envInt('HAIVEMIND_MAX_RETRIES', 5),
+  maxCrossAgentLoops: envInt('HAIVEMIND_MAX_CROSS_AGENT_LOOPS', 3),
+  maxConcurrency: envInt('HAIVEMIND_MAX_CONCURRENCY', 3),
 
   // Working directory for agent outputs
   workDir: '.haivemind-workspace',
 
   // Server
-  port: Number(process.env.PORT) || 3000,
+  port: envInt('PORT', 3000),
 
-  agentTimeoutMs: 300000,
-  orchestratorTimeoutMs: 300000,
-  sessionRetentionMs: 30 * 60 * 1000,
-  maxAgentOutputBytes: 100 * 1024,
+  agentTimeoutMs: envInt('HAIVEMIND_AGENT_TIMEOUT_MS', 300000),
+  orchestratorTimeoutMs: envInt('HAIVEMIND_ORCHESTRATOR_TIMEOUT_MS', 300000),
+  sessionRetentionMs: envInt('HAIVEMIND_SESSION_RETENTION_MS', 30 * 60 * 1000),
+  maxAgentOutputBytes: envInt('HAIVEMIND_MAX_AGENT_OUTPUT_BYTES', 100 * 1024),
 
   // DAG Rewriting — stall detection
-  stallThresholdMs: 90000,       // 90s before a running task is considered stalled
-  stallCheckIntervalMs: 30000,   // check every 30s
+  stallThresholdMs: envInt('HAIVEMIND_STALL_THRESHOLD_MS', 90000),
+  stallCheckIntervalMs: envInt('HAIVEMIND_STALL_CHECK_INTERVAL_MS', 30000),
 
   // Pluggable Agent Backends
-  defaultBackend: 'copilot',
+  defaultBackend: env('HAIVEMIND_DEFAULT_BACKEND', 'copilot'),
   backends: {
     copilot: {},           // uses model configs above
     ollama: {              // local LLM via Ollama
-      host: 'http://localhost:11434',
-      model: 'codellama',  // default model override
+      host: env('HAIVEMIND_OLLAMA_HOST', 'http://localhost:11434'),
+      model: env('HAIVEMIND_OLLAMA_MODEL', 'codellama'),
     },
   },
 
   // Multi-Workspace Swarm
   swarm: {
-    enabled: false,        // set true to distribute agents across runners
+    enabled: envBool('HAIVEMIND_SWARM_ENABLED', false),
     runners: [],           // e.g. [{ type: 'docker', image: 'haivemind/agent', maxContainers: 4 }]
   },
 
   // Plugin System (Phase 5.7)
   plugins: {
-    dir: 'plugins',           // relative to project root
-    autoLoad: true,           // scan and load on startup
+    dir: env('HAIVEMIND_PLUGINS_DIR', 'plugins'),
+    autoLoad: envBool('HAIVEMIND_PLUGINS_AUTOLOAD', true),
   },
 };
 
