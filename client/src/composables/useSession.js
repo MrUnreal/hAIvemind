@@ -35,21 +35,11 @@ export const selectedAgentId = ref(null);
 /** @type {import('vue').Ref<object|null>} */
 export const costSummary = ref(null);
 
-/** @type {import('vue').Ref<object[]>} - event log for this session */
-export const eventLog = ref([]);
+/** @type {import('vue').Ref<object[]>} - event log for this session (internal) */
+const eventLog = ref([]);
 
 /** @type {import('vue').Ref<object[]>} - raw timeline events for this session */
 export const timeline = ref([]);
-
-export const selectedAgent = computed(() => {
-  if (!selectedAgentId.value) return null;
-  return agentMap.get(selectedAgentId.value) || null;
-});
-
-export const selectedAgentOutput = computed(() => {
-  if (!selectedAgentId.value) return [];
-  return agentOutputMap.get(selectedAgentId.value) || [];
-});
 
 /** Map taskId → latest agent info */
 export const taskAgentMap = computed(() => {
@@ -78,8 +68,8 @@ export function resetSession() {
   timeline.value = [];
 }
 
-/** Push a human-readable event into the log */
-export function logEvent(msg) {
+/** Push a human-readable event into the log (internal) */
+function logEvent(msg) {
   eventLog.value.push({
     time: Date.now(),
     message: msg,

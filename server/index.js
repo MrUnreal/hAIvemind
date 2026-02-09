@@ -2,8 +2,10 @@ import express from 'express';
 import { createServer } from 'node:http';
 import { WebSocketServer } from 'ws';
 import { randomUUID } from 'node:crypto';
-import { promises as fs } from 'node:fs';
-import path from 'node:path';
+import { promises as fs, existsSync } from 'node:fs';
+import { join, dirname, resolve } from 'node:path';
+import { readdir, readFile } from 'node:fs/promises';
+import { fileURLToPath } from 'node:url';
 import config from './config.js';
 import { MSG, makeMsg, parseMsg } from '../shared/protocol.js';
 import AgentManager from './agentManager.js';
@@ -11,12 +13,8 @@ import { decompose, verify, plan } from './orchestrator.js';
 import { decomposeMock } from './mock.js';
 import TaskRunner from './taskRunner.js';
 import WorkspaceManager from './workspace.js';
-import { prepareSelfDevWorkspace, getWorktreeDiffSummary } from './selfDev.js';
 import { summarizeOutput } from './outputSummarizer.js';
 import { createSnapshot, rollbackToSnapshot, getSnapshotDiff } from './snapshot.js';
-import { readdir, readFile } from 'node:fs/promises';
-import { join, dirname } from 'node:path';
-import { fileURLToPath } from 'node:url';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -194,8 +192,8 @@ async function handleClientMessage(msg, ws) {
         return;
       }
       try {
-        const templatesDir = path.resolve(process.cwd(), 'templates');
-        const templatePath = path.join(templatesDir, `${templateId}.json`);
+        const templatesDir = resolve(process.cwd(), 'templates');
+        const templatePath = join(templatesDir, `${templateId}.json`);
         const raw = await fs.readFile(templatePath, 'utf8');
         const template = JSON.parse(raw);
 
@@ -1279,7 +1277,7 @@ pruneIntervalId = setInterval(pruneCompletedSessions, 5 * 60 * 1000);
 // ── Phase 5.0: Interrupted session recovery on startup ──
 (async function recoverInterruptedSessions() {
   try {
-    const interruptedDir = path.join(workspace.baseDir, '.haivemind', 'interrupted');
+    const interruptedDir = join(workspace.baseDir, '.haivemind', 'interrupted');
     const files = await fs.readdir(interruptedDir).catch(() => []);
     if (files.length > 0) {
       console.log(`[recovery] Found ${files.length} interrupted session(s)`);
@@ -1287,7 +1285,7 @@ pruneIntervalId = setInterval(pruneCompletedSessions, 5 * 60 * 1000);
     for (const file of files) {
       if (!file.endsWith('.json')) continue;
       try {
-        const raw = await fs.readFile(path.join(interruptedDir, file), 'utf-8');
+        const raw = await fs.readFile(join(interruptedDir, file), 'utf-8');
         const data = JSON.parse(raw);
         console.log(`  ↳ ${data.sessionId?.slice(0, 8)} (${data.projectSlug}) — ${data.incompleteTasks?.length || 0} incomplete tasks`);
       } catch { /* skip corrupt files */ }
@@ -1298,13 +1296,13 @@ pruneIntervalId = setInterval(pruneCompletedSessions, 5 * 60 * 1000);
 // ── Phase 5.0: Interrupted sessions REST API ──
 app.get('/api/interrupted-sessions', async (req, res) => {
   try {
-    const interruptedDir = path.join(workspace.baseDir, '.haivemind', 'interrupted');
+    const interruptedDir = join(workspace.baseDir, '.haivemind', 'interrupted');
     const files = await fs.readdir(interruptedDir).catch(() => []);
     const results = [];
     for (const file of files) {
       if (!file.endsWith('.json')) continue;
       try {
-        const raw = await fs.readFile(path.join(interruptedDir, file), 'utf-8');
+        const raw = await fs.readFile(join(interruptedDir, file), 'utf-8');
         results.push(JSON.parse(raw));
       } catch { /* skip */ }
     }
@@ -1316,8 +1314,8 @@ app.get('/api/interrupted-sessions', async (req, res) => {
 
 app.post('/api/interrupted-sessions/:id/discard', async (req, res) => {
   try {
-    const interruptedDir = path.join(workspace.baseDir, '.haivemind', 'interrupted');
-    const filePath = path.join(interruptedDir, `${req.params.id}.json`);
+    const interruptedDir = join(workspace.baseDir, '.haivemind', 'interrupted');
+    const filePath = join(interruptedDir, `${req.params.id}.json`);
     await fs.unlink(filePath);
     res.json({ discarded: true });
   } catch (err) {
@@ -1327,8 +1325,8 @@ app.post('/api/interrupted-sessions/:id/discard', async (req, res) => {
 
 app.post('/api/interrupted-sessions/:id/resume', async (req, res) => {
   try {
-    const interruptedDir = path.join(workspace.baseDir, '.haivemind', 'interrupted');
-    const filePath = path.join(interruptedDir, `${req.params.id}.json`);
+    const interruptedDir = join(workspace.baseDir, '.haivemind', 'interrupted');
+    const filePath = join(interruptedDir, `${req.params.id}.json`);
     const raw = await fs.readFile(filePath, 'utf-8');
     const data = JSON.parse(raw);
 
@@ -1364,7 +1362,7 @@ async function gracefulShutdown() {
   broadcast(makeMsg(MSG.SHUTDOWN_WARNING, { message: 'Server is shutting down', timestamp: Date.now() }));
 
   // 2. Persist all active (running) sessions to disk
-  const interruptedDir = path.join(workspace.baseDir, '.haivemind', 'interrupted');
+  const interruptedDir = join(workspace.baseDir, '.haivemind', 'interrupted');
   await fs.mkdir(interruptedDir, { recursive: true }).catch(() => {});
 
   let savedCount = 0;
@@ -1395,7 +1393,7 @@ async function gracefulShutdown() {
         timeline: (session.timeline || []).slice(-100), // Last 100 events only
       };
 
-      const filePath = path.join(interruptedDir, `${sessionId}.json`);
+      const filePath = join(interruptedDir, `${sessionId}.json`);
       await fs.writeFile(filePath, JSON.stringify(snapshot, null, 2));
       savedCount++;
       console.log(`  💾 Saved interrupted session: ${sessionId.slice(0, 8)} (${incompleteTasks.length} incomplete tasks)`);

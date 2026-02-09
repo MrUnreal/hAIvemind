@@ -19,8 +19,8 @@ export const projectReflections = ref([]);
 /** @type {import('vue').Ref<object|null>} - Latest session reflection */
 export const latestReflection = ref(null);
 
-/** @type {import('vue').Ref<boolean>} */
-export const settingsLoading = ref(false);
+/** @type {import('vue').Ref<boolean>} - internal loading state */
+const settingsLoading = ref(false);
 
 // ── Skills ──
 

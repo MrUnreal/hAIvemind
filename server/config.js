@@ -95,9 +95,6 @@ const config = {
   },
 };
 
-export const agentTimeoutMs = config.agentTimeoutMs;
-export const orchestratorTimeoutMs = config.orchestratorTimeoutMs;
-
 /**
  * Get the model config for a given retry count.
  * @param {number} retryIndex - Current retry index (0-based)
@@ -122,15 +119,6 @@ export function getModelForRetry(retryIndex, overrides, taskLabel) {
   const tierName = chain[idx];
   const modelName = config.tierDefaults[tierName];
   return { tierName, modelName, modelConfig: config.models[modelName] };
-}
-
-/**
- * List all models in a specific tier.
- */
-export function getModelsInTier(tierName) {
-  return Object.entries(config.models)
-    .filter(([, cfg]) => cfg.tier === tierName)
-    .map(([name, cfg]) => ({ name, ...cfg }));
 }
 
 /**
