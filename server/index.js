@@ -15,6 +15,7 @@ import TaskRunner from './taskRunner.js';
 import WorkspaceManager from './workspace.js';
 import { summarizeOutput } from './outputSummarizer.js';
 import { createSnapshot, rollbackToSnapshot, getSnapshotDiff } from './snapshot.js';
+import PluginManager from './pluginManager.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -58,6 +59,16 @@ function broadcast(msg) {
     if (ws.readyState === ws.OPEN) ws.send(msg);
   }
 }
+
+// ── Plugin Manager (Phase 5.7) ──
+const pluginManager = new PluginManager({
+  pluginsDir: resolve(process.cwd(), config.plugins?.dir || 'plugins'),
+  config,
+  broadcast,
+  makeMsg,
+  workspace,
+});
+export { pluginManager };
 
 /**
  * Record timeline events for a session.
@@ -1242,6 +1253,38 @@ app.get('/api/templates', async (req, res) => {
   }
 });
 
+// ── Plugin REST API (Phase 5.7) ──
+app.get('/api/plugins', (_req, res) => {
+  res.json(pluginManager.list());
+});
+
+app.post('/api/plugins/:name/enable', async (req, res) => {
+  try {
+    await pluginManager.enable(req.params.name);
+    res.json({ ok: true, name: req.params.name, enabled: true });
+  } catch (err) {
+    res.status(404).json({ error: err.message });
+  }
+});
+
+app.post('/api/plugins/:name/disable', async (req, res) => {
+  try {
+    await pluginManager.disable(req.params.name);
+    res.json({ ok: true, name: req.params.name, enabled: false });
+  } catch (err) {
+    res.status(404).json({ error: err.message });
+  }
+});
+
+app.post('/api/plugins/:name/reload', async (req, res) => {
+  try {
+    const entry = await pluginManager.reload(req.params.name);
+    res.json({ ok: true, name: entry.name, version: entry.version });
+  } catch (err) {
+    res.status(404).json({ error: err.message });
+  }
+});
+
 // ── Serve built client in production (when client/dist exists) ──
 const clientDist = join(__dirname, '..', 'client', 'dist');
 import('node:fs').then(({ existsSync }) => {
@@ -1270,6 +1313,13 @@ server.listen(config.port, () => {
     }
   }
   console.log();
+
+  // Phase 5.7: Load plugins at startup
+  if (config.plugins?.autoLoad !== false) {
+    pluginManager.loadAll().catch(err => {
+      console.warn(`[plugins] Auto-load failed: ${err.message}`);
+    });
+  }
 });
 
 pruneIntervalId = setInterval(pruneCompletedSessions, 5 * 60 * 1000);
@@ -1432,6 +1482,9 @@ async function gracefulShutdown() {
   // 4. Clear intervals
   clearInterval(pruneIntervalId);
   clearInterval(heartbeatInterval);
+
+  // 4.5 Notify plugins of shutdown
+  await pluginManager.emit('onShutdown').catch(() => {});
 
   // 5. Close connections
   wss.close();

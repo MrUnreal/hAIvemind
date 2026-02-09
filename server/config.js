@@ -93,6 +93,12 @@ const config = {
     enabled: false,        // set true to distribute agents across runners
     runners: [],           // e.g. [{ type: 'docker', image: 'haivemind/agent', maxContainers: 4 }]
   },
+
+  // Plugin System (Phase 5.7)
+  plugins: {
+    dir: 'plugins',           // relative to project root
+    autoLoad: true,           // scan and load on startup
+  },
 };
 
 /**

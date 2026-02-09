@@ -39,6 +39,10 @@ export const MSG = {
   SHUTDOWN_WARNING: 'shutdown:warning',
   SESSION_INTERRUPTED: 'session:interrupted',
   SESSION_RESUMED: 'session:resumed',
+
+  // Phase 5.7 — Plugin System
+  PLUGIN_EVENT: 'plugin:event',
+  PLUGIN_STATUS: 'plugin:status',
 };
 
 export function makeMsg(type, payload) {
