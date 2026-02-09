@@ -34,6 +34,11 @@ export const MSG = {
 
   // Phase 4 — Workspace Intelligence & Cost Control
   SESSION_WARNING: 'session:warning',
+
+  // Phase 5 — Graceful Shutdown & Session Recovery
+  SHUTDOWN_WARNING: 'shutdown:warning',
+  SESSION_INTERRUPTED: 'session:interrupted',
+  SESSION_RESUMED: 'session:resumed',
 };
 
 export function makeMsg(type, payload) {

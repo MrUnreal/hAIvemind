@@ -80,6 +80,11 @@ function recordTimelineEvent(msgType, payload) {
   const session = sessions.get(sessionId);
   if (!session || !session.timeline) return;
 
+  // Phase 5.0: Ring-buffer — cap timeline at 5000 events
+  if (session.timeline.length >= 5000) {
+    session.timeline.shift();
+  }
+
   session.timeline.push({
     timestamp: Date.now(),
     type: msgType,
@@ -1166,13 +1171,177 @@ server.listen(config.port, () => {
 
 pruneIntervalId = setInterval(pruneCompletedSessions, 5 * 60 * 1000);
 
-function gracefulShutdown() {
-  console.log('Shutting down...');
+// ── Phase 5.0: Interrupted session recovery on startup ──
+(async function recoverInterruptedSessions() {
+  try {
+    const interruptedDir = path.join(workspace.baseDir, '.haivemind', 'interrupted');
+    const files = await fs.readdir(interruptedDir).catch(() => []);
+    if (files.length > 0) {
+      console.log(`[recovery] Found ${files.length} interrupted session(s)`);
+    }
+    for (const file of files) {
+      if (!file.endsWith('.json')) continue;
+      try {
+        const raw = await fs.readFile(path.join(interruptedDir, file), 'utf-8');
+        const data = JSON.parse(raw);
+        console.log(`  ↳ ${data.sessionId?.slice(0, 8)} (${data.projectSlug}) — ${data.incompleteTasks?.length || 0} incomplete tasks`);
+      } catch { /* skip corrupt files */ }
+    }
+  } catch { /* no interrupted dir, fine */ }
+})();
+
+// ── Phase 5.0: Interrupted sessions REST API ──
+app.get('/api/interrupted-sessions', async (req, res) => {
+  try {
+    const interruptedDir = path.join(workspace.baseDir, '.haivemind', 'interrupted');
+    const files = await fs.readdir(interruptedDir).catch(() => []);
+    const results = [];
+    for (const file of files) {
+      if (!file.endsWith('.json')) continue;
+      try {
+        const raw = await fs.readFile(path.join(interruptedDir, file), 'utf-8');
+        results.push(JSON.parse(raw));
+      } catch { /* skip */ }
+    }
+    res.json(results);
+  } catch {
+    res.json([]);
+  }
+});
+
+app.post('/api/interrupted-sessions/:id/discard', async (req, res) => {
+  try {
+    const interruptedDir = path.join(workspace.baseDir, '.haivemind', 'interrupted');
+    const filePath = path.join(interruptedDir, `${req.params.id}.json`);
+    await fs.unlink(filePath);
+    res.json({ discarded: true });
+  } catch (err) {
+    res.status(404).json({ error: 'Interrupted session not found' });
+  }
+});
+
+app.post('/api/interrupted-sessions/:id/resume', async (req, res) => {
+  try {
+    const interruptedDir = path.join(workspace.baseDir, '.haivemind', 'interrupted');
+    const filePath = path.join(interruptedDir, `${req.params.id}.json`);
+    const raw = await fs.readFile(filePath, 'utf-8');
+    const data = JSON.parse(raw);
+
+    // Delete the interrupted file since we're resuming
+    await fs.unlink(filePath).catch(() => {});
+
+    // Re-submit incomplete tasks as a new session
+    const incompleteTasks = data.incompleteTasks || [];
+    if (incompleteTasks.length === 0) {
+      return res.json({ resumed: false, reason: 'No incomplete tasks' });
+    }
+
+    const resumePrompt = `Resume interrupted session: ${data.prompt}\n\nThe following tasks were incomplete and need to be re-executed:\n${incompleteTasks.map(t => `- ${t.label} (was: ${t.status})`).join('\n')}`;
+
+    // Start a new session with the resume prompt
+    broadcast(makeMsg(MSG.SESSION_RESUMED, { originalSessionId: data.sessionId, projectSlug: data.projectSlug }));
+
+    // Fire and forget — the session runs asynchronously
+    startSession(resumePrompt, data.projectSlug).catch(err => {
+      console.error(`[recovery] Failed to resume session ${data.sessionId}: ${err.message}`);
+    });
+
+    res.json({ resumed: true, projectSlug: data.projectSlug, incompleteTasks: incompleteTasks.length });
+  } catch (err) {
+    res.status(404).json({ error: 'Interrupted session not found' });
+  }
+});
+
+async function gracefulShutdown() {
+  console.log('\n🛑 Graceful shutdown initiated...');
+
+  // 1. Warn connected clients
+  broadcast(makeMsg(MSG.SHUTDOWN_WARNING, { message: 'Server is shutting down', timestamp: Date.now() }));
+
+  // 2. Persist all active (running) sessions to disk
+  const interruptedDir = path.join(workspace.baseDir, '.haivemind', 'interrupted');
+  await fs.mkdir(interruptedDir, { recursive: true }).catch(() => {});
+
+  let savedCount = 0;
+  for (const [sessionId, session] of sessions.entries()) {
+    if (session.status !== 'running') continue;
+
+    try {
+      // Mark session as interrupted
+      session.status = 'interrupted';
+
+      // Build interrupted state
+      const incompleteTasks = session.plan?.tasks?.filter(t => t.status !== 'done' && t.status !== 'passed') || [];
+      const snapshot = {
+        sessionId,
+        projectSlug: session.projectSlug,
+        prompt: session.prompt || session.userPrompt || '',
+        status: 'interrupted',
+        interruptedAt: Date.now(),
+        incompleteTasks: incompleteTasks.map(t => ({
+          id: t.id,
+          label: t.label,
+          status: t.status,
+          dependencies: t.dependencies,
+        })),
+        completedTasks: (session.plan?.tasks || [])
+          .filter(t => t.status === 'done' || t.status === 'passed')
+          .map(t => ({ id: t.id, label: t.label })),
+        timeline: (session.timeline || []).slice(-100), // Last 100 events only
+      };
+
+      const filePath = path.join(interruptedDir, `${sessionId}.json`);
+      await fs.writeFile(filePath, JSON.stringify(snapshot, null, 2));
+      savedCount++;
+      console.log(`  💾 Saved interrupted session: ${sessionId.slice(0, 8)} (${incompleteTasks.length} incomplete tasks)`);
+
+      // Release workspace lock
+      if (session.workDir) {
+        releaseLock(session.workDir, sessionId);
+      }
+    } catch (err) {
+      console.error(`  ❌ Failed to save session ${sessionId.slice(0, 8)}: ${err.message}`);
+    }
+  }
+
+  if (savedCount > 0) {
+    console.log(`  📁 ${savedCount} session(s) saved to ${interruptedDir}`);
+  }
+
+  // 3. Kill all running agents across all active contexts
+  const killPromises = [];
+  for (const [, ctx] of activeContexts) {
+    if (ctx.agentManager) {
+      killPromises.push(ctx.agentManager.killAll());
+    }
+    // Clean up task runner intervals
+    if (ctx.taskRunner?.cleanup) {
+      try { ctx.taskRunner.cleanup(); } catch { /* already cleaned */ }
+    }
+  }
+
+  // Wait for agent kills with a timeout
+  if (killPromises.length > 0) {
+    console.log(`  🔪 Killing ${killPromises.length} agent manager(s)...`);
+    await Promise.allSettled(killPromises);
+  }
+
+  // 4. Clear intervals
   clearInterval(pruneIntervalId);
+  clearInterval(heartbeatInterval);
+
+  // 5. Close connections
   wss.close();
   server.close(() => {
+    console.log('  ✅ Server shutdown complete\n');
     process.exit(0);
   });
+
+  // Force exit after 10 seconds if graceful close hangs
+  setTimeout(() => {
+    console.error('  ⚠️  Forced exit after timeout');
+    process.exit(1);
+  }, 10000).unref();
 }
 
 process.on('SIGTERM', gracefulShutdown);

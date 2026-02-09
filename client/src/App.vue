@@ -50,6 +50,25 @@
       </div>
     </div>
 
+    <div v-if="shutdownWarning" class="status-overlay shutdown-overlay">
+      <div class="status-banner shutdown-banner">
+        <span>🛑 {{ shutdownWarning }}</span>
+      </div>
+    </div>
+
+    <div v-if="interruptedSessions.length > 0 && !hasActiveProject" class="interrupted-banner">
+      <div v-for="is in interruptedSessions" :key="is.sessionId" class="interrupted-item">
+        <div class="interrupted-info">
+          <span class="interrupted-icon">⚡</span>
+          <span>Interrupted session on <strong>{{ is.projectSlug }}</strong> — {{ is.incompleteTasks?.length || 0 }} tasks remaining</span>
+        </div>
+        <div class="interrupted-actions">
+          <button class="interrupted-btn resume" @click="resumeInterrupted(is.sessionId)">Resume</button>
+          <button class="interrupted-btn discard" @click="discardInterrupted(is.sessionId)">Discard</button>
+        </div>
+      </div>
+    </div>
+
     <div
       v-if="sessionStatus === 'failed' || sessionError"
       class="status-overlay error-overlay"
@@ -195,7 +214,17 @@ const reconnecting = ref(false);
 const reconnectedNotification = ref(false);
 const dagRewriteToast = ref('');
 const sessionWarningToast = ref('');
+const interruptedSessions = ref([]);
+const shutdownWarning = ref('');
 let reconnectedTimeoutId = null;
+
+// Phase 5.0: Fetch interrupted sessions on startup
+(async () => {
+  try {
+    const res = await fetch('/api/interrupted-sessions');
+    if (res.ok) interruptedSessions.value = await res.json();
+  } catch { /* server might not support it yet */ }
+})();
 
 // Auto-open agent panel when a node is clicked
 watch(selectedAgentId, (val) => {
@@ -329,6 +358,21 @@ on('dag:rewrite', (payload) => {
 on('session:warning', (payload) => {
   sessionWarningToast.value = payload.message || 'Session warning';
   setTimeout(() => { sessionWarningToast.value = ''; }, 6000);
+});
+
+on('shutdown:warning', (payload) => {
+  shutdownWarning.value = payload.message || 'Server is shutting down';
+});
+
+on('session:interrupted', (payload) => {
+  interruptedSessions.value.push(payload);
+});
+
+on('session:resumed', () => {
+  // Refresh interrupted sessions list
+  fetch('/api/interrupted-sessions').then(r => r.ok ? r.json() : []).then(data => {
+    interruptedSessions.value = data;
+  }).catch(() => {});
 });
 
 on('agent:status', (payload) => {
@@ -477,6 +521,25 @@ function goToProject() {
   replayMode.value = false;
   resetSession();
   showPrompt.value = false;
+}
+
+// Phase 5.0: Interrupted session management
+async function resumeInterrupted(sessionId) {
+  try {
+    const res = await fetch(`/api/interrupted-sessions/${sessionId}/resume`, { method: 'POST' });
+    if (res.ok) {
+      interruptedSessions.value = interruptedSessions.value.filter(s => s.sessionId !== sessionId);
+    }
+  } catch { /* ignore */ }
+}
+
+async function discardInterrupted(sessionId) {
+  try {
+    const res = await fetch(`/api/interrupted-sessions/${sessionId}/discard`, { method: 'POST' });
+    if (res.ok) {
+      interruptedSessions.value = interruptedSessions.value.filter(s => s.sessionId !== sessionId);
+    }
+  } catch { /* ignore */ }
 }
 </script>
 
@@ -803,5 +866,69 @@ function goToProject() {
   100% {
     box-shadow: 0 0 0 0 rgba(244, 67, 54, 0);
   }
+}
+
+/* Phase 5.0: Shutdown & interrupted session styles */
+.shutdown-overlay {
+  z-index: 100;
+}
+.shutdown-banner {
+  background: #4a0000;
+  border-color: #ff1744;
+  color: #ff8a80;
+  font-weight: bold;
+  font-size: 1.1em;
+}
+
+.interrupted-banner {
+  padding: 0 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.interrupted-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #1a1a2e;
+  border: 1px solid #f5c542;
+  border-radius: 8px;
+  padding: 10px 16px;
+  color: #e0e0e0;
+}
+.interrupted-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.interrupted-icon {
+  font-size: 1.2em;
+}
+.interrupted-actions {
+  display: flex;
+  gap: 8px;
+}
+.interrupted-btn {
+  border: 1px solid;
+  border-radius: 6px;
+  padding: 4px 12px;
+  cursor: pointer;
+  font-size: 0.85em;
+  background: transparent;
+}
+.interrupted-btn.resume {
+  border-color: #66bb6a;
+  color: #66bb6a;
+}
+.interrupted-btn.resume:hover {
+  background: #66bb6a22;
+}
+.interrupted-btn.discard {
+  border-color: #ef5350;
+  color: #ef5350;
+}
+.interrupted-btn.discard:hover {
+  background: #ef535022;
 }
 </style>

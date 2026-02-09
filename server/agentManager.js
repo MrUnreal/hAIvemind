@@ -480,11 +480,52 @@ export default class AgentManager {
     };
   }
 
-  killAll() {
+  async killAll() {
+    const killPromises = [];
     for (const agent of this.agents.values()) {
-      if (agent.process !== null) {
-        agent.process.kill('SIGTERM');
+      if (agent.process !== null && !agent.process.killed) {
+        killPromises.push(new Promise((resolve) => {
+          const proc = agent.process;
+          const pid = proc.pid;
+
+          // Try graceful SIGTERM first
+          try {
+            // Kill process group if possible (negative pid)
+            if (pid && process.platform !== 'win32') {
+              process.kill(-pid, 'SIGTERM');
+            } else {
+              proc.kill('SIGTERM');
+            }
+          } catch { /* already exited */ }
+
+          // Force SIGKILL after 3 seconds
+          const forceKill = setTimeout(() => {
+            try {
+              if (pid && process.platform !== 'win32') {
+                process.kill(-pid, 'SIGKILL');
+              } else {
+                proc.kill('SIGKILL');
+              }
+            } catch { /* already exited */ }
+            resolve();
+          }, 3000);
+          forceKill.unref();
+
+          // Resolve early if process exits on its own
+          proc.once('exit', () => {
+            clearTimeout(forceKill);
+            resolve();
+          });
+
+          // Safety timeout
+          setTimeout(() => resolve(), 5000).unref();
+        }));
+
+        agent.status = 'interrupted';
+        agent.finishedAt = Date.now();
       }
     }
+    await Promise.allSettled(killPromises);
+    return killPromises.length;
   }
 }
