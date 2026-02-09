@@ -4,7 +4,13 @@
 
 ## In Progress
 
-_Phase 2 complete! Moving to Phase 3._
+_Phase 3 in progress! Dynamic DAG Rewriting complete._
+
+## Recently Completed (Phase 3: Scaling & Extensibility — partial)
+
+| Feature | Status | Notes |
+|---------|--------|-------|
+| **Dynamic DAG Rewriting** | ✅ Done | Stall detection in `taskRunner.js` (_checkForStalls every 30s), keyword-based data-dependency heuristic, `dag:rewrite` WS event, client edge animation + toast |
 
 ## Recently Completed (Phase 2: Intelligence & UX)
 
@@ -90,12 +96,10 @@ After each session, capture what worked, what failed, time/cost profiles, and le
 
 ### Phase 3: Scaling & Extensibility
 
-#### 🔀 Dynamic DAG Rewriting
+#### 🔀 Dynamic DAG Rewriting ✅
 Detect blocked dependency chains mid-execution and restructure the DAG on the fly.
 
-**Why it matters:** Some tasks that seemed sequential can be parallelized once prior work reveals the shape.
-
-**Approach:** Monitor in `taskRunner.js`. When a task exceeds a time threshold with no true data dependency on its blocker, fork it.
+**Implementation:** `taskRunner.js` runs `_checkForStalls()` every 30s. When a running task exceeds `stallThresholdMs` (90s) and has pending dependents with no detected data dependency (keyword heuristic), the dependency edge is removed and the blocked task is unblocked. Broadcasts `dag:rewrite` WS event. Client animates edge removal (dashed amber line → remove) and shows toast notification. Config: `stallThresholdMs`, `stallCheckIntervalMs` in `config.js`. `cleanup()` method stops interval on session end.
 
 ---
 
@@ -134,3 +138,4 @@ Spawn agents across multiple machines or containers.
 - ✅ **Persistent Skills** — Per-project learned commands, injected into prompts
 - ✅ **Escalation Control Panel** — Per-project model/cost configuration
 - ✅ **Self-Reflection & Metrics** — Post-session analysis with aggregate dashboards
+- ✅ **Dynamic DAG Rewriting** — Stall detection + automatic dependency edge removal

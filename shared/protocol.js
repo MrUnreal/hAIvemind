@@ -28,6 +28,9 @@ export const MSG = {
   SKILLS_UPDATE: 'skills:update',
   REFLECTION_CREATED: 'reflection:created',
   SETTINGS_UPDATE: 'settings:update',
+
+  // Phase 3 — Scaling & Extensibility
+  DAG_REWRITE: 'dag:rewrite',
 };
 
 export function makeMsg(type, payload) {

@@ -73,6 +73,10 @@ const config = {
   orchestratorTimeoutMs: 300000,
   sessionRetentionMs: 30 * 60 * 1000,
   maxAgentOutputBytes: 100 * 1024,
+
+  // DAG Rewriting — stall detection
+  stallThresholdMs: 90000,       // 90s before a running task is considered stalled
+  stallCheckIntervalMs: 30000,   // check every 30s
 };
 
 export const agentTimeoutMs = config.agentTimeoutMs;

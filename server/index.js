@@ -412,9 +412,18 @@ async function startSession(userPrompt, projectSlug, predefinedPlan) {
     // Step 2: Execute tasks via TaskRunner
     const agentManager = new AgentManager(broadcast, DEMO, { skills, overrides });
     // Filter out TaskRunner's own session:complete — we send it explicitly after verification
+    // Also intercept DAG_REWRITE to add a chat message
     const taskRunnerBroadcast = (msg) => {
       const parsed = parseMsg(msg);
       if (parsed?.type === MSG.SESSION_COMPLETE) return;
+      if (parsed?.type === MSG.DAG_REWRITE) {
+        const { fromLabel, toLabel, reason } = parsed.payload || {};
+        broadcast(makeMsg(MSG.CHAT_RESPONSE, {
+          projectSlug,
+          role: 'assistant',
+          content: `⚡ **DAG Rewrite**: Unblocked task "${toLabel}" — removed dependency on stalled task "${fromLabel}"\n\n_${reason}_`,
+        }));
+      }
       broadcast(msg);
     };
     const taskRunner = new TaskRunner(plan, agentManager, taskRunnerBroadcast, workDir);
@@ -424,6 +433,7 @@ async function startSession(userPrompt, projectSlug, predefinedPlan) {
     activeContexts.set(projectSlug, earlyCtx);
 
     await taskRunner.run();
+    taskRunner.cleanup(); // Stop stall-check interval
 
     // Step 3: Verify & Fix Loop — orchestrator reviews and spawns parallel fix agents
     if (!DEMO) {
@@ -596,6 +606,7 @@ async function runVerifyFixLoop({ sessionId, projectSlug, plan, edges, agentMana
     };
     const fixRunner = new TaskRunner(runnerPlan, agentManager, filteredBroadcast, workDir);
     await fixRunner.run();
+    fixRunner.cleanup();
 
     console.log(`[verify-fix] Round ${round + 1} fixes applied — re-verifying...`);
   }
@@ -731,10 +742,19 @@ async function handleChatMessage(message, projectSlug) {
     const filteredBroadcast = (msg) => {
       const parsed = parseMsg(msg);
       if (parsed?.type === MSG.SESSION_COMPLETE) return;
+      if (parsed?.type === MSG.DAG_REWRITE) {
+        const { fromLabel, toLabel, reason } = parsed.payload || {};
+        broadcast(makeMsg(MSG.CHAT_RESPONSE, {
+          projectSlug: ctx.plan.projectSlug,
+          role: 'assistant',
+          content: `⚡ **DAG Rewrite**: Unblocked task "${toLabel}" — removed dependency on stalled task "${fromLabel}"\n\n_${reason}_`,
+        }));
+      }
       broadcast(msg);
     };
     const taskRunner = new TaskRunner(runnerPlan, agentManager, filteredBroadcast, ctx.workDir);
     await taskRunner.run();
+    taskRunner.cleanup(); // Stop stall-check interval
 
     // ── Verify & Fix Loop ──
     if (!DEMO) {

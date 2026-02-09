@@ -38,6 +38,12 @@
       </div>
     </div>
 
+    <div v-if="dagRewriteToast" class="status-toast dag-rewrite-toast">
+      <div class="status-banner dag-rewrite-banner">
+        <span>⚡ DAG Rewrite: {{ dagRewriteToast }}</span>
+      </div>
+    </div>
+
     <div
       v-if="sessionStatus === 'failed' || sessionError"
       class="status-overlay error-overlay"
@@ -181,6 +187,7 @@ const liveTaskStatusSnapshot = ref(null);
 const liveAgentMapSnapshot = ref(null);
 const reconnecting = ref(false);
 const reconnectedNotification = ref(false);
+const dagRewriteToast = ref('');
 let reconnectedTimeoutId = null;
 
 // Auto-open agent panel when a node is clicked
@@ -285,6 +292,31 @@ on('plan:created', (payload) => {
 
 on('task:status', (payload) => {
   taskStatusMap.set(payload.taskId, payload);
+});
+
+on('dag:rewrite', (payload) => {
+  const { removedEdge, toLabel, fromLabel } = payload;
+  if (removedEdge) {
+    // Mark the edge as rewritten (dashed) briefly, then remove it
+    const edgeId = `${removedEdge.from}->${removedEdge.to}`;
+    const idx = edges.value.findIndex(e => e.id === edgeId);
+    if (idx !== -1) {
+      // Briefly show dashed edge, then remove after animation
+      edges.value[idx] = {
+        ...edges.value[idx],
+        style: { strokeDasharray: '8 4', stroke: '#f59e0b' },
+        animated: true,
+        label: '⚡ rewritten',
+      };
+      edges.value = [...edges.value]; // trigger reactivity
+      setTimeout(() => {
+        edges.value = edges.value.filter(e => e.id !== edgeId);
+      }, 2000);
+    }
+  }
+  // Show toast notification
+  dagRewriteToast.value = `Unblocked "${toLabel}" from stalled "${fromLabel}"`;
+  setTimeout(() => { dagRewriteToast.value = ''; }, 5000);
 });
 
 on('agent:status', (payload) => {
@@ -665,6 +697,11 @@ function goToProject() {
 .status-banner.reconnected-banner {
   border-color: #4caf50;
   color: #6ecf6e;
+}
+
+.status-banner.dag-rewrite-banner {
+  border-color: #f59e0b;
+  color: #fbbf24;
 }
 
 .error-card {
