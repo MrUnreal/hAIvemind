@@ -102,8 +102,8 @@ function extractFilesChanged(raw) {
     files.add(m[1].trim());
   }
 
-  // Copilot CLI style: "Created file: path" or "Modified file: path"
-  for (const m of raw.matchAll(/(?:Created|Modified|Updated|Wrote|Writing)\s+(?:file:?\s*)?([^\s,;]+\.\w+)/gi)) {
+  // Copilot CLI style: "Created file: path" or "Modified file: path" or "Creating file: path"
+  for (const m of raw.matchAll(/(?:Creat(?:ed|ing)|Modified|Updated|Wrote|Writing)\s+(?:file:?\s*)?([^\s,;]+\.\w+)/gi)) {
     files.add(m[1].trim());
   }
 
