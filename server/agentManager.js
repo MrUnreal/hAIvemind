@@ -7,8 +7,9 @@ import { spawnMockAgent } from './mock.js';
 import { getBackend } from './backends/index.js';
 import { createSwarm } from './swarm/index.js';
 
+import { summarizeOutput } from './outputSummarizer.js';
+
 /**
- * @typedef {Object} Agent
  * @property {string} id
  * @property {string} taskId
  * @property {string} modelTier
@@ -446,6 +447,8 @@ export default class AgentManager {
   getSessionSnapshot() {
     const agents = {};
     for (const [id, agent] of this.agents) {
+      // Phase 5.1: Generate summary if not already present
+      const summary = agent.summary || (agent.output.length > 0 ? summarizeOutput(agent.output) : null);
       agents[id] = {
         id: agent.id,
         taskId: agent.taskId,
@@ -458,6 +461,7 @@ export default class AgentManager {
         startedAt: agent.startedAt,
         finishedAt: agent.finishedAt,
         output: agent.output,
+        summary, // Phase 5.1: Structured summary alongside raw output
       };
     }
     return agents;

@@ -12,6 +12,7 @@ import { decomposeMock } from './mock.js';
 import TaskRunner from './taskRunner.js';
 import WorkspaceManager from './workspace.js';
 import { prepareSelfDevWorkspace, getWorktreeDiffSummary } from './selfDev.js';
+import { summarizeOutput } from './outputSummarizer.js';
 import { readdir, readFile } from 'node:fs/promises';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -1040,6 +1041,42 @@ app.get('/api/projects/:slug/sessions/:sessionId', (req, res) => {
   const session = workspace.getSession(req.params.slug, req.params.sessionId);
   if (!session) return res.status(404).json({ error: 'Session not found' });
   res.json(session);
+});
+
+/** Phase 5.1: Get per-task output summaries for a session */
+app.get('/api/projects/:slug/sessions/:sessionId/summaries', (req, res) => {
+  const session = workspace.getSession(req.params.slug, req.params.sessionId);
+  if (!session) return res.status(404).json({ error: 'Session not found' });
+
+  const taskSummaries = {};
+  const agents = session.agents || {};
+
+  for (const [agentId, agent] of Object.entries(agents)) {
+    const taskId = agent.taskId;
+    if (!taskId) continue;
+
+    // Use stored summary or generate on-the-fly
+    const summary = agent.summary || (agent.output?.length > 0 ? summarizeOutput(agent.output) : null);
+
+    if (!taskSummaries[taskId]) {
+      taskSummaries[taskId] = {
+        taskId,
+        taskLabel: (session.tasks || []).find(t => t.id === taskId)?.label || taskId,
+        agents: [],
+      };
+    }
+
+    taskSummaries[taskId].agents.push({
+      agentId,
+      model: agent.model,
+      modelTier: agent.modelTier,
+      status: agent.status,
+      retries: agent.retries,
+      summary,
+    });
+  }
+
+  res.json(Object.values(taskSummaries));
 });
 
 /** Start a session (REST fallback for non-WS clients) */

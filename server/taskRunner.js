@@ -1,5 +1,6 @@
 import config from './config.js';
 import { MSG, makeMsg } from '../shared/protocol.js';
+import { summarizeOutput, summaryToContext } from './outputSummarizer.js';
 
 /**
  * TaskRunner manages the DAG execution of tasks with dependency resolution,
@@ -157,9 +158,14 @@ export default class TaskRunner {
     this.running++;
     this._broadcastTaskStatus(state);
 
-    // Build extra context from failure reports
+    // Build extra context from failure reports — use structured summaries (Phase 5.1)
     const extraContext = state.failureReports
-      .map(r => `Previous failure: ${r.summary}\nSuggested fix: ${r.suggestedFix}`)
+      .map(r => {
+        if (r.outputSummary) {
+          return summaryToContext(r.outputSummary);
+        }
+        return `Previous failure: ${r.summary}\nSuggested fix: ${r.suggestedFix}`;
+      })
       .join('\n\n');
 
     try {
@@ -222,12 +228,19 @@ export default class TaskRunner {
       return;
     }
 
-    // Store a simple failure report
+    // Phase 5.1: Generate structured summary from agent output
+    const summary = summarizeOutput(agent.output);
+    agent.summary = summary; // Store on agent for snapshot persistence
+
+    // Store a failure report with structured summary
     state.failureReports.push({
       failedTaskId: state.task.id,
-      summary: `Agent exited with failure. Last output: ${fullOutput.slice(-500)}`,
-      suggestedFix: 'Retry with escalated model',
-      category: 'unknown',
+      summary: summary.digest || `Agent exited with failure. Last output: ${fullOutput.slice(-500)}`,
+      suggestedFix: summary.errors.length > 0
+        ? `Fix these errors: ${summary.errors.slice(0, 3).join('; ')}`
+        : 'Retry with escalated model',
+      category: summary.errors.length > 0 ? 'error' : (summary.tests.failed > 0 ? 'test-failure' : 'unknown'),
+      outputSummary: summary,
     });
 
     // Re-queue as pending for next schedule pass
