@@ -58,6 +58,29 @@ All three original phases have shipped. The sections below document what was bui
 > These features address real gaps discovered during the Phase 1–3 audit.
 > Ordered by severity — broken promises and safety gaps first, then polish.
 
+### 4.0 — Workspace Analysis & Context Injection _(severity: critical)_
+
+When starting a session on an **existing** project, the orchestrator decomposes blind — the file tree injection was disabled (causes output truncation) and no workspace analysis happens. Agents individually explore via `--add-dir`, but the decomposer has zero codebase context. This means it frequently:
+- Proposes recreating files that already exist
+- Misses existing patterns, conventions, and architecture
+- Creates tasks that conflict with the existing structure
+- Can't reference the right files to modify
+
+**Approach:**
+- New `server/workspaceAnalyzer.js` module — fast, token-efficient codebase scanning:
+  - **Structure snapshot**: file tree (depth-limited, respecting `.gitignore`), with file sizes and languages detected
+  - **Framework/language detection**: scan `package.json`, `tsconfig.json`, `pyproject.toml`, `Cargo.toml`, `go.mod`, etc. to determine the tech stack
+  - **Key file extraction**: read the first N lines of entry points (`index.js`, `main.py`, `App.vue`, etc.) and config files to capture imports, exports, and patterns
+  - **Dependency map**: parse package manifests for direct dependencies
+  - **Convention detection**: indentation style, module system (ESM/CJS), test framework, linter config
+- Produce a **compact context document** (~500–1500 tokens) that summarizes the workspace without dumping the entire file tree
+- Inject this context into:
+  - `decompose()` as a `## Workspace Analysis` section (replacing the broken file tree dump)
+  - `_buildPrompt()` so each agent knows the project structure
+  - `verify()` so verification is aware of the existing codebase
+- Cache the analysis per session (don't re-scan per agent)
+- Expose via REST: `GET /api/projects/:slug/analysis` for on-demand inspection
+
 ### 4.1 — Enforce Cost Ceiling _(severity: high)_
 
 The settings UI lets users set a `costCeiling` per project, but the runtime ignores it entirely.

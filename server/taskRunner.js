@@ -11,12 +11,14 @@ export default class TaskRunner {
    * @param {import('./agentManager.js').default} agentManager
    * @param {(msg: string) => void} broadcast
    * @param {string} workDir
+   * @param {object} [opts] - Optional overrides
    */
-  constructor(plan, agentManager, broadcast, workDir) {
+  constructor(plan, agentManager, broadcast, workDir, opts = {}) {
     this.plan = plan;
     this.agentManager = agentManager;
     this.broadcast = broadcast;
     this.workDir = workDir;
+    this.overrides = opts.overrides || null;
 
     /** @type {Map<string, TaskState>} */
     this.taskStates = new Map();
@@ -91,7 +93,8 @@ export default class TaskRunner {
     for (const [taskId, state] of this.taskStates) {
       // Skip tasks that aren't actionable
       if (state.status !== 'pending' && state.status !== 'gated') continue;
-      if (this.running >= config.maxConcurrency) break;
+      const maxConc = this.overrides?.maxConcurrency ?? config.maxConcurrency;
+      if (this.running >= maxConc) continue;  // Phase 4: continue (not break) to check gated tasks
 
       const depsOk = state.task.dependencies.every(depId => {
         const depState = this.taskStates.get(depId);

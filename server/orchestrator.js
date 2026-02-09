@@ -91,7 +91,7 @@ Output ONLY valid JSON (no markdown fences, no preamble):
  * Call the orchestrator (T3) model to decompose a user prompt into tasks.
  * Returns a plan: { tasks: [{ id, label, description, dependencies }] }
  */
-export async function decompose(userPrompt, workDir, { fileTree, skills } = {}) {
+export async function decompose(userPrompt, workDir, { fileTree, skills, workspaceAnalysis } = {}) {
   const { modelName, modelConfig } = getOrchestratorModel();
   const timeoutMs = config.orchestratorTimeoutMs;
   const timeoutMinutes = Math.round(timeoutMs / 60000);
@@ -145,6 +145,11 @@ When modifying an existing project (file tree provided below), reference specifi
   // If a file tree is provided, include it so the planner is codebase-aware
   if (fileTree) {
     prompt += `\n\n## Existing Project Structure\n\n\`\`\`\n${fileTree}\n\`\`\``;
+  }
+
+  // Phase 4: Inject compact workspace analysis (replaces raw file tree approach)
+  if (workspaceAnalysis && typeof workspaceAnalysis.toPromptContext === 'function') {
+    prompt += '\n\n' + workspaceAnalysis.toPromptContext();
   }
 
   // Phase 2: Inject persistent skills as project knowledge

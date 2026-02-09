@@ -347,6 +347,9 @@ async function startSession(userPrompt, projectSlug, predefinedPlan) {
     escalation: settings.escalation,
     maxRetriesTotal: settings.maxRetriesTotal,
     pinnedModels: settings.pinnedModels,
+    // Phase 4: Wire up settings that were previously ignored
+    costCeiling: settings.costCeiling ?? null,
+    maxConcurrency: settings.maxConcurrency ?? null,
   };
 
   const { sessionId, workDir, session } = workspace.startSession(projectSlug, userPrompt);
@@ -376,12 +379,26 @@ async function startSession(userPrompt, projectSlug, predefinedPlan) {
   console.log(`${'='.repeat(60)}\n`);
 
   try {
-    // Step 1: Decompose prompt into tasks via orchestrator unless a predefined plan was provided
-    // Note: file tree injection disabled for now — it causes orchestrator output truncation.
-    // Agents have --add-dir and can explore the codebase themselves.
+    // Step 1: Analyze workspace for context injection (Phase 4)
+    let workspaceAnalysis = null;
+    if (!DEMO && !predefinedPlan) {
+      try {
+        const { analyzeWorkspace } = await import('./workspaceAnalyzer.js');
+        workspaceAnalysis = await analyzeWorkspace(workDir);
+        console.log(`[session] Workspace analysis: ${workspaceAnalysis.summary}`);
+      } catch (err) {
+        console.warn(`[session] Workspace analysis failed (non-fatal): ${err.message}`);
+      }
+    }
+
+    // Store analysis on session for agent prompt injection
+    const stored0 = sessions.get(sessionId);
+    if (stored0) stored0.workspaceAnalysis = workspaceAnalysis;
+
+    // Step 2: Decompose prompt into tasks via orchestrator
     const plan = predefinedPlan || (DEMO
       ? await decomposeMock(userPrompt)
-      : await decompose(userPrompt, workDir, { skills }));
+      : await decompose(userPrompt, workDir, { skills, workspaceAnalysis }));
 
     const stored = sessions.get(sessionId);
     stored.plan = plan;
@@ -410,7 +427,7 @@ async function startSession(userPrompt, projectSlug, predefinedPlan) {
     }));
 
     // Step 2: Execute tasks via TaskRunner
-    const agentManager = new AgentManager(broadcast, DEMO, { skills, overrides });
+    const agentManager = new AgentManager(broadcast, DEMO, { skills, overrides, workspaceAnalysis });
     // Filter out TaskRunner's own session:complete — we send it explicitly after verification
     // Also intercept DAG_REWRITE to add a chat message
     const taskRunnerBroadcast = (msg) => {
@@ -426,7 +443,7 @@ async function startSession(userPrompt, projectSlug, predefinedPlan) {
       }
       broadcast(msg);
     };
-    const taskRunner = new TaskRunner(plan, agentManager, taskRunnerBroadcast, workDir);
+    const taskRunner = new TaskRunner(plan, agentManager, taskRunnerBroadcast, workDir, { overrides });
 
     // Store taskRunner reference for gate responses
     const earlyCtx = { sessionId, workDir, plan, agentManager, taskRunner, history: [] };
@@ -1070,6 +1087,26 @@ app.put('/api/projects/:slug/settings', (req, res) => {
   const updated = workspace.updateProjectSettings(req.params.slug, req.body);
   broadcast(makeMsg(MSG.SETTINGS_UPDATE, { projectSlug: req.params.slug, settings: updated }));
   res.json(updated);
+});
+
+// Phase 4: Workspace analysis endpoint
+app.get('/api/projects/:slug/analysis', async (req, res) => {
+  const project = workspace.getProject(req.params.slug);
+  if (!project) return res.status(404).json({ error: 'Project not found' });
+  try {
+    const { analyzeWorkspace } = await import('./workspaceAnalyzer.js');
+    const analysis = await analyzeWorkspace(project.path);
+    res.json({
+      summary: analysis.summary,
+      fileTree: analysis.fileTree,
+      techStack: analysis.techStack,
+      entryPoints: analysis.entryPoints,
+      dependencies: analysis.dependencies,
+      conventions: analysis.conventions,
+    });
+  } catch (err) {
+    res.status(500).json({ error: `Analysis failed: ${err.message}` });
+  }
 });
 
 // ── Utility routes ──

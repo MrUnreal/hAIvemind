@@ -44,6 +44,12 @@
       </div>
     </div>
 
+    <div v-if="sessionWarningToast" class="status-toast warning-toast">
+      <div class="status-banner warning-banner">
+        <span>⚠️ {{ sessionWarningToast }}</span>
+      </div>
+    </div>
+
     <div
       v-if="sessionStatus === 'failed' || sessionError"
       class="status-overlay error-overlay"
@@ -188,6 +194,7 @@ const liveAgentMapSnapshot = ref(null);
 const reconnecting = ref(false);
 const reconnectedNotification = ref(false);
 const dagRewriteToast = ref('');
+const sessionWarningToast = ref('');
 let reconnectedTimeoutId = null;
 
 // Auto-open agent panel when a node is clicked
@@ -317,6 +324,11 @@ on('dag:rewrite', (payload) => {
   // Show toast notification
   dagRewriteToast.value = `Unblocked "${toLabel}" from stalled "${fromLabel}"`;
   setTimeout(() => { dagRewriteToast.value = ''; }, 5000);
+});
+
+on('session:warning', (payload) => {
+  sessionWarningToast.value = payload.message || 'Session warning';
+  setTimeout(() => { sessionWarningToast.value = ''; }, 6000);
 });
 
 on('agent:status', (payload) => {
@@ -702,6 +714,12 @@ function goToProject() {
 .status-banner.dag-rewrite-banner {
   border-color: #f59e0b;
   color: #fbbf24;
+}
+
+.status-banner.warning-banner {
+  border-color: #f59e0b;
+  color: #fbbf24;
+  background: #1a1710;
 }
 
 .error-card {

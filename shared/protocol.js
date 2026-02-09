@@ -31,6 +31,9 @@ export const MSG = {
 
   // Phase 3 — Scaling & Extensibility
   DAG_REWRITE: 'dag:rewrite',
+
+  // Phase 4 — Workspace Intelligence & Cost Control
+  SESSION_WARNING: 'session:warning',
 };
 
 export function makeMsg(type, payload) {

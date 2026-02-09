@@ -31,12 +31,15 @@ export default class AgentManager {
    * @param {object} [opts]
    * @param {object} [opts.skills] - Persistent skills for this project
    * @param {object} [opts.overrides] - Per-project escalation/model overrides
+   * @param {object} [opts.workspaceAnalysis] - Workspace analysis for context injection
    */
   constructor(broadcast, demo = false, opts = {}) {
     this.broadcast = broadcast;
     this.demo = demo;
     this.skills = opts.skills || null;
     this.overrides = opts.overrides || null;
+    this.workspaceAnalysis = opts.workspaceAnalysis || null;
+    this.costCeiling = opts.overrides?.costCeiling ?? null;
     this.backendName = opts.backend || config.defaultBackend || 'copilot';
     /** @type {Map<string, Agent>} */
     this.agents = new Map();
@@ -55,6 +58,51 @@ export default class AgentManager {
    */
   spawn(task, retryIndex, workDir, extraContext = '') {
     const { tierName, modelName, modelConfig } = getModelForRetry(retryIndex, this.overrides, task.label);
+
+    // Phase 4: Cost ceiling enforcement
+    if (this.costCeiling != null) {
+      let cumulativeCost = 0;
+      for (const a of this.agents.values()) cumulativeCost += a.multiplier;
+      const projected = cumulativeCost + modelConfig.multiplier;
+      // Warn at 80% of ceiling
+      if (projected >= this.costCeiling * 0.8 && projected < this.costCeiling) {
+        this.broadcast(makeMsg(MSG.SESSION_WARNING, {
+          type: 'cost-ceiling',
+          message: `Cost approaching ceiling: ${projected}× of ${this.costCeiling}× limit`,
+          current: projected,
+          ceiling: this.costCeiling,
+        }));
+      }
+      // Block if would exceed ceiling
+      if (projected > this.costCeiling) {
+        console.warn(`[agent] Cost ceiling exceeded: ${projected}× > ${this.costCeiling}× — blocking agent for "${task.label}"`);
+        const agent = {
+          id: randomUUID(),
+          taskId: task.id,
+          taskLabel: task.label,
+          modelTier: tierName,
+          model: modelName,
+          multiplier: 0,
+          status: 'failed',
+          retries: retryIndex,
+          reason: `[cost-ceiling] Would exceed limit (${projected}× > ${this.costCeiling}×)`,
+          prompt: '',
+          cliCommand: '',
+          output: [`[cost-ceiling] Agent blocked — would push total to ${projected}× (limit: ${this.costCeiling}×)`],
+          failureReport: null,
+          startedAt: Date.now(),
+          finishedAt: Date.now(),
+          process: null,
+        };
+        this.agents.set(agent.id, agent);
+        this.broadcast(makeMsg(MSG.AGENT_STATUS, {
+          agentId: agent.id, taskId: task.id, taskLabel: task.label,
+          status: 'failed', model: modelName, modelTier: tierName,
+          multiplier: 0, retries: retryIndex, reason: agent.reason,
+        }));
+        return Promise.resolve(agent);
+      }
+    }
 
     // Build human-readable escalation reason
     const reason = this._buildEscalationReason(retryIndex, tierName, modelName);
@@ -361,6 +409,11 @@ export default class AgentManager {
       if (skillLines.length > 0) {
         prompt += `\n## Project Knowledge (from previous sessions)\n${skillLines.join('\n')}\n`;
       }
+    }
+
+    // Phase 4: Inject compact workspace analysis
+    if (this.workspaceAnalysis && typeof this.workspaceAnalysis.toPromptContext === 'function') {
+      prompt += '\n' + this.workspaceAnalysis.toPromptContext() + '\n';
     }
 
     if (extraContext) {
