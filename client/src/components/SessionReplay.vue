@@ -84,9 +84,12 @@ const filteredEvents = computed(() => {
 function buildReplayState() {
   const tasksById = new Map();
   const edgesById = new Map();
+  const taskStatuses = new Map();
+  const agentStatuses = new Map();
 
   for (const ev of filteredEvents.value) {
     const data = ev && typeof ev === 'object' ? ev.data || {} : {};
+    const evType = ev?.type || '';
 
     if (Array.isArray(data.tasks)) {
       for (const task of data.tasks) {
@@ -100,6 +103,16 @@ function buildReplayState() {
       const task = data.task;
       const id = task.id || task.taskId || JSON.stringify(task);
       tasksById.set(id, task);
+    }
+
+    // Capture task:status events — payload is { taskId, status, ... } directly in data
+    if (evType === 'task:status' && data.taskId && data.status) {
+      taskStatuses.set(data.taskId, data);
+    }
+
+    // Capture agent:status events — payload is { agentId, taskId, status, ... }
+    if (evType === 'agent:status' && data.agentId) {
+      agentStatuses.set(data.agentId, data);
     }
 
     if (Array.isArray(data.edges)) {
@@ -121,6 +134,8 @@ function buildReplayState() {
     currentTime: currentTime.value,
     filteredTasks: Array.from(tasksById.values()),
     filteredEdges: Array.from(edgesById.values()),
+    taskStatuses: Object.fromEntries(taskStatuses),
+    agentStatuses: Object.fromEntries(agentStatuses),
   };
 }
 

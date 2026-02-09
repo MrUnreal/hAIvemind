@@ -155,6 +155,8 @@ const sidePanelCollapsed = ref(true);
 const replayMode = ref(false);
 const liveTasksSnapshot = ref(null);
 const liveEdgesSnapshot = ref(null);
+const liveTaskStatusSnapshot = ref(null);
+const liveAgentMapSnapshot = ref(null);
 const reconnecting = ref(false);
 const reconnectedNotification = ref(false);
 let reconnectedTimeoutId = null;
@@ -171,6 +173,8 @@ watch(replayMode, async (enabled) => {
   if (enabled) {
     liveTasksSnapshot.value = tasks.value.slice();
     liveEdgesSnapshot.value = edges.value.slice();
+    liveTaskStatusSnapshot.value = new Map(taskStatusMap);
+    liveAgentMapSnapshot.value = new Map(agentMap);
 
     if (
       activeProject.value &&
@@ -186,8 +190,20 @@ watch(replayMode, async (enabled) => {
     if (liveEdgesSnapshot.value) {
       edges.value = liveEdgesSnapshot.value;
     }
+    // Restore taskStatusMap
+    taskStatusMap.clear();
+    if (liveTaskStatusSnapshot.value) {
+      for (const [k, v] of liveTaskStatusSnapshot.value) taskStatusMap.set(k, v);
+    }
+    // Restore agentMap
+    agentMap.clear();
+    if (liveAgentMapSnapshot.value) {
+      for (const [k, v] of liveAgentMapSnapshot.value) agentMap.set(k, v);
+    }
     liveTasksSnapshot.value = null;
     liveEdgesSnapshot.value = null;
+    liveTaskStatusSnapshot.value = null;
+    liveAgentMapSnapshot.value = null;
   }
 });
 
@@ -316,6 +332,29 @@ function onReplayStateUpdate(state) {
     edges.value = state.filteredEdges;
   } else if (liveEdgesSnapshot.value) {
     edges.value = liveEdgesSnapshot.value;
+  }
+
+  // Rebuild taskStatusMap from replay's historical task statuses
+  taskStatusMap.clear();
+  if (state && state.taskStatuses) {
+    for (const [taskId, statusData] of Object.entries(state.taskStatuses)) {
+      taskStatusMap.set(taskId, statusData);
+    }
+  }
+  // Ensure tasks NOT yet seen at this replay time show as 'pending'
+  for (const t of tasks.value) {
+    const tid = t.id || t.taskId;
+    if (tid && !tid.startsWith('__') && !taskStatusMap.has(tid)) {
+      taskStatusMap.set(tid, { taskId: tid, status: 'pending' });
+    }
+  }
+
+  // Rebuild agentMap from replay's historical agent statuses
+  agentMap.clear();
+  if (state && state.agentStatuses) {
+    for (const [agentId, agentData] of Object.entries(state.agentStatuses)) {
+      agentMap.set(agentId, agentData);
+    }
   }
 }
 
