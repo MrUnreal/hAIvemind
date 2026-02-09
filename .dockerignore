@@ -1,0 +1,14 @@
+node_modules/
+client/node_modules/
+client/dist/
+.haivemind-workspace/
+.haivemind/
+test-results/
+playwright-report/
+tests/
+*.log
+*.png
+.git/
+.gitignore
+README.md
+playwright.config.js

@@ -1,12 +1,16 @@
 {
   "name": "haivemind",
   "version": "0.1.0",
-  "private": true,
+  "description": "Massively parallel AI coding orchestrator",
   "type": "module",
   "bin": {
     "haivemind": "./bin/haivemind.js"
   },
+  "engines": {
+    "node": ">=18.0.0"
+  },
   "scripts": {
+    "start": "node server/index.js",
     "dev": "concurrently \"npm run dev:server\" \"npm run dev:client\"",
     "dev:stable": "concurrently \"npm run dev:server:stable\" \"npm run dev:client\"",
     "dev:mock": "concurrently \"npm run dev:server:mock\" \"npm run dev:client\"",
@@ -14,7 +18,10 @@
     "dev:server:stable": "node server/index.js",
     "dev:server:mock": "node --watch server/index.js --mock",
     "dev:client": "cd client && npx vite --open",
-    "build:client": "cd client && npx vite build"
+    "build:client": "cd client && npx vite build",
+    "docker:build": "docker build -t haivemind:latest .",
+    "docker:up": "docker compose up -d",
+    "docker:down": "docker compose down"
   },
   "dependencies": {
     "express": "^5.1.0",

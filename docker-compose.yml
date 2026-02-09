@@ -1,0 +1,28 @@
+version: '3.8'
+
+services:
+  haivemind:
+    build: .
+    image: haivemind:latest
+    container_name: haivemind
+    restart: unless-stopped
+    ports:
+      - '${PORT:-3000}:3000'
+    environment:
+      - PORT=3000
+      - DEMO=${DEMO:-0}
+      - COPILOT_CMD=${COPILOT_CMD:-copilot}
+    volumes:
+      - haivemind-workspace:/app/.haivemind-workspace
+      - haivemind-data:/app/.haivemind
+      - ./projects:/app/projects
+    healthcheck:
+      test: ['CMD', 'wget', '-qO-', 'http://localhost:3000/api/projects']
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+volumes:
+  haivemind-workspace:
+  haivemind-data:

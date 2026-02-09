@@ -1244,6 +1244,19 @@ app.get('/api/templates', async (req, res) => {
   }
 });
 
+// ── Serve built client in production (when client/dist exists) ──
+const clientDist = join(__dirname, '..', 'client', 'dist');
+import('node:fs').then(({ existsSync }) => {
+  if (existsSync(clientDist)) {
+    app.use(express.static(clientDist));
+    // SPA fallback — serve index.html for any non-API route
+    app.get(/^(?!\/api|\/ws).*/, (_req, res) => {
+      res.sendFile(join(clientDist, 'index.html'));
+    });
+    console.log('[server] Serving built client from client/dist/');
+  }
+});
+
 // ── Start server ──
 server.listen(config.port, () => {
   const projects = workspace.listProjects();
