@@ -4,6 +4,8 @@ import config, { getModelForRetry } from './config.js';
 import { withTimeout } from './processTimeout.js';
 import { MSG, makeMsg } from '../shared/protocol.js';
 import { spawnMockAgent } from './mock.js';
+import { getBackend } from './backends/index.js';
+import { createSwarm } from './swarm/index.js';
 
 /**
  * @typedef {Object} Agent
@@ -35,8 +37,12 @@ export default class AgentManager {
     this.demo = demo;
     this.skills = opts.skills || null;
     this.overrides = opts.overrides || null;
+    this.backendName = opts.backend || config.defaultBackend || 'copilot';
     /** @type {Map<string, Agent>} */
     this.agents = new Map();
+
+    // Multi-Workspace Swarm: create swarm manager when enabled
+    this.swarm = config.swarm?.enabled ? createSwarm(config.swarm) : null;
   }
 
   /**
@@ -54,14 +60,8 @@ export default class AgentManager {
     const reason = this._buildEscalationReason(retryIndex, tierName, modelName);
 
     const prompt = this._buildPrompt(task, extraContext);
-    // Build copilot CLI args: --model X --prompt "text" --allow-all --add-dir <workDir>
-    const fullArgs = [
-      ...modelConfig.args,
-      prompt,
-      '--allow-all',
-      '--add-dir', workDir,
-    ];
-    const cliCommand = `${modelConfig.cmd} ${fullArgs.map(a => `"${a}"`).join(' ')}`;
+    // cliCommand is set by the backend; initialize with a placeholder
+    const cliCommand = `[${this.backendName}] ${modelName} → "${task.label}"`;
 
     const agent = {
       id: randomUUID(),
@@ -100,49 +100,176 @@ export default class AgentManager {
       console.log(`[agent:${agent.id.slice(0, 8)}] Spawning ${modelName} (${tierName}, ${modelConfig.multiplier}×) for task "${task.label}"`);
       console.log(`[agent:${agent.id.slice(0, 8)}] CMD: ${cliCommand.slice(0, 120)}...`);
 
-      const child = this.demo
-        ? spawnMockAgent(task, modelName, tierName)
-        : spawn(modelConfig.cmd, fullArgs, {
-            cwd: workDir,
-            env: { ...process.env },
-          });
+      // Swarm path: delegate to a remote runner if swarm is enabled and has capacity
+      if (this.swarm && !this.demo) {
+        const runner = this.swarm.getAvailableRunner();
+        if (runner) {
+          console.log(`[agent:${agent.id.slice(0, 8)}] Delegating to swarm runner: ${runner.constructor.name}`);
+          return runner.spawn(task, retryIndex, workDir, extraContext, this)
+            .then((swarmAgent) => resolve(swarmAgent))
+            .catch((err) => {
+              console.warn(`[agent:${agent.id.slice(0, 8)}] Swarm runner failed, falling back to local: ${err.message}`);
+              this._spawnChild(agent, task, retryIndex, workDir, extraContext, modelName, tierName, modelConfig, prompt, resolve);
+            });
+        }
+      }
 
-      agent.process = child;
+      this._spawnChild(agent, task, retryIndex, workDir, extraContext, modelName, tierName, modelConfig, prompt, resolve);
+    });
+  }
 
+  /**
+   * Spawn a child process locally and wire up its I/O to the agent.
+   * @private
+   */
+  _spawnChild(agent, task, retryIndex, workDir, extraContext, modelName, tierName, modelConfig, prompt, resolve) {
+    let child;
+    if (this.demo) {
+      child = spawnMockAgent(task, modelName, tierName);
+    } else {
+      const backend = getBackend(this.backendName, config.backends?.[this.backendName] || {});
+      const spawned = backend.spawn(prompt, workDir, { model: modelName, modelConfig });
+      child = spawned.process;
+      agent.cliCommand = spawned.cliCommand;
+    }
+
+    this.attachProcess(agent, child, task, modelName, tierName, modelConfig, retryIndex).then(resolve);
+  }
+
+  /**
+   * Spawn an agent locally (used by swarm LocalRunner).
+   * Same as spawn() but always local — never delegates to swarm.
+   * @param {object} task
+   * @param {number} retryIndex
+   * @param {string} workDir
+   * @param {string} [extraContext]
+   * @returns {Promise<Agent>}
+   */
+  spawnLocal(task, retryIndex, workDir, extraContext = '') {
+    const { tierName, modelName, modelConfig } = getModelForRetry(retryIndex, this.overrides, task.label);
+    const reason = this._buildEscalationReason(retryIndex, tierName, modelName);
+    const prompt = this._buildPrompt(task, extraContext);
+    const agent = this.prepareAgent(task, retryIndex, modelName, tierName, modelConfig, reason, prompt);
+
+    return new Promise((resolve) => {
+      this._spawnChild(agent, task, retryIndex, workDir, extraContext, modelName, tierName, modelConfig, prompt, resolve);
+    });
+  }
+
+  /**
+   * Create an agent object and broadcast its status WITHOUT spawning a process.
+   * Used by swarm runners (Docker/SSH) that manage their own processes.
+   *
+   * Overloaded signatures:
+   *   prepareAgent(task, retryIndex, workDir, extraContext) — resolves model internally
+   *   prepareAgent(task, retryIndex, modelName, tierName, modelConfig, reason, prompt) — explicit model
+   *
+   * @returns {Agent}
+   */
+  prepareAgent(task, retryIndex, arg3, arg4, arg5, arg6, arg7) {
+    let modelName, tierName, modelConfig, reason, prompt;
+
+    if (typeof arg5 === 'object' && arg5 !== null) {
+      // Explicit signature: (task, retryIndex, modelName, tierName, modelConfig, reason, prompt)
+      modelName = arg3;
+      tierName = arg4;
+      modelConfig = arg5;
+      reason = arg6;
+      prompt = arg7;
+    } else {
+      // Simple signature: (task, retryIndex, workDir, extraContext)
+      const resolved = getModelForRetry(retryIndex, this.overrides, task.label);
+      modelName = resolved.modelName;
+      tierName = resolved.tierName;
+      modelConfig = resolved.modelConfig;
+      reason = this._buildEscalationReason(retryIndex, tierName, modelName);
+      prompt = this._buildPrompt(task, arg4 || '');
+    }
+    const agent = {
+      id: randomUUID(),
+      taskId: task.id,
+      taskLabel: task.label,
+      modelTier: tierName,
+      model: modelName,
+      multiplier: modelConfig.multiplier,
+      status: 'running',
+      retries: retryIndex,
+      reason,
+      prompt,
+      cliCommand: `[swarm] ${modelName} → "${task.label}"`,
+      output: [],
+      failureReport: null,
+      startedAt: Date.now(),
+      finishedAt: null,
+      process: null,
+    };
+
+    this.agents.set(agent.id, agent);
+
+    this.broadcast(makeMsg(MSG.AGENT_STATUS, {
+      agentId: agent.id,
+      taskId: task.id,
+      taskLabel: task.label,
+      status: 'running',
+      model: modelName,
+      modelTier: tierName,
+      multiplier: modelConfig.multiplier,
+      retries: retryIndex,
+      reason,
+    }));
+
+    return agent;
+  }
+
+  /**
+   * Attach a child process's I/O to an agent and return a promise
+   * that resolves when the process exits.
+   * Used by swarm runners that create their own child processes.
+   *
+   * Can be called as:
+   *   attachProcess(agent, child, task) — pulls model info from agent object
+   *   attachProcess(agent, child, task, modelName, tierName, modelConfig, retryIndex) — explicit
+   *
+   * @param {Agent} agent
+   * @param {import('node:child_process').ChildProcess} child
+   * @param {object} task
+   * @param {string} [modelName]
+   * @param {string} [tierName]
+   * @param {object} [modelConfig]
+   * @param {number} [retryIndex]
+   * @returns {Promise<Agent>}
+   */
+  attachProcess(agent, child, task, modelName, tierName, modelConfig, retryIndex) {
+    // Default to agent's stored values if not provided explicitly
+    modelName = modelName ?? agent.model;
+    tierName = tierName ?? agent.modelTier;
+    modelConfig = modelConfig ?? { multiplier: agent.multiplier };
+    retryIndex = retryIndex ?? agent.retries;
+    agent.process = child;
+
+    return new Promise((resolve) => {
       /** @type {NodeJS.Timeout | null} */
       let timeoutId = null;
       let settled = false;
 
       const clearAgentTimeout = () => {
-        if (timeoutId) {
-          clearTimeout(timeoutId);
-          timeoutId = null;
-        }
+        if (timeoutId) { clearTimeout(timeoutId); timeoutId = null; }
       };
 
       const onClose = (code) => {
         if (settled) return;
         settled = true;
         clearAgentTimeout();
-
         agent.finishedAt = Date.now();
         agent.status = code === 0 ? 'success' : 'failed';
         agent.process = null;
-
         console.log(`[agent:${agent.id.slice(0, 8)}] Exited with code ${code} → ${agent.status}`);
-
         this.broadcast(makeMsg(MSG.AGENT_STATUS, {
-          agentId: agent.id,
-          taskId: task.id,
-          taskLabel: task.label,
-          status: agent.status,
-          model: modelName,
-          modelTier: tierName,
-          multiplier: modelConfig.multiplier,
-          retries: retryIndex,
-          reason,
+          agentId: agent.id, taskId: task.id, taskLabel: task.label,
+          status: agent.status, model: modelName, modelTier: tierName,
+          multiplier: modelConfig.multiplier, retries: retryIndex,
+          reason: agent.reason,
         }));
-
         resolve(agent);
       };
 
@@ -150,26 +277,17 @@ export default class AgentManager {
         if (settled) return;
         settled = true;
         clearAgentTimeout();
-
         agent.finishedAt = Date.now();
         agent.status = 'failed';
         agent.output.push(`[spawn error] ${err.message}`);
         agent.process = null;
-
         console.error(`[agent:${agent.id.slice(0, 8)}] Spawn error: ${err.message}`);
-
         this.broadcast(makeMsg(MSG.AGENT_STATUS, {
-          agentId: agent.id,
-          taskId: task.id,
-          taskLabel: task.label,
-          status: 'failed',
-          model: modelName,
-          modelTier: tierName,
-          multiplier: modelConfig.multiplier,
-          retries: retryIndex,
-          reason,
+          agentId: agent.id, taskId: task.id, taskLabel: task.label,
+          status: 'failed', model: modelName, modelTier: tierName,
+          multiplier: modelConfig.multiplier, retries: retryIndex,
+          reason: agent.reason,
         }));
-
         resolve(agent);
       };
 
@@ -180,11 +298,7 @@ export default class AgentManager {
           totalBytes -= agent.output.shift().length;
         }
         agent.output.push(chunk);
-        this.broadcast(makeMsg(MSG.AGENT_OUTPUT, {
-          agentId: agent.id,
-          chunk,
-          stream: 'stdout',
-        }));
+        this.broadcast(makeMsg(MSG.AGENT_OUTPUT, { agentId: agent.id, chunk, stream: 'stdout' }));
       });
 
       child.stderr.on('data', (data) => {
@@ -194,62 +308,32 @@ export default class AgentManager {
           totalBytes -= agent.output.shift().length;
         }
         agent.output.push(chunk);
-        this.broadcast(makeMsg(MSG.AGENT_OUTPUT, {
-          agentId: agent.id,
-          chunk,
-          stream: 'stderr',
-        }));
+        this.broadcast(makeMsg(MSG.AGENT_OUTPUT, { agentId: agent.id, chunk, stream: 'stderr' }));
       });
 
-      child.on('close', (code) => onClose(code));
+      child.on('close', onClose);
+      child.on('error', onError);
 
-      child.on('error', (err) => onError(err));
-
-      // Note: dead duplicate handlers removed in Phase 2 cleanup
-      // (previously had unreachable code after return onClose/onError calls)
       timeoutId = setTimeout(() => {
         if (settled) return;
         settled = true;
-
         const minutes = config.agentTimeoutMs / 60000;
         const timeoutMessage = `Agent timed out after ${minutes} minutes`;
-
         agent.finishedAt = Date.now();
         agent.status = 'failed';
         agent.output.push(timeoutMessage);
         agent.process = null;
-
         child.removeAllListeners('close');
         child.removeAllListeners('error');
-
-        try {
-          child.kill('SIGTERM');
-        } catch {
-          // Ignore if process already exited.
-        }
-
-        setTimeout(() => {
-          try {
-            child.kill('SIGKILL');
-          } catch {
-            // Ignore if process already exited.
-          }
-        }, 5000);
-
+        try { child.kill('SIGTERM'); } catch { /* already exited */ }
+        setTimeout(() => { try { child.kill('SIGKILL'); } catch { /* already exited */ } }, 5000);
         console.warn(`[agent:${agent.id.slice(0, 8)}] ${timeoutMessage}`);
-
         this.broadcast(makeMsg(MSG.AGENT_STATUS, {
-          agentId: agent.id,
-          taskId: task.id,
-          taskLabel: task.label,
-          status: 'failed',
-          model: modelName,
-          modelTier: tierName,
-          multiplier: modelConfig.multiplier,
-          retries: retryIndex,
-          reason,
+          agentId: agent.id, taskId: task.id, taskLabel: task.label,
+          status: 'failed', model: modelName, modelTier: tierName,
+          multiplier: modelConfig.multiplier, retries: retryIndex,
+          reason: agent.reason,
         }));
-
         resolve(agent);
       }, config.agentTimeoutMs);
     });

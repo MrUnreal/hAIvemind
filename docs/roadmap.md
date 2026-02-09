@@ -2,15 +2,13 @@
 
 > Features the hAIvemind will build for itself. Prioritized by impact — reliability before ambition.
 
-## In Progress
-
-_Phase 3 in progress! Dynamic DAG Rewriting complete._
-
-## Recently Completed (Phase 3: Scaling & Extensibility — partial)
+## Recently Completed (Phase 3: Scaling & Extensibility — COMPLETE)
 
 | Feature | Status | Notes |
 |---------|--------|-------|
 | **Dynamic DAG Rewriting** | ✅ Done | Stall detection in `taskRunner.js` (_checkForStalls every 30s), keyword-based data-dependency heuristic, `dag:rewrite` WS event, client edge animation + toast |
+| **Pluggable Agent Backends** | ✅ Done | `server/backends/` — abstract `AgentBackend` base class, `CopilotBackend`, `OllamaBackend`, registry with `getBackend()`/`registerBackend()`/`listBackends()`, config-driven `defaultBackend` selection |
+| **Multi-Workspace Swarm** | ✅ Done | `server/swarm/` — `LocalRunner`, `DockerRunner`, `SSHRunner`, `SwarmManager` with capacity-based scheduling, `prepareAgent()`/`attachProcess()` in AgentManager for remote process wiring, config-driven `swarm.enabled` + `swarm.runners[]` |
 
 ## Recently Completed (Phase 2: Intelligence & UX)
 
@@ -103,21 +101,17 @@ Detect blocked dependency chains mid-execution and restructure the DAG on the fl
 
 ---
 
-#### 🔌 Pluggable Agent Backends
+#### 🔌 Pluggable Agent Backends ✅
 Swap Copilot CLI for any agent runtime: Codex, Aider, Open Interpreter, local LLMs via Ollama.
 
-**Why it matters:** Lock-in to one CLI tool limits model choice and capabilities.
-
-**Approach:** Agent backend interface — `spawn(prompt, workDir) → { stdout, exitCode }`. Copilot CLI is one implementation.
+**Implementation:** `server/backends/base.js` defines abstract `AgentBackend` class with `get name()` and `spawn(prompt, workDir, opts)`. `CopilotBackend` extracts existing Copilot CLI logic. `OllamaBackend` spawns `ollama run <model> <prompt>` with `OLLAMA_HOST` support. `server/backends/index.js` provides registry `Map` with `getBackend(name, config)`, `registerBackend(name, BackendClass)`, `listBackends()`. `config.js` has `defaultBackend` + `backends` section. `agentManager.js` delegates to backend via `getBackend().spawn()`.
 
 ---
 
-#### 🌐 Multi-Workspace Swarm
+#### 🌐 Multi-Workspace Swarm ✅
 Spawn agents across multiple machines or containers.
 
-**Why it matters:** Local CPU/memory limits cap parallelism.
-
-**Approach:** Agent manager abstraction — local subprocess vs. remote Docker/SSH agent.
+**Implementation:** `server/swarm/` module with `LocalRunner` (wraps existing local spawn), `DockerRunner` (`docker run --rm -v workDir:/workspace`), `SSHRunner` (rsync + ssh). `SwarmManager` class manages runner pool, `getAvailableRunner()` picks runner with most capacity. `agentManager.js` gains `prepareAgent()` (create agent object without process), `attachProcess()` (wire I/O to agent), `spawnLocal()` (local-only path for LocalRunner). `config.js` has `swarm.enabled` + `swarm.runners[]`. Fallback to local spawn when swarm has no capacity.
 
 ---
 
@@ -139,3 +133,5 @@ Spawn agents across multiple machines or containers.
 - ✅ **Escalation Control Panel** — Per-project model/cost configuration
 - ✅ **Self-Reflection & Metrics** — Post-session analysis with aggregate dashboards
 - ✅ **Dynamic DAG Rewriting** — Stall detection + automatic dependency edge removal
+- ✅ **Pluggable Agent Backends** — Abstract backend interface, Copilot + Ollama implementations, runtime registry
+- ✅ **Multi-Workspace Swarm** — Local/Docker/SSH runners, capacity-based scheduling, remote process wiring

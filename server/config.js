@@ -77,6 +77,22 @@ const config = {
   // DAG Rewriting — stall detection
   stallThresholdMs: 90000,       // 90s before a running task is considered stalled
   stallCheckIntervalMs: 30000,   // check every 30s
+
+  // Pluggable Agent Backends
+  defaultBackend: 'copilot',
+  backends: {
+    copilot: {},           // uses model configs above
+    ollama: {              // local LLM via Ollama
+      host: 'http://localhost:11434',
+      model: 'codellama',  // default model override
+    },
+  },
+
+  // Multi-Workspace Swarm
+  swarm: {
+    enabled: false,        // set true to distribute agents across runners
+    runners: [],           // e.g. [{ type: 'docker', image: 'haivemind/agent', maxContainers: 4 }]
+  },
 };
 
 export const agentTimeoutMs = config.agentTimeoutMs;
