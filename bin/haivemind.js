@@ -117,12 +117,14 @@ ${coloured(C.bold, 'Usage:')}
   haivemind ${coloured(C.green, 'projects')}                           List all projects
   haivemind ${coloured(C.green, 'status')} <slug>                      Show project sessions
   haivemind ${coloured(C.green, 'build')} <slug> "<prompt>"            Run a session headlessly
+  haivemind ${coloured(C.green, 'autopilot')} <slug>                    Run continuous self-improvement
   haivemind ${coloured(C.green, 'replay')} <slug> <sessionId>          Show session detail
   haivemind ${coloured(C.green, 'help')}                               Show this help
 
 ${coloured(C.bold, 'Flags:')}
   --mock       Run in demo/mock mode (no real agents)
   --json       Output JSON instead of human-readable text
+  --cycles=N   Max autopilot cycles (default: 3)
 `);
 }
 
@@ -415,6 +417,99 @@ async function cmdBuild() {
   process.exit(exitCode);
 }
 
+// ── Auto-Pilot ────────────────────────────────────────────────────────────
+
+async function cmdAutopilot() {
+  const slug = positional[1];
+  const maxCycles = parseInt(flags.cycles || '3', 10);
+
+  if (!slug) {
+    logErr('Usage: haivemind autopilot <slug> [--cycles=N] [--mock]');
+    process.exit(1);
+  }
+
+  const { WorkspaceManager, MSG } = await loadBackend();
+  const { decompose, decomposeMock, verify, AgentManager, TaskRunner, createSnapshot } = await loadOrchestration();
+  const { runAutopilotCycle } = await import('../server/autopilot.js');
+
+  const DEMO = MOCK;
+  const workspace = new WorkspaceManager();
+  const project = workspace.getProject(slug);
+  if (!project) { logErr(`Project "${slug}" not found`); process.exit(1); }
+
+  log(coloured(C.bold + C.cyan, `\n  hAIvemind Autopilot: ${slug}`));
+  log(`  Max cycles: ${maxCycles}`);
+  log(`  Mode: ${DEMO ? 'mock' : 'live'}\n`);
+
+  // session runner — reuses the same orchestration as cmdBuild
+  async function runSession(_slug, prompt) {
+    const skills = workspace.getSkills(_slug);
+    const overrides = workspace.getProjectSettings(_slug);
+    const { sessionId, workDir } = workspace.startSession(_slug, prompt);
+
+    const snapshot = await createSnapshot(workDir, sessionId);
+    const broadcastNoop = () => {}; // silent in autopilot
+
+    let plan;
+    if (DEMO) {
+      plan = await decomposeMock(prompt);
+    } else {
+      plan = await decompose(prompt, workDir, { skills });
+    }
+
+    const agentManager = new AgentManager(broadcastNoop, DEMO, { skills, overrides });
+    const taskRunner = new TaskRunner(plan, agentManager, broadcastNoop, workDir, { overrides });
+
+    await taskRunner.run();
+    const costSummary = agentManager.getCostSummary();
+    const finalTasks = (plan.tasks || []).map(t => ({ ...t }));
+    const edges = [];
+    for (const t of plan.tasks || []) {
+      for (const dep of (t.dependencies || [])) {
+        edges.push({ source: dep, target: t.id });
+      }
+    }
+
+    workspace.finalizeSession(_slug, sessionId, {
+      status: 'completed',
+      tasks: finalTasks,
+      edges,
+      agents: agentManager.getSessionSnapshot(),
+      costSummary,
+      snapshot,
+    });
+
+    taskRunner.cleanup();
+    await agentManager.killAll();
+
+    const failedTasks = finalTasks.filter(t => t.status === 'failed');
+    return {
+      exitCode: failedTasks.length > 0 ? 1 : 0,
+      sessionId,
+      costSummary,
+    };
+  }
+
+  const result = await runAutopilotCycle({
+    workspace,
+    slug,
+    runSession,
+    planFn: null, // Use fallback planner (no T3 call in MVP)
+    config: { maxCycles },
+    log: (msg) => log(coloured(C.dim, msg)),
+  });
+
+  log(coloured(C.bold + C.green, `\n  Autopilot complete`));
+  log(`  Cycles: ${result.cycles}`);
+  log(`  Stopped: ${result.stopped}\n`);
+
+  if (JSON_MODE) {
+    out(result);
+  }
+
+  process.exit(0);
+}
+
 // ── Dispatch ──────────────────────────────────────────────────────────────
 
 const commands = {
@@ -423,6 +518,7 @@ const commands = {
   status: cmdStatus,
   build: cmdBuild,
   replay: cmdReplay,
+  autopilot: cmdAutopilot,
 };
 
 const handler = commands[command];
