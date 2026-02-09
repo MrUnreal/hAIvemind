@@ -3,6 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
+  "bin": {
+    "haivemind": "./bin/haivemind.js"
+  },
   "scripts": {
     "dev": "concurrently \"npm run dev:server\" \"npm run dev:client\"",
     "dev:stable": "concurrently \"npm run dev:server:stable\" \"npm run dev:client\"",
