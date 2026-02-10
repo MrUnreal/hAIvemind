@@ -48,10 +48,11 @@ test.describe('Logger — Source Analysis', () => {
     expect(src).not.toMatch(/console\.warn\(/);
   });
 
-  test('server/index.js uses log.error instead of console.error', () => {
-    const src = readFileSync(path.join(ROOT, 'server', 'index.js'), 'utf8');
+  test('server modules use log.error instead of console.error', () => {
+    const src = readFileSync(path.join(ROOT, 'server', 'services', 'shutdown.js'), 'utf8');
     expect(src).toContain('log.error(');
-    expect(src).not.toMatch(/console\.error\(/);
+    const indexSrc = readFileSync(path.join(ROOT, 'server', 'index.js'), 'utf8');
+    expect(indexSrc).not.toMatch(/console\.error\(/);
   });
 
   test('server/index.js imports logger', () => {

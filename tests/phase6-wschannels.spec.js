@@ -45,47 +45,47 @@ test.describe('Phase 6.7 — Protocol', () => {
 // ═══════════════════════════════════════════════════════════
 
 test.describe('Phase 6.7 — Server Scoped Broadcast', () => {
-  test('server/index.js has broadcastGlobal function', async () => {
-    const src = await readFile(join(ROOT, 'server', 'index.js'), 'utf-8');
+  test('ws/broadcast.js has broadcastGlobal function', async () => {
+    const src = await readFile(join(ROOT, 'server', 'ws', 'broadcast.js'), 'utf-8');
     expect(src).toContain('function broadcastGlobal(');
   });
 
   test('broadcast resolves projectSlug from payload', async () => {
-    const src = await readFile(join(ROOT, 'server', 'index.js'), 'utf-8');
+    const src = await readFile(join(ROOT, 'server', 'ws', 'broadcast.js'), 'utf-8');
     expect(src).toContain('parsed?.payload?.projectSlug');
     expect(src).toContain('parsed?.payload?.slug');
   });
 
   test('broadcast resolves slug from taskId via taskToSession', async () => {
-    const src = await readFile(join(ROOT, 'server', 'index.js'), 'utf-8');
+    const src = await readFile(join(ROOT, 'server', 'ws', 'broadcast.js'), 'utf-8');
     expect(src).toContain('taskToSession.get(taskId)');
   });
 
   test('broadcast filters by ws.subscribedProjects', async () => {
-    const src = await readFile(join(ROOT, 'server', 'index.js'), 'utf-8');
+    const src = await readFile(join(ROOT, 'server', 'ws', 'broadcast.js'), 'utf-8');
     expect(src).toContain('ws.subscribedProjects');
     expect(src).toContain('.has(resolvedSlug)');
   });
 
   test('WS connection initializes subscribedProjects set', async () => {
-    const src = await readFile(join(ROOT, 'server', 'index.js'), 'utf-8');
+    const src = await readFile(join(ROOT, 'server', 'ws', 'setup.js'), 'utf-8');
     expect(src).toContain('ws.subscribedProjects = new Set()');
   });
 
   test('server handles WS_SUBSCRIBE message', async () => {
-    const src = await readFile(join(ROOT, 'server', 'index.js'), 'utf-8');
+    const src = await readFile(join(ROOT, 'server', 'ws', 'handlers.js'), 'utf-8');
     expect(src).toContain('MSG.WS_SUBSCRIBE');
     expect(src).toContain('ws.subscribedProjects.add(projectSlug)');
   });
 
   test('server handles WS_UNSUBSCRIBE message', async () => {
-    const src = await readFile(join(ROOT, 'server', 'index.js'), 'utf-8');
+    const src = await readFile(join(ROOT, 'server', 'ws', 'handlers.js'), 'utf-8');
     expect(src).toContain('MSG.WS_UNSUBSCRIBE');
     expect(src).toContain('ws.subscribedProjects.delete(projectSlug)');
   });
 
   test('SHUTDOWN_WARNING uses broadcastGlobal', async () => {
-    const src = await readFile(join(ROOT, 'server', 'index.js'), 'utf-8');
+    const src = await readFile(join(ROOT, 'server', 'services', 'shutdown.js'), 'utf-8');
     expect(src).toContain("broadcastGlobal(makeMsg(MSG.SHUTDOWN_WARNING");
   });
 });
@@ -163,7 +163,7 @@ test.describe('Phase 6.7 — Server Checkpoint Integration', () => {
   });
 
   test('server deletes checkpoint on session complete', async () => {
-    const src = await readFile(join(ROOT, 'server', 'index.js'), 'utf-8');
+    const src = await readFile(join(ROOT, 'server', 'services', 'sessions.js'), 'utf-8');
     expect(src).toContain('deleteCheckpoint(sessionId');
     // Should appear in both complete and fail paths
     const matches = src.match(/deleteCheckpoint\(/g);
@@ -171,20 +171,21 @@ test.describe('Phase 6.7 — Server Checkpoint Integration', () => {
   });
 
   test('graceful shutdown flushes checkpoints', async () => {
-    const src = await readFile(join(ROOT, 'server', 'index.js'), 'utf-8');
+    const src = await readFile(join(ROOT, 'server', 'services', 'shutdown.js'), 'utf-8');
     expect(src).toContain('checkpointTimer.flush()');
   });
 
   test('graceful shutdown clears checkpoint interval', async () => {
-    const src = await readFile(join(ROOT, 'server', 'index.js'), 'utf-8');
-    expect(src).toContain('clearInterval(checkpointTimer.intervalId)');
+    const src = await readFile(join(ROOT, 'server', 'services', 'shutdown.js'), 'utf-8');
+    expect(src).toContain('clearInterval(refs.checkpointTimer.intervalId)');
   });
 
   test('server recovers crash-orphaned sessions from checkpoints', async () => {
-    const src = await readFile(join(ROOT, 'server', 'index.js'), 'utf-8');
-    expect(src).toContain('recoverFromCheckpoints');
-    expect(src).toContain('readAllCheckpoints(workspace)');
-    expect(src).toContain('crash-orphaned');
+    const indexSrc = await readFile(join(ROOT, 'server', 'index.js'), 'utf-8');
+    expect(indexSrc).toContain('recoverFromCheckpoints');
+    const recoverySrc = await readFile(join(ROOT, 'server', 'services', 'recovery.js'), 'utf-8');
+    expect(recoverySrc).toContain('readAllCheckpoints(workspace)');
+    expect(recoverySrc).toContain('crash-orphaned');
   });
 });
 

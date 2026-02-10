@@ -4,10 +4,16 @@
  */
 
 import { Router } from 'express';
+import { promises as fs } from 'node:fs';
+import { join } from 'node:path';
+import { MSG, makeMsg } from '../../shared/protocol.js';
 import { summarizeOutput } from '../outputSummarizer.js';
 import { rollbackToSnapshot, getSnapshotDiff } from '../snapshot.js';
+import { readAllCheckpoints } from '../sessionCheckpoint.js';
 import { workDirLocks, refs } from '../state.js';
+import { broadcast } from '../ws/broadcast.js';
 import { startSession } from '../services/sessions.js';
+import log from '../logger.js';
 
 const router = Router();
 
@@ -137,6 +143,84 @@ router.post('/projects/:slug/sessions', async (req, res) => {
   if (!prompt) return res.status(400).json({ error: 'No prompt provided' });
   startSession(prompt, req.params.slug);
   res.json({ status: 'started', project: req.params.slug });
+});
+
+// ═══════════════════════════════════════════════════════════
+//  Session Checkpoints (Phase 6.7)
+// ═══════════════════════════════════════════════════════════
+
+/** Get all session checkpoints (crash-recovery data) */
+router.get('/checkpoints', async (_req, res) => {
+  try {
+    const checkpoints = await readAllCheckpoints(refs.workspace);
+    res.json(checkpoints);
+  } catch (err) {
+    res.status(500).json({ error: `Failed to read checkpoints: ${err.message}` });
+  }
+});
+
+// ═══════════════════════════════════════════════════════════
+//  Interrupted Sessions (Phase 5.0)
+// ═══════════════════════════════════════════════════════════
+
+/** List all interrupted sessions */
+router.get('/interrupted-sessions', async (req, res) => {
+  try {
+    const interruptedDir = join(refs.workspace.baseDir, '.haivemind', 'interrupted');
+    const files = await fs.readdir(interruptedDir).catch(() => []);
+    const results = [];
+    for (const file of files) {
+      if (!file.endsWith('.json')) continue;
+      try {
+        const raw = await fs.readFile(join(interruptedDir, file), 'utf-8');
+        results.push(JSON.parse(raw));
+      } catch { /* skip */ }
+    }
+    res.json(results);
+  } catch {
+    res.json([]);
+  }
+});
+
+/** Discard an interrupted session */
+router.post('/interrupted-sessions/:id/discard', async (req, res) => {
+  try {
+    const interruptedDir = join(refs.workspace.baseDir, '.haivemind', 'interrupted');
+    const filePath = join(interruptedDir, `${req.params.id}.json`);
+    await fs.unlink(filePath);
+    res.json({ discarded: true });
+  } catch (err) {
+    res.status(404).json({ error: 'Interrupted session not found' });
+  }
+});
+
+/** Resume an interrupted session */
+router.post('/interrupted-sessions/:id/resume', async (req, res) => {
+  try {
+    const interruptedDir = join(refs.workspace.baseDir, '.haivemind', 'interrupted');
+    const filePath = join(interruptedDir, `${req.params.id}.json`);
+    const raw = await fs.readFile(filePath, 'utf-8');
+    const data = JSON.parse(raw);
+
+    await fs.unlink(filePath).catch(() => {});
+
+    const incompleteTasks = data.incompleteTasks || [];
+    if (incompleteTasks.length === 0) {
+      return res.json({ resumed: false, reason: 'No incomplete tasks' });
+    }
+
+    const resumePrompt = `Resume interrupted session: ${data.prompt}\n\nThe following tasks were incomplete and need to be re-executed:\n${incompleteTasks.map(t => `- ${t.label} (was: ${t.status})`).join('\n')}`;
+
+    broadcast(makeMsg(MSG.SESSION_RESUMED, { originalSessionId: data.sessionId, projectSlug: data.projectSlug }));
+
+    startSession(resumePrompt, data.projectSlug).catch(err => {
+      log.error(`[recovery] Failed to resume session ${data.sessionId}: ${err.message}`);
+    });
+
+    res.json({ resumed: true, projectSlug: data.projectSlug, incompleteTasks: incompleteTasks.length });
+  } catch (err) {
+    res.status(404).json({ error: 'Interrupted session not found' });
+  }
 });
 
 export default router;

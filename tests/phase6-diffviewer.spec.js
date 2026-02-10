@@ -15,7 +15,7 @@ function read(f) { return readFileSync(path.join(ROOT, f), 'utf8'); }
 
 test.describe('Phase 6.4 — Server: Enhanced Diff Endpoint', () => {
   test('diff endpoint accepts patches query param', async () => {
-    const src = read('server/index.js');
+    const src = read('server/routes/sessions.js');
     expect(src).toContain("req.query.patches === 'true'");
   });
 

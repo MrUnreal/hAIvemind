@@ -112,6 +112,18 @@ test.describe('Snapshot — REST API', () => {
     expect(res.status()).toBe(404);
   });
 
+  test('GET diff returns 404 for nonexistent session', async ({ request }) => {
+    const projectsRes = await request.get(`${API}/api/projects`);
+    const projects = await projectsRes.json();
+    const linked = projects.find(/** @type {(p: any) => boolean} */ (p) => p.linked === true);
+    if (!linked) { test.skip(); return; }
+
+    const res = await request.get(`${API}/api/projects/${linked.slug}/sessions/nonexistent-session-999/diff`);
+    expect(res.status()).toBe(404);
+    const body = await res.json();
+    expect(String(body.error || '')).toMatch(/not found/i);
+  });
+
   test('GET diff returns object with files and summary', async ({ request }) => {
     const projectsRes = await request.get(`${API}/api/projects`);
     const projects = await projectsRes.json();
@@ -128,6 +140,21 @@ test.describe('Snapshot — REST API', () => {
       const body = await res.json();
       expect(body).toHaveProperty('files');
       expect(body).toHaveProperty('summary');
+
+      const resWithPatches = await request.get(
+        `${API}/api/projects/${linked.slug}/sessions/${sessionId}/diff?patches=true`,
+      );
+      expect(resWithPatches.ok()).toBeTruthy();
+      const patched = await resWithPatches.json();
+      expect(patched).toHaveProperty('files');
+      expect(patched).toHaveProperty('summary');
+      if (Array.isArray(patched.files) && patched.files.length > 0) {
+        expect(patched).toHaveProperty('patches');
+        expect(typeof patched.patches).toBe('object');
+        for (const value of Object.values(patched.patches)) {
+          expect(typeof value).toBe('string');
+        }
+      }
     }
   });
 
@@ -152,12 +179,13 @@ test.describe('Snapshot — REST API', () => {
 // ─── Integration: Server imports ───────────────────────────────────────────
 
 test.describe('Snapshot — Server Integration', () => {
-  test('server/index.js imports snapshot functions', async () => {
-    const indexSrc = await import('node:fs').then(fs =>
-      fs.readFileSync(path.resolve(import.meta.dirname, '..', 'server', 'index.js'), 'utf8'),
+  test('sessions route imports snapshot functions', async () => {
+    const src = await import('node:fs').then(fs =>
+      fs.readFileSync(path.resolve(import.meta.dirname, '..', 'server', 'routes', 'sessions.js'), 'utf8'),
     );
-    expect(indexSrc).toContain("import { createSnapshot, rollbackToSnapshot, getSnapshotDiff }");
-    expect(indexSrc).toContain("from './snapshot.js'");
+    expect(src).toContain('rollbackToSnapshot');
+    expect(src).toContain('getSnapshotDiff');
+    expect(src).toContain("from '../snapshot.js'");
   });
 
   test('server/workspace.js persists snapshot in finalizeSession', async () => {
@@ -167,20 +195,20 @@ test.describe('Snapshot — Server Integration', () => {
     expect(wsSrc).toContain('snapshot');
   });
 
-  test('server/index.js has rollback endpoint', async () => {
-    const indexSrc = await import('node:fs').then(fs =>
-      fs.readFileSync(path.resolve(import.meta.dirname, '..', 'server', 'index.js'), 'utf8'),
+  test('sessions route has rollback endpoint', async () => {
+    const src = await import('node:fs').then(fs =>
+      fs.readFileSync(path.resolve(import.meta.dirname, '..', 'server', 'routes', 'sessions.js'), 'utf8'),
     );
-    expect(indexSrc).toContain('/rollback');
-    expect(indexSrc).toContain('rollbackToSnapshot');
+    expect(src).toContain('/rollback');
+    expect(src).toContain('rollbackToSnapshot');
   });
 
-  test('server/index.js has diff endpoint', async () => {
-    const indexSrc = await import('node:fs').then(fs =>
-      fs.readFileSync(path.resolve(import.meta.dirname, '..', 'server', 'index.js'), 'utf8'),
+  test('sessions route has diff endpoint', async () => {
+    const src = await import('node:fs').then(fs =>
+      fs.readFileSync(path.resolve(import.meta.dirname, '..', 'server', 'routes', 'sessions.js'), 'utf8'),
     );
-    expect(indexSrc).toContain('/diff');
-    expect(indexSrc).toContain('getSnapshotDiff');
+    expect(src).toContain('/diff');
+    expect(src).toContain('getSnapshotDiff');
   });
 });
 

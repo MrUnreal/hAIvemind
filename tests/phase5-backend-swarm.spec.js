@@ -167,10 +167,11 @@ test.describe('Swarm REST API', () => {
 });
 
 test.describe('Backend/Swarm — Code Integration', () => {
-  test('server/index.js imports backend/swarm modules', () => {
-    const content = readFileSync(path.join(ROOT, 'server', 'index.js'), 'utf8');
-    expect(content).toContain('listBackends');
-    expect(content).toContain('createSwarm');
+  test('server imports backend/swarm modules', () => {
+    const indexSrc = readFileSync(path.join(ROOT, 'server', 'index.js'), 'utf8');
+    expect(indexSrc).toContain('createSwarm');
+    const backendsSrc = readFileSync(path.join(ROOT, 'server', 'routes', 'backends.js'), 'utf8');
+    expect(backendsSrc).toContain('listBackends');
   });
 
   test('listBackends returns expected backends', async () => {

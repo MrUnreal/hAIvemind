@@ -31,29 +31,29 @@ test.describe('Phase 6.6 — Protocol', () => {
 
 test.describe('Phase 6.6 — Server Endpoints', () => {
   test('POST /api/projects/:slug/autopilot endpoint exists', () => {
-    const src = read('server/index.js');
-    expect(src).toContain("app.post('/api/projects/:slug/autopilot'");
+    const src = read('server/routes/autopilot.js');
+    expect(src).toContain("router.post('/projects/:slug/autopilot'");
   });
 
   test('GET /api/projects/:slug/autopilot endpoint exists', () => {
-    const src = read('server/index.js');
-    expect(src).toContain("app.get('/api/projects/:slug/autopilot'");
+    const src = read('server/routes/autopilot.js');
+    expect(src).toContain("router.get('/projects/:slug/autopilot'");
   });
 
   test('POST /api/projects/:slug/autopilot/stop endpoint exists', () => {
-    const src = read('server/index.js');
-    expect(src).toContain("app.post('/api/projects/:slug/autopilot/stop'");
+    const src = read('server/routes/autopilot.js');
+    expect(src).toContain("router.post('/projects/:slug/autopilot/stop'");
   });
 
   test('server broadcasts autopilot WS messages', () => {
-    const src = read('server/index.js');
+    const src = read('server/routes/autopilot.js');
     expect(src).toContain('MSG.AUTOPILOT_STARTED');
     expect(src).toContain('MSG.AUTOPILOT_CYCLE');
     expect(src).toContain('MSG.AUTOPILOT_STOPPED');
   });
 
   test('server tracks autopilot state with abort controller', () => {
-    const src = read('server/index.js');
+    const src = read('server/routes/autopilot.js');
     expect(src).toContain('autopilotRuns');
     expect(src).toContain('abortController');
   });
@@ -173,7 +173,7 @@ test.describe('Phase 6.6 — Integration', () => {
   test('duplicate autopilot start is prevented when running', async ({ request }) => {
     // The autopilot endpoint correctly checks for running state
     // In mock mode it may complete instantly, so we verify the guard logic exists in code
-    const src = read('server/index.js');
+    const src = read('server/routes/autopilot.js');
     expect(src).toContain('Autopilot already running');
     expect(src).toContain('409');
   });
