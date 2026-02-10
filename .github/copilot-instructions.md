@@ -65,12 +65,65 @@ type(scope): short description
 
 ---
 
-## Self-Narrative
+## Self-Evolution Protocol
 
-This project is self-built. Every commit message, README line, and doc update should reinforce:
+hAIvemind builds itself. This isn't a tagline — it's how the project actually works. Every Copilot session IS the hAIvemind developing itself. Act accordingly.
+
+### Roadmap-Driven Development
+- All work comes from `docs/roadmap.md`. Before starting a new feature, check the roadmap for the next uncompleted item.
+- Phases are sequential: Foundation → 1 (Reliability) → 2 (Intelligence) → 3 (Extensibility) → 4 (Hardening) → 5 (Autonomy) → 6 (Production) → 7+.
+- Sub-phases (e.g. 6.0, 6.1, … 6.8) are completed in order within a phase.
+- When a sub-phase ships, mark it ✅ in the roadmap **in the same commit**.
+- When all sub-phases of a phase ship, update the README Status table.
+- If you finish everything on the roadmap, **propose new phases** with concrete sub-features — don't stop.
+
+### Self-Improvement Mindset
+- After completing a feature, look for opportunities: dead code cleanup, test gaps, doc drift, performance wins.
+- If a commit reveals a pattern that should be automated, suggest adding it as a roadmap item.
+- Prefer refactoring that makes the next feature easier over gold-plating the current one.
+- When touching a module, leave it cleaner than you found it (boy scout rule).
+
+### Feature Lifecycle
+1. **Pick** — Next uncompleted item from `docs/roadmap.md`
+2. **Plan** — If complex, research the codebase first. Identify affected files, risks, approach.
+3. **Build** — Implement with tests. One feature per commit.
+4. **Verify** — Run relevant test file(s). Fix failures before committing.
+5. **Document** — Update README (if user-facing), roadmap (always), architecture docs (if structure changed).
+6. **Ship** — Commit with scoped message, push with the push protocol.
+
+### Decomposition Principles
+- When a feature touches 3+ files, plan the changes before coding.
+- Prefer small, focused modules over monoliths. `server/index.js` is 141 lines of wiring — keep it that way.
+- New server capabilities go in `server/routes/`, `server/services/`, or `server/ws/` — not in index.js.
+- New client features get their own component or composable. Don't bloat existing files.
+
+### Model Tiering Awareness
+- hAIvemind uses `T0 → T0 → T1 → T2 → T3` escalation. Free models first, premium only when needed.
+- When writing orchestration logic, respect this pattern. Don't hardcode premium models.
+- Cost tracking is a feature, not an afterthought.
+
+### Self-Narrative
+Every commit message, README line, and doc update should reinforce:
 - **"Built by hAIvemind itself"** — the platform develops its own features
 - **Concrete numbers** — test counts, LOC, module counts, phase counts
 - **Zero manual code** — maintain this claim by never breaking the chain
+- **Progress is visible** — stats in README badges, phases in Status table, features in roadmap
+
+---
+
+## Architecture Principles
+
+These are non-negotiable constraints for the codebase:
+
+| Principle | Rule |
+|-----------|------|
+| **Thin entry point** | `server/index.js` stays under 200 lines — pure wiring, no logic |
+| **Module boundaries** | Routes handle HTTP, services handle business logic, WS handles real-time |
+| **Shared state** | Cross-module refs go through `server/state.js`, never globals |
+| **Protocol-first** | New message types must be defined in `shared/protocol.js` before use |
+| **Client composables** | Reusable logic lives in `client/src/composables/`, not in components |
+| **Test isolation** | Each test file is self-contained — no shared state between test files |
+| **Git worktree safety** | Self-dev sessions use isolated worktrees, never the main working tree |
 
 ---
 
