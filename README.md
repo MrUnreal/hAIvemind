@@ -67,13 +67,36 @@ graph LR
 git clone git@github.com:MrUnreal/hAIvemind.git
 cd hAIvemind
 npm install
+cd client && npm install && cd ..
 npm run dev
 ```
 
+Or with Docker:
+```bash
+docker compose up
+```
+
 > Requires **Node.js 18+** and **GitHub Copilot CLI** on PATH.
+> Copy `.env.example` to `.env` and customize settings.
 > See [Setup Guide](docs/setup.md) for detailed instructions.
 
 Open **http://localhost:5173** → pick a project → describe what to build → watch agents swarm.
+
+### CLI Usage
+
+```bash
+# List projects
+npx haivemind projects
+
+# Build something
+npx haivemind build my-project "Add user authentication with JWT"
+
+# Autopilot mode
+npx haivemind autopilot my-project --cycles=5
+
+# Run tests
+npm test
+```
 
 ## How It Works
 
@@ -110,6 +133,7 @@ sequenceDiagram
 
 Every feature below was built by the hAIvemind's own orchestrator — decomposed, executed in parallel, verified, and merged autonomously.
 
+### Core Engine
 🐝 **Maximum Parallelism** — Every independent task runs at once. 7 tasks? 7 simultaneous agents.
 
 📊 **Live DAG Visualization** — Real-time graph with status colors, runtime timers, active edge highlighting, and auto-viewport focus on running nodes.
@@ -124,11 +148,45 @@ Every feature below was built by the hAIvemind's own orchestrator — decomposed
 
 🤝 **Human-in-the-Loop Gates** — Mark tasks as requiring human approval before proceeding. The DAG pauses at gate nodes, you review, approve or redirect with feedback.
 
-⚡ **Streaming Agent Output** — Live stdout/stderr per agent, broadcast in real-time over WebSocket. Watch agents think, not just finish.
+📁 **Project Isolation** — Each project gets its own workspace directory and session history. Link existing repos or create fresh projects.
+
+### Operations (Phase 5)
+🛡️ **Graceful Shutdown & Recovery** — `SIGTERM`/`SIGINT` handlers flush sessions to disk. On restart, interrupted sessions can be resumed or discarded.
+
+📝 **Smart Output Summaries** — Post-run structured summaries (files changed, errors, test results). Summaries replace raw output on escalation to stay within token limits.
+
+⏪ **Workspace Rollback** — Pre-session git snapshots, one-click rollback, file-level diff preview before undoing changes.
+
+⌨️ **CLI Mode** — `haivemind build <project> "prompt"` for headless/CI use. Color-coded streaming output, `--json` mode, exit codes.
+
+🤖 **Auto-Pilot** — `haivemind autopilot <slug>` runs reflect→plan→build cycles autonomously with safety rails (cost ceiling, max cycles, mandatory tests).
+
+🐳 **Distribution** — `Dockerfile`, `docker-compose.yml`, `npm start` for production. One-command deploy.
+
+🔌 **Plugin System** — Load/unload/enable/disable plugins with lifecycle hooks (`beforeSession`, `afterSession`, `afterPlan`, `onShutdown`). REST API + Settings UI.
+
+⚙️ **Backend & Swarm REST** — Switch backends (Copilot/Ollama) and toggle swarm mode at runtime without restart.
+
+### Production Readiness (Phase 6)
+🧪 **CI Pipeline** — GitHub Actions workflow, Playwright auto-server, `npm test` / `npm run test:ci` scripts.
+
+📋 **Structured Logging** — Leveled logger (error/warn/info/debug), timestamp-prefixed, JSON mode for production (`LOG_FORMAT=json`).
+
+🌐 **Environment Config** — `.env` file support, all config overridable via `HAIVEMIND_*` env vars. No hardcoded values.
+
+📑 **Template Gallery** — Browse, preview, and create project templates from the UI. Variable substitution and stack badges.
+
+⚡ **Real-Time Agent Streaming** — Throttled `AGENT_STREAM` with progressive terminal rendering, output search/filter, raw/summary toggle.
+
+🔍 **Session Diff Viewer** — Per-file unified diffs with syntax highlighting. Workspace overview showing tech stack, file tree, conventions.
+
+🔌 **Plugin & Backend UI** — Settings panel with enable/disable/reload toggles, backend selector, swarm capacity display.
+
+🤖 **Autopilot Web UI** — Start/stop autopilot from the browser, cycle history, reasoning, cost tracking, real-time progress.
+
+📡 **Scoped WebSocket Channels** — Per-project subscriptions, session checkpointing for crash recovery, zero cross-project noise.
 
 🧬 **Self-Development Mode** — hAIvemind evolves its own codebase. New features are developed in isolated git worktrees, verified, diffed, and merged — the platform builds itself.
-
-📁 **Project Isolation** — Each project gets its own workspace directory and session history. Link existing repos or create fresh projects.
 
 ## Screenshots
 
@@ -150,9 +208,18 @@ Every feature below was built by the hAIvemind's own orchestrator — decomposed
 
 ## Roadmap
 
-The hAIvemind develops its own features. Next up: persistent skills, escalation control panel, dynamic DAG rewriting, pluggable agent backends, and more.
+| Phase | Status | Highlights |
+|-------|--------|------------|
+| Foundation | ✅ | Parallel agents, DAG visualization, chat, verify-fix loops, gates |
+| Phase 1: Reliability | ✅ | Process timeouts, error recovery, session locking, memory management |
+| Phase 2: Intelligence | ✅ | Persistent skills, escalation control, self-reflection metrics |
+| Phase 3: Extensibility | ✅ | DAG rewriting, pluggable backends, multi-workspace swarm |
+| Phase 4: Hardening | ✅ | Workspace analysis, cost ceilings, per-project concurrency |
+| Phase 5: Autonomy | ✅ | Graceful shutdown, CLI, autopilot, plugins, Docker distribution |
+| Phase 6: Production | ✅ 7/8 | CI, logging, templates, streaming, diff viewer, plugin UI, autopilot UI, WS channels |
+| Phase 6.8: Decomposition | 🔄 | Server modularization into routes/services/ws |
 
-See [docs/roadmap.md](docs/roadmap.md) for the full feature backlog with status tracking.
+See [docs/roadmap.md](docs/roadmap.md) for the full feature backlog and [ROADMAP-PHASE6.md](ROADMAP-PHASE6.md) for Phase 6 details.
 
 ## License
 

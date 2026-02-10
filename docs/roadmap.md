@@ -175,103 +175,36 @@ Currently single-user, no auth. Fine for local dev, but blocks team usage or hos
 
 ---
 
-## Phase 5: Autonomy & Distribution
+## Phase 5: Autonomy & Distribution ✅
 
-> hAIvemind becomes the ultimate local dev tool — self-healing, headless-capable,
-> and packaged for one-command installation. "Run locally before you distribute yourself."
+> hAIvemind becomes self-healing, headless-capable, and packaged for one-command installation.
 
-### 5.0 — Graceful Shutdown & Session Recovery _(promoted from 4.3)_
+| Feature | Status | Notes |
+|---------|--------|-------|
+| **5.0 — Graceful Shutdown** | ✅ | SIGTERM/SIGINT handlers, session flush to disk, resume/discard UI, process tree cleanup |
+| **5.1 — Output Summaries** | ✅ | Structured summaries (files changed, errors, tests), escalation uses summaries not raw output |
+| **5.2 — Workspace Rollback** | ✅ | Pre-session git tags, one-click rollback, file-level diff in UI, tarball fallback |
+| **5.3 — CLI Mode** | ✅ | `bin/haivemind.js` — build/status/projects/replay commands, `--json`/`--mock` flags, exit codes |
+| **5.4 — Auto-Pilot** | ✅ | `haivemind autopilot <slug>` — reflect→plan→build cycles, cost ceiling, max cycles, autopilot log |
+| **5.5 — Distribution** | ✅ | Dockerfile (multi-stage, non-root), docker-compose.yml, `npm start`, static file serving |
+| **5.6 — Dead Code Cleanup** | ✅ | Removed unused imports/exports/deps, consolidated path/fs, de-exported internal-only symbols |
+| **5.7 — Plugin System** | ✅ | PluginManager (load/unload/enable/disable/reload), emit/pipe hooks, REST API, state persistence |
+| **5.8 — Backend/Swarm REST** | ✅ | GET/PUT /api/backends, GET/PUT /api/swarm, runtime switching without restart |
 
-No `SIGTERM`/`SIGINT` handler exists. A restart orphans child processes, leaks timers, and loses all in-memory state. Active sessions vanish with no trace.
+---
 
-**Approach:**
-- `process.on('SIGTERM')` / `process.on('SIGINT')` → `agentManager.killAll()`, flush active session snapshots to disk (`.haivemind/interrupted/<sessionId>.json`), clear intervals/timeouts
-- On startup, scan for interrupted sessions and expose them in the UI as "interrupted — resume or discard"
-- Cap `session.timeline` at 5 000 events (ring-buffer style) to prevent OOM during long fix loops
-- Process tree cleanup: kill entire process groups, not just direct children
+## Phase 6: Production Readiness & Frontend Completeness ✅ (7/8)
 
-### 5.1 — Agent Output Diffing & Smart Summaries _(promoted from 4.5)_
+> Production hardening, frontend completeness, and scalability improvements.
 
-Agent output is captured raw but never analyzed. Escalation passes full stdout/stderr which is noisy and overflows prompt windows.
-
-**Approach:**
-- Post-run, extract structured summary: files changed, errors encountered, warnings, test results
-- On escalation, pass the _summary_ rather than raw output
-- Store summaries alongside raw output in session snapshot for replay
-- Expose per-task diff view in the UI (what changed vs pre-session state)
-
-### 5.2 — Workspace Snapshot & Rollback _(promoted from 4.7)_
-
-If an agent writes bad code and verify passes (false positive), there's no undo except manual `git reset`.
-
-**Approach:**
-- Before each session, create lightweight git tag (`haivemind/pre-session/<id>`)
-- "Rollback" button in session history resets workspace to pre-session state
-- Non-git workspaces: tarball snapshot in `.haivemind/snapshots/`
-- Show file-level diff between pre/post session in the UI
-
-### 5.3 — CLI Mode (Headless Operation)
-
-hAIvemind currently requires a browser. Power users and CI pipelines need headless execution.
-
-**Approach:**
-- New `bin/haivemind` CLI entry point using `commander` or `yargs`
-- Commands: `haivemind build <project> "<prompt>"`, `haivemind status`, `haivemind projects`, `haivemind replay <sessionId>`
-- Streams task status and agent output to stdout with color-coded log lines
-- Exit code reflects session outcome (0 = all tasks passed, 1 = failures)
-- JSON output mode (`--json`) for machine consumption
-- Reuses the same orchestrator/agentManager/taskRunner — just different I/O surface
-
-### 5.4 — Auto-Pilot Mode (Continuous Self-Improvement)
-
-The hAIvemind should be able to plan and execute its own improvement sessions without human intervention.
-
-**Approach:**
-- `haivemind autopilot` CLI command or UI toggle
-- After each session completes, trigger a "reflection → plan → build" cycle:
-  1. **Reflect**: Analyze session metrics (retry rate, escalation count, time per task)
-  2. **Plan**: Feed reflection + roadmap to a T3 planner agent to propose the next session
-  3. **Build**: Auto-submit the planned session (with configurable approval gate)
-- Safety rails: max sessions per cycle, cost ceiling enforcement, mandatory test pass before commit
-- Log all auto-pilot decisions to `.haivemind/autopilot-log.json`
-
-### 5.5 — One-Command Distribution
-
-Package hAIvemind for instant installation on any machine.
-
-**Approach:**
-- `Dockerfile` + `docker-compose.yml` — single `docker compose up` to run everything
-- npm global install: `npx haivemind` starts server + opens browser
-- Standalone binary via `pkg` or `nexe` for zero-dependency distribution
-- Auto-detect available backends on first run (check for `gh copilot`, `ollama`, etc.)
-- First-run wizard: select backend, configure API keys, choose workspace
-
-### 5.6 — Dead Code Cleanup _(promoted from 4.4)_
-
-Two protocol message types defined but never used: `AGENT_RETRY` and `AGENT_STREAM`.
-
-**Approach:**
-- Remove both from `shared/protocol.js`
-- Audit all protocol types for missing handlers
-- Add protocol coverage check to test suite
-
-### 5.7 — Plugin System (Extensible Agent Capabilities)
-
-Let users add custom agent behaviors without modifying core code.
-
-**Approach:**
-- `~/.haivemind/plugins/` directory scanned at startup
-- Plugin interface: `{ name, hooks: { beforeDecompose, afterAgent, beforeVerify, onSessionComplete } }`
-- Built-in plugins: `eslint-autofix`, `git-auto-commit`, `slack-notify`
-- Plugin manifest (`plugin.json`) with version, compatibility range, description
-- `haivemind plugin install <name>` CLI command
-
-### 5.8 — REST API for Backend & Swarm Management _(promoted from 4.6)_
-
-Backends and swarm runners require restart to change. Need runtime management.
-
-**Approach:**
-- `GET/POST /api/backends` — list/register backends at runtime
-- `GET/POST/DELETE /api/swarm/runners` — manage swarm runners
-- Hot-reload config without server restart
-- Expose in Settings UI as new "Infrastructure" tab
+| Feature | Status | Notes |
+|---------|--------|-------|
+| **6.0 — CI Pipeline** | ✅ | GitHub Actions, Playwright webServer auto-start, `npm test`/`npm run test:ci` scripts |
+| **6.1 — Structured Logging** | ✅ | `server/logger.js` (levels/timestamps/JSON), `.env.example`, config env overrides (`HAIVEMIND_*`) |
+| **6.2 — Template Gallery** | ✅ | TemplateGallery.vue dropdown, variable forms, `POST /api/templates`, stack badges |
+| **6.3 — Agent Streaming** | ✅ | Throttled AGENT_STREAM (150ms batches), progressive terminal rendering, search/filter, raw/summary toggle |
+| **6.4 — Diff Viewer** | ✅ | DiffViewer.vue with per-file unified diffs, WorkspaceOverview.vue, rollback preview |
+| **6.5 — Plugin/Backend UI** | ✅ | SettingsPanel plugins tab + backends tab, swarm toggle, runner cards |
+| **6.6 — Autopilot Web UI** | ✅ | REST endpoints, AutopilotPanel.vue, cycle history, cost tracking, start/stop |
+| **6.7 — WS Channels** | ✅ | Per-project subscriptions, broadcastGlobal, session checkpointing, crash recovery |
+| **6.8 — Server Decomposition** | 🔄 | Split index.js into routes/, services/, ws/ modules — in progress |
