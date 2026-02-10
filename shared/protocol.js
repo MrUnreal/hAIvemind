@@ -43,6 +43,11 @@ export const MSG = {
   // Phase 5.7 — Plugin System
   PLUGIN_EVENT: 'plugin:event',
   PLUGIN_STATUS: 'plugin:status',
+
+  // Phase 6.6 — Autopilot
+  AUTOPILOT_STARTED: 'autopilot:started',
+  AUTOPILOT_CYCLE: 'autopilot:cycle',
+  AUTOPILOT_STOPPED: 'autopilot:stopped',
 };
 
 export function makeMsg(type, payload) {

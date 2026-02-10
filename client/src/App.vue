@@ -143,6 +143,12 @@
             📊 Metrics
           </button>
           <button
+            :class="['tab-btn', { active: sideTab === 'autopilot' }]"
+            @click="sideTab = 'autopilot'; sidePanelCollapsed = false"
+          >
+            🤖 Autopilot
+          </button>
+          <button
             class="tab-collapse"
             @click="sidePanelCollapsed = !sidePanelCollapsed"
           >
@@ -154,6 +160,11 @@
           <OrchestratorChat v-show="sideTab === 'chat'" />
           <SettingsPanel v-if="sideTab === 'settings'" @close="sidePanelCollapsed = true" />
           <MetricsDashboard v-if="sideTab === 'metrics'" @close="sidePanelCollapsed = true" />
+          <AutopilotPanel
+            v-if="sideTab === 'autopilot' && activeProject?.slug"
+            :projectSlug="activeProject.slug"
+            @close="sidePanelCollapsed = true"
+          />
         </div>
       </div>
     </div>
@@ -171,6 +182,7 @@ import SessionHistory from './components/SessionHistory.vue';
 import OrchestratorChat from './components/OrchestratorChat.vue';
 import SettingsPanel from './components/SettingsPanel.vue';
 import MetricsDashboard from './components/MetricsDashboard.vue';
+import AutopilotPanel from './components/AutopilotPanel.vue';
 import { useWebSocket } from './composables/useWebSocket.js';
 import {
   sessionStatus,
@@ -397,6 +409,11 @@ on('agent:stream', (payload) => {
   // Append as a single batched chunk (no duplicate with agent:output)
   // Stream is additive — UI can choose to use either source
 });
+
+// Phase 6.6: Autopilot WebSocket events
+on('autopilot:started', () => { /* AutopilotPanel polls for updates */ });
+on('autopilot:cycle', () => { /* AutopilotPanel polls for updates */ });
+on('autopilot:stopped', () => { /* AutopilotPanel polls for updates */ });
 
 on('session:complete', (payload) => {
   sessionStatus.value = 'completed';

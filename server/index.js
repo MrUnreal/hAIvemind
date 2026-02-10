@@ -1217,6 +1217,114 @@ app.get('/api/projects/:slug/analysis', async (req, res) => {
   }
 });
 
+// ═══════════════════════════════════════════════════════════
+//  REST API — Phase 6.6: Autopilot
+// ═══════════════════════════════════════════════════════════
+
+const autopilotRuns = new Map(); // slug → { running, abortController, cycles, decisions }
+
+/** Start autopilot run */
+app.post('/api/projects/:slug/autopilot', async (req, res) => {
+  const { slug } = req.params;
+  const project = workspace.getProject(slug);
+  if (!project) return res.status(404).json({ error: 'Project not found' });
+
+  if (autopilotRuns.get(slug)?.running) {
+    return res.status(409).json({ error: 'Autopilot already running for this project' });
+  }
+
+  const { maxCycles = 5, costCeiling = null, requireTests = false } = req.body || {};
+  const abortController = { aborted: false };
+
+  const run = { running: true, abortController, cycles: 0, decisions: [], startedAt: Date.now() };
+  autopilotRuns.set(slug, run);
+
+  broadcast(makeMsg(MSG.AUTOPILOT_STARTED, { slug, maxCycles, costCeiling }));
+  res.json({ status: 'started', slug, maxCycles });
+
+  // Run autopilot asynchronously
+  try {
+    const { runAutopilotCycle } = await import('./autopilot.js');
+    const result = await runAutopilotCycle({
+      workspace,
+      slug,
+      runSession: (prompt) => {
+        return new Promise((resolve) => {
+          // Create a mini session runner that resolves when session completes
+          const sessionId = startSession(prompt, slug);
+          const check = setInterval(() => {
+            if (abortController.aborted) {
+              clearInterval(check);
+              resolve({ exitCode: 1, sessionId, costSummary: {} });
+            }
+            const s = sessions.get(sessionId);
+            if (s && (s.status === 'completed' || s.status === 'failed')) {
+              clearInterval(check);
+              resolve({
+                exitCode: s.status === 'completed' ? 0 : 1,
+                sessionId,
+                costSummary: s.costSummary || {},
+              });
+            }
+          }, 1000);
+        });
+      },
+      planFn: async () => null, // Mock planner — in real mode, would call LLM
+      config: { maxCycles, costCeiling, requireTests },
+      log: (await import('./logger.js')).default,
+      onCycle: (decision) => {
+        run.cycles++;
+        run.decisions.push(decision);
+        broadcast(makeMsg(MSG.AUTOPILOT_CYCLE, { slug, ...decision }));
+      },
+    });
+    run.running = false;
+    run.stoppedReason = result?.stopped || 'completed';
+    broadcast(makeMsg(MSG.AUTOPILOT_STOPPED, { slug, reason: run.stoppedReason, cycles: run.cycles }));
+  } catch (err) {
+    run.running = false;
+    run.stoppedReason = 'error';
+    broadcast(makeMsg(MSG.AUTOPILOT_STOPPED, { slug, reason: 'error', error: err.message }));
+  }
+});
+
+/** Get autopilot status */
+app.get('/api/projects/:slug/autopilot', (req, res) => {
+  const { slug } = req.params;
+  const project = workspace.getProject(slug);
+  if (!project) return res.status(404).json({ error: 'Project not found' });
+
+  const run = autopilotRuns.get(slug);
+  if (!run) return res.json({ running: false, history: [] });
+
+  // Try to load history from log file
+  let history = [];
+  try {
+    const logPath = path.join(project.dir, '.haivemind', 'autopilot-log.json');
+    if (fs.existsSync(logPath)) {
+      history = JSON.parse(fs.readFileSync(logPath, 'utf8'));
+    }
+  } catch { /* ignore */ }
+
+  res.json({
+    running: run.running,
+    cycles: run.cycles,
+    decisions: run.decisions,
+    stoppedReason: run.stoppedReason,
+    startedAt: run.startedAt,
+    history,
+  });
+});
+
+/** Stop autopilot run */
+app.post('/api/projects/:slug/autopilot/stop', (req, res) => {
+  const { slug } = req.params;
+  const run = autopilotRuns.get(slug);
+  if (!run?.running) return res.status(404).json({ error: 'No autopilot run active' });
+  run.abortController.aborted = true;
+  res.json({ ok: true, message: 'Abort signal sent' });
+});
+
 // ── Utility routes ──
 app.get('/api/health', (req, res) => {
   res.json({
