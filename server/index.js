@@ -1140,7 +1140,8 @@ app.get('/api/projects/:slug/sessions/:sessionId/diff', (req, res) => {
     return res.json({ files: [], summary: 'No git snapshot available for diff' });
   }
 
-  const diff = getSnapshotDiff(project.dir, session.snapshot);
+  const patches = req.query.patches === 'true';
+  const diff = getSnapshotDiff(project.dir, session.snapshot, { patches });
   res.json(diff || { files: [], summary: 'Unable to compute diff' });
 });
 

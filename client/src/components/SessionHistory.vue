@@ -14,6 +14,12 @@
 
     <div v-if="sessionsLoading" class="loading">Loading sessions...</div>
 
+    <!-- Phase 6.4: Workspace Intelligence -->
+    <WorkspaceOverview
+      v-if="activeProject?.slug && !sessionsLoading"
+      :projectSlug="activeProject.slug"
+    />
+
     <div v-else-if="sessions.length === 0" class="empty">
       <p>No sessions yet. Start your first one!</p>
       <button class="new-session-btn" @click="$emit('newSession')">
@@ -69,8 +75,14 @@
           </span>
         </div>
 
-        <!-- Phase 5.2: Rollback button -->
+        <!-- Phase 5.2: Rollback button + Phase 6.4: View Diff -->
         <div class="session-actions" v-if="session.status === 'completed' || session.status === 'failed'">
+          <button
+            class="diff-btn"
+            @click.stop="viewingDiff = viewingDiff === session.id ? null : session.id"
+          >
+            {{ viewingDiff === session.id ? '✕ Close Diff' : '📊 View Diff' }}
+          </button>
           <button
             class="rollback-btn"
             @click.stop="onRollback(session.id)"
@@ -79,6 +91,14 @@
             {{ rollingBack === session.id ? '↩ Rolling back...' : '↩ Rollback' }}
           </button>
         </div>
+
+        <!-- Phase 6.4: Inline Diff Viewer -->
+        <DiffViewer
+          v-if="viewingDiff === session.id"
+          :projectSlug="activeProject?.slug"
+          :sessionId="session.id"
+          @close="viewingDiff = null"
+        />
       </div>
     </div>
   </div>
@@ -92,10 +112,13 @@ import {
   sessionsLoading,
 } from '../composables/useProjects.js';
 import { loadSession } from '../composables/useSession.js';
+import DiffViewer from './DiffViewer.vue';
+import WorkspaceOverview from './WorkspaceOverview.vue';
 
 defineEmits(['newSession']);
 
 const rollingBack = ref(null);
+const viewingDiff = ref(null);
 
 const sortedSessions = computed(() => {
   return [...sessions.value].sort((a, b) => (b.startedAt || 0) - (a.startedAt || 0));
@@ -132,9 +155,16 @@ async function onLoadSession(sessionId) {
   await loadSession(activeProject.value.slug, sessionId);
 }
 
-// Phase 5.2: Rollback workspace to pre-session state
+// Phase 5.2 + 6.4: Rollback workspace — show diff preview first
 async function onRollback(sessionId) {
   if (!activeProject.value || rollingBack.value) return;
+
+  // Phase 6.4: Show diff inline before confirming
+  if (viewingDiff.value !== sessionId) {
+    viewingDiff.value = sessionId;
+    return; // User sees the diff first, then clicks Rollback again to confirm
+  }
+
   if (!confirm('This will reset the workspace to its state before this session. Continue?')) return;
 
   rollingBack.value = sessionId;
@@ -335,5 +365,19 @@ async function onRollback(sessionId) {
 .rollback-btn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+.diff-btn {
+  font-size: 11px;
+  padding: 3px 10px;
+  border-radius: 6px;
+  border: 1px solid #60a5fa;
+  background: transparent;
+  color: #60a5fa;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.diff-btn:hover {
+  background: rgba(96, 165, 250, 0.15);
 }
 </style>

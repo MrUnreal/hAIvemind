@@ -142,9 +142,10 @@ export async function rollbackToSnapshot(workDir, snapshot) {
  * Only works for git repos.
  * @param {string} workDir
  * @param {{ type: string, ref: string }} snapshot
- * @returns {{ files: string[], summary: string } | null}
+ * @param {{ patches?: boolean }} [options] - If patches=true, include per-file unified diffs
+ * @returns {{ files: string[], summary: string, patches?: Record<string,string> } | null}
  */
-export function getSnapshotDiff(workDir, snapshot) {
+export function getSnapshotDiff(workDir, snapshot, options = {}) {
   if (!snapshot || snapshot.type !== 'git-tag') return null;
 
   try {
@@ -175,7 +176,31 @@ export function getSnapshotDiff(workDir, snapshot) {
       }
     }
 
-    return { files, summary: diffStat || 'No changes' };
+    const result = { files, summary: diffStat || 'No changes' };
+
+    // Phase 6.4: Optionally include per-file unified diffs
+    if (options.patches && files.length > 0) {
+      const patches = {};
+      const MAX_PATCH_SIZE = 50000; // 50KB cap per file
+      for (const file of files) {
+        try {
+          const patch = execSync(`git diff "${snapshot.ref}" -- "${file}"`, {
+            cwd: workDir,
+            stdio: ['ignore', 'pipe', 'pipe'],
+            encoding: 'utf8',
+            maxBuffer: 1024 * 1024,
+          }).trim();
+          patches[file] = patch.length > MAX_PATCH_SIZE
+            ? patch.slice(0, MAX_PATCH_SIZE) + '\n... (truncated)'
+            : patch || '(new file)';
+        } catch {
+          patches[file] = '(unable to read diff)';
+        }
+      }
+      result.patches = patches;
+    }
+
+    return result;
   } catch {
     return null;
   }
