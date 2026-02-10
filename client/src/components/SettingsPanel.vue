@@ -150,6 +150,104 @@
           </button>
         </div>
       </div>
+
+      <!-- Phase 6.5: Plugins tab -->
+      <div v-if="activeTab === 'plugins'" class="tab-content">
+        <p class="section-hint">Manage loaded plugins. Enable, disable, or reload plugins.</p>
+
+        <div v-if="pluginsLoading" class="loading-state">Loading plugins...</div>
+
+        <div v-else-if="plugins.length === 0" class="empty-state">
+          No plugins found. Place plugin folders in <code>plugins/</code> directory.
+        </div>
+
+        <div v-else class="plugin-list">
+          <div v-for="plugin in plugins" :key="plugin.name" class="plugin-card">
+            <div class="plugin-header">
+              <span class="plugin-name">{{ plugin.name }}</span>
+              <span class="plugin-version" v-if="plugin.version">v{{ plugin.version }}</span>
+              <span :class="['plugin-status', plugin.enabled ? 'enabled' : 'disabled']">
+                {{ plugin.enabled ? '● Enabled' : '○ Disabled' }}
+              </span>
+            </div>
+            <p class="plugin-desc" v-if="plugin.description">{{ plugin.description }}</p>
+            <div class="plugin-actions">
+              <button
+                class="toggle-plugin-btn"
+                @click="togglePlugin(plugin.name, plugin.enabled)"
+              >
+                {{ plugin.enabled ? '🔴 Disable' : '🟢 Enable' }}
+              </button>
+              <button class="reload-plugin-btn" @click="reloadPlugin(plugin.name)">
+                🔄 Reload
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div class="action-row">
+          <button class="save-btn" @click="fetchPlugins" :disabled="pluginsLoading">
+            🔄 Refresh
+          </button>
+        </div>
+      </div>
+
+      <!-- Phase 6.5: Backends tab -->
+      <div v-if="activeTab === 'backends'" class="tab-content">
+        <p class="section-hint">Manage AI backends and swarm configuration.</p>
+
+        <div v-if="backendsLoading" class="loading-state">Loading backends...</div>
+
+        <template v-else>
+          <!-- Active backend selector -->
+          <div class="setting-row">
+            <label>Active Backend</label>
+            <div class="backend-list">
+              <div
+                v-for="backend in backends"
+                :key="backend.name"
+                :class="['backend-card', { active: activeBackend === backend.name }]"
+                @click="switchBackend(backend.name)"
+              >
+                <span class="backend-name">{{ backend.name }}</span>
+                <span class="backend-active" v-if="activeBackend === backend.name">✓ Active</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Swarm section -->
+          <div class="setting-row" v-if="swarmStatus">
+            <label>Swarm Mode</label>
+            <div class="swarm-section">
+              <div class="swarm-toggle">
+                <button
+                  :class="['swarm-btn', { on: swarmStatus.enabled }]"
+                  @click="toggleSwarm(!swarmStatus.enabled)"
+                >
+                  {{ swarmStatus.enabled ? '🟢 Enabled' : '🔴 Disabled' }}
+                </button>
+                <span class="swarm-capacity" v-if="swarmStatus.totalCapacity">
+                  Capacity: {{ swarmStatus.totalCapacity }}
+                </span>
+              </div>
+
+              <!-- Runner list -->
+              <div v-if="swarmRunners.length" class="runner-list">
+                <div v-for="runner in swarmRunners" :key="runner.index" class="runner-card">
+                  <span class="runner-type">{{ runner.type }}</span>
+                  <span class="runner-capacity">×{{ runner.capacity }}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="action-row">
+            <button class="save-btn" @click="fetchBackends" :disabled="backendsLoading">
+              🔄 Refresh
+            </button>
+          </div>
+        </template>
+      </div>
     </div>
 
     <div v-else class="loading-state">Loading settings...</div>
@@ -177,6 +275,8 @@ const activeTab = ref('escalation');
 const tabs = [
   { id: 'escalation', label: 'Escalation', icon: '🎛️' },
   { id: 'skills', label: 'Skills', icon: '🧠' },
+  { id: 'plugins', label: 'Plugins', icon: '🔌' },
+  { id: 'backends', label: 'Backends', icon: '🖥️' },
 ];
 
 // ── Escalation state ──
@@ -275,6 +375,83 @@ async function saveSkills() {
   }
 }
 
+// ── Phase 6.5: Plugins state ──
+const plugins = ref([]);
+const pluginsLoading = ref(false);
+
+async function fetchPlugins() {
+  pluginsLoading.value = true;
+  try {
+    const res = await fetch('/api/plugins');
+    if (res.ok) plugins.value = await res.json();
+  } catch { /* ignore */ }
+  pluginsLoading.value = false;
+}
+
+async function togglePlugin(name, enabled) {
+  const action = enabled ? 'disable' : 'enable';
+  try {
+    await fetch(`/api/plugins/${name}/${action}`, { method: 'POST' });
+    await fetchPlugins();
+  } catch { /* ignore */ }
+}
+
+async function reloadPlugin(name) {
+  try {
+    await fetch(`/api/plugins/${name}/reload`, { method: 'POST' });
+    await fetchPlugins();
+  } catch { /* ignore */ }
+}
+
+// ── Phase 6.5: Backends state ──
+const backends = ref([]);
+const activeBackend = ref('');
+const backendsLoading = ref(false);
+const swarmStatus = ref(null);
+const swarmRunners = ref([]);
+
+async function fetchBackends() {
+  backendsLoading.value = true;
+  try {
+    const [listRes, activeRes, swarmRes, runnerRes] = await Promise.all([
+      fetch('/api/backends'),
+      fetch('/api/backends/active'),
+      fetch('/api/swarm'),
+      fetch('/api/swarm/runners'),
+    ]);
+    if (listRes.ok) backends.value = await listRes.json();
+    if (activeRes.ok) {
+      const data = await activeRes.json();
+      activeBackend.value = data.name || '';
+    }
+    if (swarmRes.ok) swarmStatus.value = await swarmRes.json();
+    if (runnerRes.ok) swarmRunners.value = await runnerRes.json();
+  } catch { /* ignore */ }
+  backendsLoading.value = false;
+}
+
+async function switchBackend(name) {
+  try {
+    await fetch('/api/backends/active', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name }),
+    });
+    activeBackend.value = name;
+  } catch { /* ignore */ }
+}
+
+async function toggleSwarm(enabled) {
+  try {
+    const res = await fetch('/api/swarm', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ enabled }),
+    });
+    if (res.ok) swarmStatus.value = await res.json();
+  } catch { /* ignore */ }
+}
+
 onMounted(async () => {
   if (activeProject.value?.slug) {
     loading.value = true;
@@ -284,6 +461,12 @@ onMounted(async () => {
     ]);
     loading.value = false;
   }
+});
+
+// Lazy-load plugin/backend data when their tabs are selected
+watch(activeTab, (tab) => {
+  if (tab === 'plugins' && plugins.value.length === 0) fetchPlugins();
+  if (tab === 'backends' && backends.value.length === 0) fetchBackends();
 });
 </script>
 
@@ -577,5 +760,184 @@ onMounted(async () => {
   padding: 32px;
   text-align: center;
   color: #555;
+}
+
+/* Phase 6.5: Plugin styles */
+.plugin-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.plugin-card {
+  background: #16161e;
+  border: 1px solid #2a2a3e;
+  border-radius: 8px;
+  padding: 12px;
+}
+
+.plugin-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.plugin-name {
+  font-weight: 600;
+  color: #e0e0e0;
+}
+
+.plugin-version {
+  color: #666;
+  font-size: 11px;
+}
+
+.plugin-status {
+  margin-left: auto;
+  font-size: 11px;
+}
+
+.plugin-status.enabled {
+  color: #4ade80;
+}
+
+.plugin-status.disabled {
+  color: #666;
+}
+
+.plugin-desc {
+  color: #888;
+  font-size: 12px;
+  margin: 4px 0 8px;
+}
+
+.plugin-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.toggle-plugin-btn, .reload-plugin-btn {
+  font-size: 11px;
+  padding: 3px 10px;
+  border-radius: 6px;
+  border: 1px solid #444;
+  background: transparent;
+  color: #ccc;
+  cursor: pointer;
+}
+
+.toggle-plugin-btn:hover, .reload-plugin-btn:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.empty-state {
+  color: #666;
+  text-align: center;
+  padding: 24px;
+  font-size: 13px;
+}
+
+.empty-state code {
+  background: #222;
+  padding: 2px 6px;
+  border-radius: 3px;
+  color: #a78bfa;
+}
+
+/* Phase 6.5: Backend styles */
+.backend-list {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.backend-card {
+  background: #16161e;
+  border: 1px solid #2a2a3e;
+  border-radius: 8px;
+  padding: 10px 16px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.2s;
+}
+
+.backend-card:hover {
+  border-color: #60a5fa;
+}
+
+.backend-card.active {
+  border-color: #4ade80;
+  background: rgba(74, 222, 128, 0.08);
+}
+
+.backend-name {
+  font-weight: 500;
+  color: #e0e0e0;
+  text-transform: capitalize;
+}
+
+.backend-active {
+  color: #4ade80;
+  font-size: 11px;
+}
+
+.swarm-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.swarm-toggle {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.swarm-btn {
+  padding: 4px 12px;
+  border-radius: 6px;
+  border: 1px solid #444;
+  background: transparent;
+  color: #ccc;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.swarm-btn.on {
+  border-color: #4ade80;
+  color: #4ade80;
+}
+
+.swarm-capacity {
+  color: #888;
+  font-size: 12px;
+}
+
+.runner-list {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.runner-card {
+  background: #1a1a2e;
+  border: 1px solid #333;
+  border-radius: 6px;
+  padding: 4px 10px;
+  font-size: 11px;
+  display: flex;
+  gap: 6px;
+}
+
+.runner-type {
+  color: #a78bfa;
+  text-transform: capitalize;
+}
+
+.runner-capacity {
+  color: #888;
 }
 </style>
