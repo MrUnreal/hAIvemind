@@ -490,13 +490,17 @@ function onReplayStateUpdate(state) {
   }
 }
 
-function onSubmit(prompt) {
+function onSubmit(payload) {
   if (!activeProject.value || !connected.value) return;
   replayMode.value = false;
   sessionError.value = null;
   sessionStatus.value = 'planning';
   showPrompt.value = false;
-  send('session:start', { prompt, projectSlug: activeProject.value.slug });
+  // Support both raw string (legacy) and { prompt, templateId, variables } object
+  const data = typeof payload === 'string'
+    ? { prompt: payload, projectSlug: activeProject.value.slug }
+    : { ...payload, projectSlug: activeProject.value.slug };
+  send('session:start', data);
 }
 
 function retrySession() {

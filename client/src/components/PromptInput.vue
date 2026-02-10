@@ -4,6 +4,14 @@
       <h2>What would you like to build?</h2>
       <p class="subtitle">Describe your project and hAIvemind will decompose it into tasks, assign agents, and build it for you.</p>
 
+      <TemplateGallery @select="onTemplateSelect" />
+      <TemplateForm
+        v-if="selectedTemplate"
+        :template="selectedTemplate"
+        @cancel="onTemplateSelect(null)"
+        @update:variables="templateVars = $event"
+      />
+
       <textarea
         v-model="prompt"
         placeholder="e.g., Build a REST API with Express and a React frontend for a todo app with user authentication..."
@@ -14,7 +22,7 @@
       ></textarea>
 
       <div class="actions">
-        <button @click="submit" :disabled="!prompt.trim() || planning || !props.connected" class="btn-primary">
+        <button @click="submit" :disabled="!canSubmit || planning || !props.connected" class="btn-primary">
           {{ planning ? '🔄 Planning...' : '🐝 Build' }}
         </button>
         <span class="hint">Ctrl+Enter to submit</span>
@@ -38,8 +46,10 @@
 </template>
 
 <script setup>
-import { ref, watch } from 'vue';
+import { ref, watch, computed } from 'vue';
 import { sessionStatus } from '../composables/useSession.js';
+import TemplateGallery from './TemplateGallery.vue';
+import TemplateForm from './TemplateForm.vue';
 
 const emit = defineEmits(['submit']);
 const props = defineProps({
@@ -50,15 +60,29 @@ const props = defineProps({
 });
 const prompt = ref('');
 const planning = ref(false);
+const selectedTemplate = ref(null);
+const templateVars = ref({});
+
+const canSubmit = computed(() => prompt.value.trim() || selectedTemplate.value);
 
 watch(sessionStatus, (status) => {
   planning.value = status === 'planning';
 });
 
+function onTemplateSelect(tpl) {
+  selectedTemplate.value = tpl;
+  templateVars.value = {};
+}
+
 function submit() {
-  if (!prompt.value.trim() || planning.value || !props.connected) return;
+  if (!canSubmit.value || planning.value || !props.connected) return;
   planning.value = true;
-  emit('submit', prompt.value.trim());
+  const payload = { prompt: prompt.value.trim() };
+  if (selectedTemplate.value) {
+    payload.templateId = selectedTemplate.value.id;
+    payload.variables = { ...templateVars.value };
+  }
+  emit('submit', payload);
 }
 </script>
 

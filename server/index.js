@@ -1254,6 +1254,33 @@ app.get('/api/templates', async (req, res) => {
   }
 });
 
+// POST /api/templates — create a new template
+app.post('/api/templates', async (req, res) => {
+  try {
+    const { name, description, stack, variables, tasks } = req.body || {};
+    if (!name || !tasks || !Array.isArray(tasks)) {
+      return res.status(400).json({ error: 'name and tasks[] are required' });
+    }
+    // Derive id from name
+    const id = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+    if (!id) return res.status(400).json({ error: 'Invalid template name' });
+
+    const filePath = join(TEMPLATES_DIR, `${id}.json`);
+    // Don't overwrite existing templates
+    if (existsSync(filePath)) {
+      return res.status(409).json({ error: 'Template already exists', id });
+    }
+
+    const template = { name, description: description || '', stack: stack || '', variables: variables || [], tasks };
+    await fs.writeFile(filePath, JSON.stringify(template, null, 2), 'utf8');
+    log.info(`[templates] Created template: ${id}`);
+    res.status(201).json({ id, ...template });
+  } catch (err) {
+    log.error('[templates] Error creating template:', err.message);
+    res.status(500).json({ error: 'Failed to create template' });
+  }
+});
+
 // ── Backend REST API (Phase 5.8) ──
 import { listBackends } from './backends/index.js';
 import SwarmManager, { createSwarm } from './swarm/index.js';
