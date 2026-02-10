@@ -207,4 +207,4 @@ Currently single-user, no auth. Fine for local dev, but blocks team usage or hos
 | **6.5 — Plugin/Backend UI** | ✅ | SettingsPanel plugins tab + backends tab, swarm toggle, runner cards |
 | **6.6 — Autopilot Web UI** | ✅ | REST endpoints, AutopilotPanel.vue, cycle history, cost tracking, start/stop |
 | **6.7 — WS Channels** | ✅ | Per-project subscriptions, broadcastGlobal, session checkpointing, crash recovery |
-| **6.8 — Server Decomposition** | 🔄 | Split index.js into routes/, services/, ws/ modules — in progress |
+| **6.8 — Server Decomposition** | ✅ | index.js 1846→141 lines; 7 route groups, 4 services, 3 WS modules, shared state.js; 20 tests |
