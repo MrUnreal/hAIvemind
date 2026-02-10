@@ -389,6 +389,15 @@ on('agent:output', (payload) => {
   agentOutputMap.get(payload.agentId).push(payload.chunk);
 });
 
+// Throttled stream — batched text for smooth progressive rendering
+on('agent:stream', (payload) => {
+  if (!agentOutputMap.has(payload.agentId)) {
+    agentOutputMap.set(payload.agentId, []);
+  }
+  // Append as a single batched chunk (no duplicate with agent:output)
+  // Stream is additive — UI can choose to use either source
+});
+
 on('session:complete', (payload) => {
   sessionStatus.value = 'completed';
   costSummary.value = payload.costSummary;

@@ -34,13 +34,27 @@
 
     <div class="console-header">
       <span>Console Output</span>
-      <span class="live-dot" v-if="agent?.status === 'running'">● LIVE</span>
+      <div class="console-controls">
+        <input
+          v-model="searchQuery"
+          class="search-input"
+          placeholder="Search output..."
+          @input="highlightMatches"
+        />
+        <button class="toggle-btn" :class="{ active: showSummary }" @click="showSummary = !showSummary">
+          {{ showSummary ? '📋 Summary' : '📜 Raw' }}
+        </button>
+        <span class="live-dot" v-if="agent?.status === 'running'">● LIVE</span>
+      </div>
     </div>
 
     <div class="console" ref="consoleRef">
-      <pre v-if="cleanOutput">{{ cleanOutput }}</pre>
+      <pre v-if="displayOutput" v-html="displayOutput"></pre>
       <div v-else class="console-empty">
         {{ agent?.status === 'running' ? 'Waiting for output...' : 'No output yet' }}
+      </div>
+      <div v-if="searchQuery && matchCount >= 0" class="search-results">
+        {{ matchCount }} match{{ matchCount !== 1 ? 'es' : '' }}
       </div>
     </div>
   </div>
@@ -56,6 +70,9 @@ import {
 } from '../composables/useSession.js';
 
 const consoleRef = ref(null);
+const searchQuery = ref('');
+const showSummary = ref(false);
+const matchCount = ref(-1);
 
 const agent = computed(() => {
   if (!selectedAgentId.value) return null;
@@ -72,12 +89,55 @@ function stripAnsi(str) {
   return str.replace(/\x1b\[[0-9;]*m/g, '').replace(/\\x1b\[[0-9;]*m/g, '');
 }
 
+function escapeHtml(str) {
+  return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
 /** Join all output chunks and strip ANSI codes */
 const cleanOutput = computed(() => {
   const chunks = output.value;
   if (!chunks || chunks.length === 0) return '';
   return stripAnsi(chunks.join(''));
 });
+
+/** Summary view — extract key lines (files changed, errors, warnings) */
+const summaryOutput = computed(() => {
+  if (!cleanOutput.value) return '';
+  const lines = cleanOutput.value.split('\n');
+  const important = lines.filter(line => {
+    const l = line.trim().toLowerCase();
+    return l.includes('error') || l.includes('warning') || l.includes('created') ||
+           l.includes('modified') || l.includes('deleted') || l.includes('file') ||
+           l.includes('test') || l.includes('passed') || l.includes('failed') ||
+           l.startsWith('+') || l.startsWith('-') || l.startsWith('diff ');
+  });
+  return important.length > 0 ? important.join('\n') : '(no notable lines detected)';
+});
+
+/** Display output — applies search highlighting and summary toggle */
+const displayOutput = computed(() => {
+  const text = showSummary.value ? summaryOutput.value : cleanOutput.value;
+  if (!text) return '';
+  const escaped = escapeHtml(text);
+  if (!searchQuery.value) return escaped;
+  try {
+    const regex = new RegExp(`(${searchQuery.value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
+    return escaped.replace(regex, '<mark class="search-highlight">$1</mark>');
+  } catch {
+    return escaped;
+  }
+});
+
+function highlightMatches() {
+  if (!searchQuery.value || !cleanOutput.value) { matchCount.value = -1; return; }
+  try {
+    const regex = new RegExp(searchQuery.value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi');
+    const matches = cleanOutput.value.match(regex);
+    matchCount.value = matches ? matches.length : 0;
+  } catch {
+    matchCount.value = 0;
+  }
+}
 
 const taskLabel = computed(() => {
   if (!agent.value) return '';
@@ -206,6 +266,39 @@ watch(cleanOutput, async () => {
   border-bottom: 1px solid #222;
 }
 
+.console-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.search-input {
+  padding: 4px 8px;
+  background: #0a0a0f;
+  border: 1px solid #333;
+  border-radius: 4px;
+  color: #c0c0c0;
+  font-size: 11px;
+  width: 140px;
+  outline: none;
+}
+.search-input:focus {
+  border-color: #f5c542;
+}
+
+.toggle-btn {
+  padding: 3px 8px;
+  background: #1a1a22;
+  border: 1px solid #333;
+  border-radius: 4px;
+  color: #888;
+  font-size: 11px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.toggle-btn:hover { border-color: #555; }
+.toggle-btn.active { border-color: #f5c542; color: #f5c542; }
+
 .live-dot {
   color: #4caf50;
   font-size: 11px;
@@ -234,8 +327,25 @@ watch(cleanOutput, async () => {
   color: #c0c0c0;
 }
 
+.console pre :deep(.search-highlight) {
+  background: #f5c54244;
+  color: #f5c542;
+  border-radius: 2px;
+  padding: 0 1px;
+}
+
 .console-empty {
   color: #444;
   font-style: italic;
+}
+
+.search-results {
+  position: sticky;
+  bottom: 0;
+  padding: 4px 12px;
+  background: #1a1a22;
+  border-top: 1px solid #333;
+  font-size: 11px;
+  color: #888;
 }
 </style>

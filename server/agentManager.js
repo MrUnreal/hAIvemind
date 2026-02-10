@@ -309,6 +309,7 @@ export default class AgentManager {
         if (settled) return;
         settled = true;
         clearAgentTimeout();
+        if (streamTimer) { clearTimeout(streamTimer); flushStream(); }
         agent.finishedAt = Date.now();
         agent.status = code === 0 ? 'success' : 'failed';
         agent.process = null;
@@ -326,6 +327,7 @@ export default class AgentManager {
         if (settled) return;
         settled = true;
         clearAgentTimeout();
+        if (streamTimer) { clearTimeout(streamTimer); flushStream(); }
         agent.finishedAt = Date.now();
         agent.status = 'failed';
         agent.output.push(`[spawn error] ${err.message}`);
@@ -340,6 +342,28 @@ export default class AgentManager {
         resolve(agent);
       };
 
+      // ── Throttled stream buffer (Phase 6.3) ──
+      // Collects raw chunks and emits AGENT_STREAM at a throttled interval
+      // for smooth progressive rendering. AGENT_OUTPUT still fires per-chunk.
+      const STREAM_INTERVAL_MS = 150;
+      let streamBuffer = '';
+      let streamTimer = null;
+
+      const flushStream = () => {
+        if (streamBuffer) {
+          this.broadcast(makeMsg(MSG.AGENT_STREAM, { agentId: agent.id, text: streamBuffer }));
+          streamBuffer = '';
+        }
+        streamTimer = null;
+      };
+
+      const appendStream = (chunk) => {
+        streamBuffer += chunk;
+        if (!streamTimer) {
+          streamTimer = setTimeout(flushStream, STREAM_INTERVAL_MS);
+        }
+      };
+
       child.stdout.on('data', (data) => {
         const chunk = data.toString();
         let totalBytes = agent.output.reduce((acc, s) => acc + s.length, 0);
@@ -348,6 +372,7 @@ export default class AgentManager {
         }
         agent.output.push(chunk);
         this.broadcast(makeMsg(MSG.AGENT_OUTPUT, { agentId: agent.id, chunk, stream: 'stdout' }));
+        appendStream(chunk);
       });
 
       child.stderr.on('data', (data) => {
@@ -358,6 +383,7 @@ export default class AgentManager {
         }
         agent.output.push(chunk);
         this.broadcast(makeMsg(MSG.AGENT_OUTPUT, { agentId: agent.id, chunk, stream: 'stderr' }));
+        appendStream(chunk);
       });
 
       child.on('close', onClose);
