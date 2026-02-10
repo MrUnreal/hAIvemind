@@ -17,6 +17,7 @@ import { summarizeOutput } from './outputSummarizer.js';
 import { createSnapshot, rollbackToSnapshot, getSnapshotDiff } from './snapshot.js';
 import PluginManager from './pluginManager.js';
 import log, { createLogger } from './logger.js';
+import { writeCheckpoint, deleteCheckpoint, readAllCheckpoints, startCheckpointTimer } from './sessionCheckpoint.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -56,6 +57,39 @@ function broadcast(msg) {
   if (parsed && (parsed.type === MSG.TASK_STATUS || parsed.type === MSG.AGENT_STATUS || parsed.type === MSG.VERIFICATION_STATUS)) {
     recordTimelineEvent(parsed.type, parsed.payload);
   }
+
+  // Phase 6.7: Scoped WS Channels — resolve project slug from message payload
+  const slug = parsed?.payload?.projectSlug || parsed?.payload?.slug || null;
+
+  // If no slug in payload, try to resolve from taskId/agentId/sessionId
+  let resolvedSlug = slug;
+  if (!resolvedSlug && parsed?.payload) {
+    const { taskId, agentId, sessionId: sid } = parsed.payload;
+    if (taskId) {
+      const mappedSid = taskToSession.get(taskId);
+      if (mappedSid) {
+        const s = sessions.get(mappedSid);
+        if (s) resolvedSlug = s.projectSlug;
+      }
+    }
+    if (!resolvedSlug && sid) {
+      const s = sessions.get(sid);
+      if (s) resolvedSlug = s.projectSlug;
+    }
+  }
+
+  for (const ws of clients) {
+    if (ws.readyState !== ws.OPEN) continue;
+    // If client has subscriptions and message has a project scope, filter
+    if (resolvedSlug && ws.subscribedProjects?.size > 0 && !ws.subscribedProjects.has(resolvedSlug)) {
+      continue;
+    }
+    ws.send(msg);
+  }
+}
+
+/** Broadcast to all connected clients regardless of subscription (for global events). */
+function broadcastGlobal(msg) {
   for (const ws of clients) {
     if (ws.readyState === ws.OPEN) ws.send(msg);
   }
@@ -106,6 +140,7 @@ function recordTimelineEvent(msgType, payload) {
 
 wss.on('connection', (ws) => {
   clients.add(ws);
+  ws.subscribedProjects = new Set(); // Phase 6.7: Per-client project subscriptions
   log.info(`[ws] Client connected (${clients.size} total)`);
 
   ws.isAlive = true;
@@ -347,6 +382,22 @@ async function handleClientMessage(msg, ws) {
       }
     }
   }
+
+  // Phase 6.7: WebSocket channel subscriptions
+  if (msg.type === MSG.WS_SUBSCRIBE) {
+    const { projectSlug } = msg.payload || {};
+    if (projectSlug && typeof projectSlug === 'string') {
+      ws.subscribedProjects.add(projectSlug);
+      log.info(`[ws] Client subscribed to project: ${projectSlug} (${ws.subscribedProjects.size} subscriptions)`);
+    }
+  }
+  if (msg.type === MSG.WS_UNSUBSCRIBE) {
+    const { projectSlug } = msg.payload || {};
+    if (projectSlug) {
+      ws.subscribedProjects.delete(projectSlug);
+      log.info(`[ws] Client unsubscribed from project: ${projectSlug} (${ws.subscribedProjects.size} subscriptions)`);
+    }
+  }
 }
 
 async function startSession(userPrompt, projectSlug, predefinedPlan) {
@@ -526,6 +577,10 @@ async function startSession(userPrompt, projectSlug, predefinedPlan) {
     });
     releaseLock(workDir, sessionId);
 
+    // Phase 6.7: Delete checkpoint — session is done
+    const proj = workspace.getProject(projectSlug);
+    if (proj) deleteCheckpoint(sessionId, proj.dir).catch(() => {});
+
     // Phase 2: Post-session analysis — extract skills and generate reflection
     try {
       const reflection = generateReflection(plan, agentManager, costSummaryData, session);
@@ -559,6 +614,10 @@ async function startSession(userPrompt, projectSlug, predefinedPlan) {
 
     workspace.finalizeSession(projectSlug, sessionId, { status: 'failed', timeline, snapshot });
     releaseLock(workDir, sessionId);
+
+    // Phase 6.7: Delete checkpoint — session failed
+    const projFailed = workspace.getProject(projectSlug);
+    if (projFailed) deleteCheckpoint(sessionId, projFailed.dir).catch(() => {});
   }
 }
 
@@ -1325,6 +1384,20 @@ app.post('/api/projects/:slug/autopilot/stop', (req, res) => {
   res.json({ ok: true, message: 'Abort signal sent' });
 });
 
+// ═══════════════════════════════════════════════════════════
+//  REST API — Phase 6.7: Session Checkpoints
+// ═══════════════════════════════════════════════════════════
+
+/** Get all session checkpoints (crash-recovery data) */
+app.get('/api/checkpoints', async (_req, res) => {
+  try {
+    const checkpoints = await readAllCheckpoints(workspace);
+    res.json(checkpoints);
+  } catch (err) {
+    res.status(500).json({ error: `Failed to read checkpoints: ${err.message}` });
+  }
+});
+
 // ── Utility routes ──
 app.get('/api/health', (req, res) => {
   res.json({
@@ -1549,6 +1622,9 @@ server.listen(config.port, () => {
 
 pruneIntervalId = setInterval(pruneCompletedSessions, 5 * 60 * 1000);
 
+// Phase 6.7: Start session checkpoint timer (every 30s)
+const checkpointTimer = startCheckpointTimer(sessions, workspace, 30000);
+
 // ── Phase 5.0: Interrupted session recovery on startup ──
 (async function recoverInterruptedSessions() {
   try {
@@ -1566,6 +1642,42 @@ pruneIntervalId = setInterval(pruneCompletedSessions, 5 * 60 * 1000);
       } catch { /* skip corrupt files */ }
     }
   } catch { /* no interrupted dir, fine */ }
+})();
+
+// Phase 6.7: Recover crash-orphaned sessions from checkpoints
+(async function recoverFromCheckpoints() {
+  try {
+    const checkpoints = await readAllCheckpoints(workspace);
+    const orphaned = checkpoints.filter(cp => cp.status === 'running');
+    if (orphaned.length > 0) {
+      log.info(`[checkpoint] Found ${orphaned.length} crash-orphaned session(s) from checkpoints`);
+      // Move orphaned checkpoints to interrupted dir for standard recovery flow
+      const interruptedDir = join(workspace.baseDir, '.haivemind', 'interrupted');
+      await fs.mkdir(interruptedDir, { recursive: true }).catch(() => {});
+      for (const cp of orphaned) {
+        const filePath = join(interruptedDir, `${cp.sessionId}.json`);
+        const interrupted = {
+          sessionId: cp.sessionId,
+          projectSlug: cp.projectSlug,
+          prompt: cp.prompt,
+          status: 'interrupted',
+          interruptedAt: cp.checkpointedAt,
+          incompleteTasks: (cp.plan?.tasks || []).filter(t => t.status !== 'done' && t.status !== 'passed').map(t => ({
+            id: t.id, label: t.label, status: t.status, dependencies: t.dependencies,
+          })),
+          completedTasks: (cp.plan?.tasks || []).filter(t => t.status === 'done' || t.status === 'passed').map(t => ({
+            id: t.id, label: t.label,
+          })),
+          timeline: cp.timeline || [],
+        };
+        await fs.writeFile(filePath, JSON.stringify(interrupted, null, 2)).catch(() => {});
+        // Delete the checkpoint file
+        const project = workspace.getProject(cp.projectSlug);
+        if (project) await deleteCheckpoint(cp.sessionId, project.dir).catch(() => {});
+        log.info(`  ↳ Recovered ${cp.sessionId?.slice(0, 8)} (${cp.projectSlug}) from checkpoint`);
+      }
+    }
+  } catch { /* no checkpoints, fine */ }
 })();
 
 // ── Phase 5.0: Interrupted sessions REST API ──
@@ -1634,7 +1746,7 @@ async function gracefulShutdown() {
   log.info('\n🛑 Graceful shutdown initiated...');
 
   // 1. Warn connected clients
-  broadcast(makeMsg(MSG.SHUTDOWN_WARNING, { message: 'Server is shutting down', timestamp: Date.now() }));
+  broadcastGlobal(makeMsg(MSG.SHUTDOWN_WARNING, { message: 'Server is shutting down', timestamp: Date.now() }));
 
   // 2. Persist all active (running) sessions to disk
   const interruptedDir = join(workspace.baseDir, '.haivemind', 'interrupted');
@@ -1707,6 +1819,10 @@ async function gracefulShutdown() {
   // 4. Clear intervals
   clearInterval(pruneIntervalId);
   clearInterval(heartbeatInterval);
+  clearInterval(checkpointTimer.intervalId);
+
+  // 4.25 Flush final checkpoints for any still-running sessions
+  await checkpointTimer.flush().catch(() => {});
 
   // 4.5 Notify plugins of shutdown
   await pluginManager.emit('onShutdown').catch(() => {});

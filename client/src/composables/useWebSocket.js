@@ -11,6 +11,7 @@ const handlers = new Map();
 const pendingMessages = [];
 let getActiveProject = null;
 let initialized = false;
+let currentSubscribedProject = null; // Phase 6.7: Track current subscription
 
 function connect() {
   socket = new WebSocket(WS_URL);
@@ -31,6 +32,9 @@ function connect() {
       const projectSlug = getActiveProject();
       if (projectSlug) {
         socket.send(JSON.stringify({ type: 'reconnect:sync', payload: { projectSlug } }));
+        // Phase 6.7: Subscribe to the active project's WS channel
+        socket.send(JSON.stringify({ type: 'ws:subscribe', payload: { projectSlug } }));
+        currentSubscribedProject = projectSlug;
       }
     }
 
@@ -91,6 +95,18 @@ function send(type, payload) {
   return true;
 }
 
+/** Phase 6.7: Switch project subscription on the WS channel */
+function subscribeProject(projectSlug) {
+  if (currentSubscribedProject === projectSlug) return;
+  if (currentSubscribedProject) {
+    send('ws:unsubscribe', { projectSlug: currentSubscribedProject });
+  }
+  if (projectSlug) {
+    send('ws:subscribe', { projectSlug });
+  }
+  currentSubscribedProject = projectSlug;
+}
+
 export function useWebSocket(getActiveProjectFn) {
   if (typeof getActiveProjectFn === 'function') {
     getActiveProject = getActiveProjectFn;
@@ -99,5 +115,5 @@ export function useWebSocket(getActiveProjectFn) {
     initialized = true;
     connect();
   }
-  return { connected, connectionLost, on, off, send };
+  return { connected, connectionLost, on, off, send, subscribeProject };
 }

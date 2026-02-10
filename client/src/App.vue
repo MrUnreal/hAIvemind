@@ -213,7 +213,7 @@ import {
   resetProjectIntelligence,
 } from './composables/useProjectSettings.js';
 
-const { connected, connectionLost, on, send } = useWebSocket();
+const { connected, connectionLost, on, send, subscribeProject } = useWebSocket();
 const showPrompt = ref(false);
 const sideTab = ref('agent');
 const sidePanelCollapsed = ref(true);
@@ -469,8 +469,11 @@ on('reflection:created', (payload) => {
 watch(activeProject, async (project) => {
   if (project?.slug) {
     loadProjectIntelligence(project.slug);
+    // Phase 6.7: Subscribe to project-scoped WS channel
+    subscribeProject(project.slug);
   } else {
     resetProjectIntelligence();
+    subscribeProject(null);
   }
 });
 

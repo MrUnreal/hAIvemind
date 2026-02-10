@@ -48,6 +48,10 @@ export const MSG = {
   AUTOPILOT_STARTED: 'autopilot:started',
   AUTOPILOT_CYCLE: 'autopilot:cycle',
   AUTOPILOT_STOPPED: 'autopilot:stopped',
+
+  // Phase 6.7 — Scoped WS Channels
+  WS_SUBSCRIBE: 'ws:subscribe',
+  WS_UNSUBSCRIBE: 'ws:unsubscribe',
 };
 
 export function makeMsg(type, payload) {
