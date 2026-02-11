@@ -139,9 +139,9 @@ router.get('/projects/:slug/sessions/:sessionId/diff', (req, res) => {
 
 /** Start a session (REST fallback for non-WS clients) */
 router.post('/projects/:slug/sessions', async (req, res) => {
-  const { prompt } = req.body;
-  if (!prompt) return res.status(400).json({ error: 'No prompt provided' });
-  startSession(prompt, req.params.slug);
+  const { prompt, templateId } = req.body;
+  if (!prompt && !templateId) return res.status(400).json({ error: 'No prompt provided' });
+  startSession(prompt || `Build from template: ${templateId}`, req.params.slug);
   res.json({ status: 'started', project: req.params.slug });
 });
 

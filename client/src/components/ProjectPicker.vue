@@ -1,8 +1,12 @@
 <template>
   <div class="project-picker">
     <div class="picker-card">
-      <h2>Select a Project</h2>
-      <p class="subtitle">Each project gets its own isolated workspace. Agents write code directly into the project directory.</p>
+      <!-- Hero -->
+      <div class="hero">
+        <div class="hero-icon">🐝</div>
+        <h1 class="hero-title">hAIvemind</h1>
+        <p class="hero-tagline">AI-powered orchestrator that decomposes, delegates, and builds.</p>
+      </div>
 
       <!-- Create new -->
       <div class="create-section">
@@ -37,20 +41,39 @@
         <p v-if="error" class="error-msg">{{ error }}</p>
       </div>
 
+      <!-- Search / filter -->
+      <div v-if="projects.length > 5" class="search-row">
+        <input
+          v-model="search"
+          placeholder="Search projects..."
+          class="search-input"
+        />
+      </div>
+
       <!-- Project list -->
-      <div v-if="loading" class="loading">Loading projects...</div>
+      <div v-if="loading" class="loading">
+        <div class="loading-spinner"></div>
+        <span>Loading projects...</span>
+      </div>
 
       <div v-else-if="projects.length === 0" class="empty">
-        <p>No projects yet. Create one above to get started.</p>
+        <div class="empty-icon">📂</div>
+        <p>No projects yet</p>
+        <span class="empty-hint">Create one above to get started.</span>
       </div>
 
       <div v-else class="project-list">
         <div
-          v-for="project in projects"
+          v-for="project in filteredProjects"
           :key="project.slug"
           class="project-item"
           @click="onSelect(project)"
         >
+          <div class="project-icon-col">
+            <div class="project-avatar" :style="{ background: avatarColor(project.slug) }">
+              {{ project.name.charAt(0).toUpperCase() }}
+            </div>
+          </div>
           <div class="project-main">
             <span class="project-name">
               {{ project.name }}
@@ -59,8 +82,8 @@
             <span class="project-slug">{{ project.slug }}</span>
           </div>
           <div class="project-meta">
-            <span>{{ project.sessionCount || 0 }} sessions</span>
-            <span v-if="project.totalCost">{{ project.totalCost.toFixed(1) }}× cost</span>
+            <span class="meta-pill sessions">{{ project.sessionCount || 0 }} sessions</span>
+            <span v-if="project.totalCost" class="meta-pill cost">{{ project.totalCost.toFixed(1) }}×</span>
             <span class="project-date">{{ formatDate(project.createdAt) }}</span>
           </div>
           <button
@@ -71,13 +94,16 @@
             ✕
           </button>
         </div>
+        <div v-if="filteredProjects.length === 0 && search" class="empty-search">
+          No projects match "{{ search }}"
+        </div>
       </div>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue';
+import { ref, computed, onMounted } from 'vue';
 import {
   projects,
   loading,
@@ -92,6 +118,32 @@ const newName = ref('');
 const linkName = ref('');
 const linkDir = ref('');
 const error = ref('');
+const search = ref('');
+
+const filteredProjects = computed(() => {
+  if (!search.value.trim()) return projects.value;
+  const q = search.value.trim().toLowerCase();
+  return projects.value.filter(p =>
+    p.name.toLowerCase().includes(q) || p.slug.toLowerCase().includes(q)
+  );
+});
+
+const avatarColors = [
+  'linear-gradient(135deg, #f5c542, #e6a817)',
+  'linear-gradient(135deg, #4a9eff, #2563eb)',
+  'linear-gradient(135deg, #6ecf6e, #22c55e)',
+  'linear-gradient(135deg, #b56af5, #8b5cf6)',
+  'linear-gradient(135deg, #f56a6a, #ef4444)',
+  'linear-gradient(135deg, #f59e0b, #d97706)',
+  'linear-gradient(135deg, #06b6d4, #0891b2)',
+  'linear-gradient(135deg, #ec4899, #db2777)',
+];
+
+function avatarColor(slug) {
+  let hash = 0;
+  for (const c of slug) hash = ((hash << 5) - hash + c.charCodeAt(0)) | 0;
+  return avatarColors[Math.abs(hash) % avatarColors.length];
+}
 
 onMounted(() => {
   fetchProjects();
@@ -142,31 +194,56 @@ function formatDate(ts) {
 .project-picker {
   flex: 1;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
-  padding: 40px;
+  padding: 40px 24px;
+  overflow-y: auto;
 }
 
 .picker-card {
-  max-width: 680px;
+  max-width: 720px;
   width: 100%;
+  padding-bottom: 60px;
 }
 
-h2 {
-  font-size: 28px;
-  font-weight: 600;
-  color: #f0f0f0;
+/* ── Hero ── */
+.hero {
+  text-align: center;
+  margin-bottom: 40px;
+}
+
+.hero-icon {
+  font-size: 48px;
+  margin-bottom: 12px;
+  filter: drop-shadow(0 0 24px rgba(245, 197, 66, 0.3));
+}
+
+.hero-title {
+  font-size: 36px;
+  font-weight: 700;
+  background: linear-gradient(135deg, #f5c542 0%, #ffd866 50%, #f5c542 100%);
+  background-size: 200% 200%;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: shimmer 3s ease-in-out infinite;
   margin-bottom: 8px;
 }
 
-.subtitle {
-  color: #888;
-  margin-bottom: 24px;
+@keyframes shimmer {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
+
+.hero-tagline {
+  color: #666;
+  font-size: 15px;
   line-height: 1.5;
 }
 
+/* ── Create section ── */
 .create-section {
-  margin-bottom: 32px;
+  margin-bottom: 28px;
 }
 
 .input-row {
@@ -176,57 +253,67 @@ h2 {
 }
 
 .link-row {
-  margin-top: 8px;
+  margin-top: 4px;
 }
 
 .text-input {
   flex: 1;
   background: #111118;
-  border: 1px solid #333;
-  border-radius: 8px;
-  padding: 10px 14px;
+  border: 1px solid #2a2a3e;
+  border-radius: 10px;
+  padding: 11px 16px;
   color: #e0e0e0;
   font-size: 14px;
   font-family: inherit;
   outline: none;
-  transition: border-color 0.2s;
+  transition: border-color 0.2s, box-shadow 0.2s;
 }
 .text-input:focus {
   border-color: #f5c542;
+  box-shadow: 0 0 0 3px rgba(245, 197, 66, 0.1);
 }
 .text-input.small {
   max-width: 180px;
 }
+.text-input::placeholder {
+  color: #444;
+}
 
 .btn-primary {
-  background: #f5c542;
+  background: linear-gradient(135deg, #f5c542, #e6a817);
   color: #111;
   border: none;
-  padding: 10px 20px;
-  border-radius: 8px;
+  padding: 11px 22px;
+  border-radius: 10px;
   font-size: 14px;
   font-weight: 600;
   cursor: pointer;
   white-space: nowrap;
-  transition: background 0.2s;
+  transition: transform 0.15s, box-shadow 0.2s;
 }
-.btn-primary:hover:not(:disabled) { background: #ffd866; }
-.btn-primary:disabled { opacity: 0.4; cursor: not-allowed; }
+.btn-primary:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 16px rgba(245, 197, 66, 0.3);
+}
+.btn-primary:active:not(:disabled) {
+  transform: translateY(0);
+}
+.btn-primary:disabled { opacity: 0.35; cursor: not-allowed; }
 
 .btn-secondary {
-  background: #1a2a3a;
+  background: #14141e;
   color: #6aacf5;
-  border: 1px solid #2a3a4a;
-  padding: 10px 16px;
-  border-radius: 8px;
+  border: 1px solid #1e2a3a;
+  padding: 11px 16px;
+  border-radius: 10px;
   font-size: 13px;
   font-weight: 500;
   cursor: pointer;
   white-space: nowrap;
-  transition: background 0.2s;
+  transition: border-color 0.2s, background 0.2s;
 }
-.btn-secondary:hover:not(:disabled) { background: #223344; }
-.btn-secondary:disabled { opacity: 0.4; cursor: not-allowed; }
+.btn-secondary:hover:not(:disabled) { background: #1a2230; border-color: #2a4a6a; }
+.btn-secondary:disabled { opacity: 0.35; cursor: not-allowed; }
 
 .error-msg {
   color: #f56a6a;
@@ -234,32 +321,124 @@ h2 {
   margin-top: 8px;
 }
 
-.loading, .empty {
-  text-align: center;
-  color: #666;
+/* ── Search ── */
+.search-row {
+  margin-bottom: 16px;
+}
+
+.search-input {
+  width: 100%;
+  background: #111118;
+  border: 1px solid #2a2a3e;
+  border-radius: 10px;
+  padding: 10px 16px;
+  color: #e0e0e0;
+  font-size: 13px;
+  font-family: inherit;
+  outline: none;
+  transition: border-color 0.2s;
+}
+.search-input:focus {
+  border-color: #4a9eff;
+  box-shadow: 0 0 0 3px rgba(74, 158, 255, 0.08);
+}
+.search-input::placeholder {
+  color: #444;
+}
+
+/* ── Loading ── */
+.loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  color: #555;
   padding: 40px 0;
 }
 
+.loading-spinner {
+  width: 20px;
+  height: 20px;
+  border: 2px solid #333;
+  border-top-color: #f5c542;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ── Empty ── */
+.empty {
+  text-align: center;
+  padding: 60px 0;
+}
+
+.empty-icon {
+  font-size: 40px;
+  margin-bottom: 12px;
+  opacity: 0.5;
+}
+
+.empty p {
+  color: #666;
+  font-size: 15px;
+  margin-bottom: 4px;
+}
+
+.empty-hint {
+  color: #444;
+  font-size: 13px;
+}
+
+.empty-search {
+  text-align: center;
+  color: #555;
+  padding: 24px;
+  font-size: 13px;
+}
+
+/* ── Project list ── */
 .project-list {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
 }
 
 .project-item {
   display: flex;
   align-items: center;
-  gap: 16px;
-  padding: 14px 16px;
+  gap: 14px;
+  padding: 12px 16px;
   background: #111118;
-  border: 1px solid #222;
-  border-radius: 10px;
+  border: 1px solid #1e1e2e;
+  border-radius: 12px;
   cursor: pointer;
-  transition: border-color 0.2s, background 0.2s;
+  transition: border-color 0.2s, background 0.2s, transform 0.15s, box-shadow 0.2s;
 }
 .project-item:hover {
-  border-color: #f5c542;
-  background: #16161e;
+  border-color: #f5c54266;
+  background: #14141e;
+  transform: translateX(2px);
+  box-shadow: 0 2px 12px rgba(245, 197, 66, 0.06);
+}
+
+.project-icon-col {
+  flex-shrink: 0;
+}
+
+.project-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 15px;
+  font-weight: 700;
+  color: #fff;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.3);
 }
 
 .project-main {
@@ -267,12 +446,16 @@ h2 {
   display: flex;
   flex-direction: column;
   gap: 2px;
+  min-width: 0;
 }
 
 .project-name {
   font-weight: 600;
   color: #e0e0e0;
-  font-size: 15px;
+  font-size: 14px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .linked-badge {
@@ -288,32 +471,54 @@ h2 {
 }
 
 .project-slug {
-  font-size: 12px;
-  color: #555;
-  font-family: monospace;
+  font-size: 11px;
+  color: #444;
+  font-family: 'JetBrains Mono', 'Consolas', monospace;
 }
 
 .project-meta {
   display: flex;
-  gap: 12px;
-  font-size: 12px;
-  color: #666;
+  gap: 8px;
+  align-items: center;
+  font-size: 11px;
   white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.meta-pill {
+  padding: 2px 8px;
+  border-radius: 6px;
+  font-weight: 500;
+}
+
+.meta-pill.sessions {
+  background: #1a1a2e;
+  color: #888;
+}
+
+.meta-pill.cost {
+  background: #2a2a1a;
+  color: #f5c542;
 }
 
 .project-date {
-  color: #555;
+  color: #444;
+  font-size: 11px;
 }
 
 .btn-delete {
   background: none;
   border: none;
-  color: #555;
+  color: #333;
   font-size: 14px;
   cursor: pointer;
   padding: 4px 8px;
-  border-radius: 4px;
+  border-radius: 6px;
   transition: color 0.2s, background 0.2s;
+  opacity: 0;
+}
+.project-item:hover .btn-delete {
+  opacity: 1;
 }
 .btn-delete:hover {
   color: #f56a6a;

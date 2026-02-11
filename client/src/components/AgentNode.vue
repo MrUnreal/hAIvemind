@@ -84,28 +84,29 @@ const elapsed = computed(() => {
 
 <style scoped>
 .agent-node {
-  background: #16161e;
-  border: 2px solid #333;
-  border-radius: 10px;
+  background: #0f0f16;
+  border: 2px solid #1e1e2e;
+  border-radius: 12px;
   padding: 12px 16px;
   min-width: 220px;
   cursor: pointer;
-  transition: border-color 0.3s, box-shadow 0.3s;
+  transition: border-color 0.3s, box-shadow 0.3s, transform 0.2s;
 }
 
 .agent-node:hover {
-  box-shadow: 0 0 12px rgba(245, 197, 66, 0.15);
+  box-shadow: 0 0 16px rgba(245, 197, 66, 0.1);
+  transform: translateY(-1px);
 }
 
-.status-pending { border-color: #444; }
+.status-pending { border-color: #2a2a3e; }
 .status-running {
   border-color: #4a9eff;
-  box-shadow: 0 0 12px rgba(74, 158, 255, 0.2);
+  box-shadow: 0 0 16px rgba(74, 158, 255, 0.2);
   animation: pulse 2s ease-in-out infinite;
 }
-.status-success { border-color: #4caf50; }
-.status-failed { border-color: #f44336; }
-.status-blocked { border-color: #ff9800; }
+.status-success { border-color: #2a7a2a; background: #0d140d; }
+.status-failed { border-color: #7a2a2a; background: #140d0d; }
+.status-blocked { border-color: #7a5a00; }
 
 @keyframes pulse {
   0%, 100% { box-shadow: 0 0 8px rgba(74, 158, 255, 0.15); }

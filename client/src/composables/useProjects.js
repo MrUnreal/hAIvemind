@@ -24,7 +24,14 @@ export async function fetchProjects() {
   loading.value = true;
   try {
     const res = await fetch(`${API_BASE}/projects`);
-    projects.value = await res.json();
+    const data = await res.json();
+    // Sort newest-first so recently created projects appear at the top
+    data.sort((a, b) => {
+      const da = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+      const db = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+      return db - da;
+    });
+    projects.value = data;
   } catch (err) {
     console.error('[projects] Failed to fetch:', err);
   } finally {

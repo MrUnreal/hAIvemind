@@ -219,15 +219,15 @@ async function onRollback(sessionId) {
   color: #111;
   border: none;
   padding: 10px 24px;
-  border-radius: 8px;
+  border-radius: 10px;
   font-size: 14px;
-  font-weight: 600;
+  font-weight: 700;
   cursor: pointer;
-  transition: transform 0.2s, box-shadow 0.2s;
+  transition: transform 0.15s, box-shadow 0.2s;
 }
 .new-session-btn:hover {
   transform: translateY(-1px);
-  box-shadow: 0 4px 16px rgba(245, 197, 66, 0.3);
+  box-shadow: 0 4px 20px rgba(245, 197, 66, 0.3);
 }
 
 .loading {
@@ -252,16 +252,16 @@ async function onRollback(sessionId) {
 }
 
 .session-card {
-  background: #16161e;
-  border: 1px solid #2a2a3e;
-  border-radius: 12px;
-  padding: 16px 20px;
+  background: #0f0f16;
+  border: 1px solid #1e1e2e;
+  border-radius: 14px;
+  padding: 18px 22px;
   cursor: pointer;
   transition: border-color 0.2s, box-shadow 0.2s, transform 0.15s;
 }
 .session-card:hover {
-  border-color: #f5c542;
-  box-shadow: 0 2px 12px rgba(245, 197, 66, 0.1);
+  border-color: #f5c54255;
+  box-shadow: 0 4px 16px rgba(245, 197, 66, 0.06);
   transform: translateY(-1px);
 }
 
@@ -322,9 +322,9 @@ async function onRollback(sessionId) {
 
 .task-chip {
   font-size: 11px;
-  color: #aaa;
-  background: #1a1a2e;
-  border: 1px solid #2a2a3e;
+  color: #999;
+  background: #111118;
+  border: 1px solid #1e1e2e;
   padding: 3px 8px;
   border-radius: 6px;
   white-space: nowrap;

@@ -590,8 +590,18 @@ async function discardInterrupted(sessionId) {
   justify-content: space-between;
   padding: 12px 24px;
   background: #111118;
-  border-bottom: 1px solid #222;
+  border-bottom: 1px solid #1a1a2e;
   flex-shrink: 0;
+  position: relative;
+}
+.header::after {
+  content: '';
+  position: absolute;
+  bottom: -1px;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(245, 197, 66, 0.3), transparent);
 }
 
 .header-left {
@@ -602,8 +612,11 @@ async function discardInterrupted(sessionId) {
 
 .logo {
   font-size: 18px;
-  font-weight: 600;
-  color: #f5c542;
+  font-weight: 700;
+  background: linear-gradient(135deg, #f5c542, #ffd866);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
   cursor: pointer;
   transition: opacity 0.2s;
 }
@@ -614,17 +627,18 @@ async function discardInterrupted(sessionId) {
 .project-badge {
   font-size: 13px;
   font-weight: 500;
-  color: #aaa;
-  background: #1a1a2e;
-  border: 1px solid #2a2a3e;
-  padding: 4px 12px;
+  color: #999;
+  background: #14141e;
+  border: 1px solid #22223a;
+  padding: 4px 14px;
   border-radius: 8px;
   cursor: pointer;
-  transition: border-color 0.2s;
+  transition: border-color 0.2s, color 0.2s, transform 0.15s;
 }
 .project-badge:hover {
-  border-color: #f5c542;
+  border-color: #f5c54266;
   color: #e0e0e0;
+  transform: translateY(-1px);
 }
 
 .header-meta {
@@ -644,12 +658,13 @@ async function discardInterrupted(sessionId) {
 .status-dot.red { background: #f44336; }
 
 .cost-badge {
-  background: #1a1a2e;
-  border: 1px solid #333;
+  background: #1a1a0e;
+  border: 1px solid #33331a;
   padding: 2px 10px;
   border-radius: 12px;
   font-size: 12px;
   color: #f5c542;
+  font-weight: 500;
 }
 
 .replay-btn {
@@ -692,9 +707,9 @@ async function discardInterrupted(sessionId) {
 .side-panel {
   display: flex;
   flex-direction: column;
-  border-left: 1px solid #222;
-  background: #111118;
-  transition: width 0.2s;
+  border-left: 1px solid #1a1a2e;
+  background: #0f0f16;
+  transition: width 0.25s ease;
   width: 480px;
   flex-shrink: 0;
 }
@@ -713,22 +728,23 @@ async function discardInterrupted(sessionId) {
   flex: 1;
   background: none;
   border: none;
-  color: #666;
-  font-size: 12px;
+  color: #555;
+  font-size: 11px;
   font-weight: 600;
-  padding: 10px 8px;
+  padding: 10px 6px;
   cursor: pointer;
   transition: color 0.2s, border-bottom 0.2s;
   border-bottom: 2px solid transparent;
   white-space: nowrap;
   overflow: hidden;
+  letter-spacing: 0.01em;
 }
 .tab-btn.active {
   color: #f5c542;
   border-bottom-color: #f5c542;
 }
 .tab-btn:hover:not(.active) {
-  color: #aaa;
+  color: #999;
 }
 
 .side-panel.collapsed .tab-btn {

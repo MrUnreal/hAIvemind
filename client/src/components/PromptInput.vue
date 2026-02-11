@@ -2,7 +2,7 @@
   <div class="prompt-container">
     <div class="prompt-card">
       <h2>What would you like to build?</h2>
-      <p class="subtitle">Describe your project and hAIvemind will decompose it into tasks, assign agents, and build it for you.</p>
+      <p class="subtitle">Describe your project and hAIvemind will decompose it into tasks, assign agents, and build it.</p>
 
       <TemplateGallery @select="onTemplateSelect" />
       <TemplateForm
@@ -12,14 +12,16 @@
         @update:variables="templateVars = $event"
       />
 
-      <textarea
-        v-model="prompt"
-        placeholder="e.g., Build a REST API with Express and a React frontend for a todo app with user authentication..."
-        rows="5"
-        @keydown.ctrl.enter="submit"
-        @keydown.meta.enter="submit"
-        :disabled="planning || !props.connected"
-      ></textarea>
+      <div class="textarea-wrapper">
+        <textarea
+          v-model="prompt"
+          placeholder="e.g., Build a REST API with Express and a React frontend for a todo app with user authentication..."
+          rows="5"
+          @keydown.ctrl.enter="submit"
+          @keydown.meta.enter="submit"
+          :disabled="planning || !props.connected"
+        ></textarea>
+      </div>
 
       <div class="actions">
         <button @click="submit" :disabled="!canSubmit || planning || !props.connected" class="btn-primary">
@@ -29,17 +31,33 @@
       </div>
 
       <div class="tier-info">
-        <h4>Model Tiers (Copilot Premium Request Cost)</h4>
+        <h4>Model Escalation Chain</h4>
         <div class="tiers">
-          <span class="tier t0">T0 Free (0×)</span>
+          <div class="tier-step t0">
+            <span class="tier-label">T0</span>
+            <span class="tier-name">Free</span>
+            <span class="tier-cost">0×</span>
+          </div>
           <span class="arrow">→</span>
-          <span class="tier t1">T1 Budget (0.33×)</span>
+          <div class="tier-step t1">
+            <span class="tier-label">T1</span>
+            <span class="tier-name">Budget</span>
+            <span class="tier-cost">0.33×</span>
+          </div>
           <span class="arrow">→</span>
-          <span class="tier t2">T2 Standard (1×)</span>
+          <div class="tier-step t2">
+            <span class="tier-label">T2</span>
+            <span class="tier-name">Standard</span>
+            <span class="tier-cost">1×</span>
+          </div>
           <span class="arrow">→</span>
-          <span class="tier t3">T3 Premium (3×)</span>
+          <div class="tier-step t3">
+            <span class="tier-label">T3</span>
+            <span class="tier-name">Premium</span>
+            <span class="tier-cost">3×</span>
+          </div>
         </div>
-        <p class="tier-note">Workers start at T0 (free). Retries escalate through tiers automatically. Max cost capped at 3×.</p>
+        <p class="tier-note">Agents start free. Retries auto-escalate. Cost capped at 3× per task.</p>
       </div>
     </div>
   </div>
@@ -92,42 +110,67 @@ function submit() {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 40px;
+  padding: 40px 24px;
 }
 
 .prompt-card {
-  max-width: 640px;
+  max-width: 660px;
   width: 100%;
 }
 
 h2 {
   font-size: 28px;
-  font-weight: 600;
+  font-weight: 700;
   margin-bottom: 8px;
   color: #f0f0f0;
 }
 
 .subtitle {
-  color: #888;
+  color: #666;
   margin-bottom: 24px;
-  line-height: 1.5;
+  line-height: 1.6;
+  font-size: 15px;
+}
+
+.textarea-wrapper {
+  position: relative;
+  border-radius: 14px;
+  overflow: hidden;
+}
+
+.textarea-wrapper::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 14px;
+  padding: 1px;
+  background: linear-gradient(135deg, #2a2a3e, #1a1a2e);
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+  transition: background 0.3s;
+}
+
+.textarea-wrapper:focus-within::before {
+  background: linear-gradient(135deg, #f5c542, #e6a817);
 }
 
 textarea {
   width: 100%;
-  background: #111118;
-  border: 1px solid #333;
-  border-radius: 12px;
-  padding: 16px;
+  background: #0f0f16;
+  border: none;
+  border-radius: 14px;
+  padding: 18px 20px;
   color: #e0e0e0;
   font-size: 15px;
   font-family: inherit;
   resize: vertical;
   outline: none;
-  transition: border-color 0.2s;
+  line-height: 1.6;
 }
-textarea:focus {
-  border-color: #f5c542;
+textarea::placeholder {
+  color: #3a3a4a;
 }
 textarea:disabled {
   opacity: 0.5;
@@ -137,75 +180,104 @@ textarea:disabled {
   display: flex;
   align-items: center;
   gap: 16px;
-  margin-top: 16px;
+  margin-top: 18px;
 }
 
 .btn-primary {
-  background: #f5c542;
+  background: linear-gradient(135deg, #f5c542, #e6a817);
   color: #111;
   border: none;
-  padding: 10px 28px;
-  border-radius: 8px;
+  padding: 12px 32px;
+  border-radius: 10px;
   font-size: 15px;
-  font-weight: 600;
+  font-weight: 700;
   cursor: pointer;
-  transition: background 0.2s;
+  transition: transform 0.15s, box-shadow 0.2s;
+  letter-spacing: 0.01em;
 }
 .btn-primary:hover:not(:disabled) {
-  background: #ffd866;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 20px rgba(245, 197, 66, 0.35);
+}
+.btn-primary:active:not(:disabled) {
+  transform: translateY(0);
 }
 .btn-primary:disabled {
-  opacity: 0.4;
+  opacity: 0.35;
   cursor: not-allowed;
 }
 
 .hint {
   font-size: 12px;
-  color: #555;
+  color: #444;
 }
 
+/* ── Tier info ── */
 .tier-info {
   margin-top: 40px;
-  padding: 16px;
-  background: #111118;
-  border: 1px solid #222;
-  border-radius: 12px;
+  padding: 18px 20px;
+  background: #0f0f16;
+  border: 1px solid #1a1a2e;
+  border-radius: 14px;
 }
 
 .tier-info h4 {
-  font-size: 13px;
-  font-weight: 500;
-  color: #888;
-  margin-bottom: 12px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #555;
+  margin-bottom: 14px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
 }
 
 .tiers {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   flex-wrap: wrap;
 }
 
-.tier {
-  padding: 4px 10px;
-  border-radius: 6px;
-  font-size: 12px;
-  font-weight: 500;
+.tier-step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 8px 14px;
+  border-radius: 10px;
+  min-width: 70px;
 }
-.tier.t0 { background: #1a3a1a; color: #6ecf6e; }
-.tier.t1 { background: #2a2a1a; color: #c5c56a; }
-.tier.t2 { background: #1a2a3a; color: #6aacf5; }
-.tier.t3 { background: #2a1a3a; color: #b56af5; }
-.tier.t4 { background: #3a1a1a; color: #f56a6a; }
+
+.tier-step .tier-label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+}
+.tier-step .tier-name {
+  font-size: 11px;
+  font-weight: 500;
+  opacity: 0.7;
+}
+.tier-step .tier-cost {
+  font-size: 10px;
+  font-weight: 600;
+  opacity: 0.5;
+}
+
+.tier-step.t0 { background: #0e1f0e; color: #6ecf6e; }
+.tier-step.t1 { background: #1f1f0e; color: #c5c56a; }
+.tier-step.t2 { background: #0e1a2a; color: #6aacf5; }
+.tier-step.t3 { background: #1f0e2a; color: #b56af5; }
 
 .arrow {
-  color: #444;
+  color: #333;
   font-size: 14px;
+  flex-shrink: 0;
 }
 
 .tier-note {
-  margin-top: 10px;
+  margin-top: 12px;
   font-size: 12px;
-  color: #555;
+  color: #444;
+  line-height: 1.4;
 }
 </style>

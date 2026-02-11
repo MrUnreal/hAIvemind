@@ -58,18 +58,19 @@ function select(tpl) {
   align-items: center;
   gap: 8px;
   cursor: pointer;
-  padding: 8px 12px;
-  background: #111118;
-  border: 1px solid #333;
-  border-radius: 8px;
-  color: #aaa;
+  padding: 10px 14px;
+  background: #0f0f16;
+  border: 1px solid #1e1e2e;
+  border-radius: 10px;
+  color: #888;
   font-size: 13px;
-  font-weight: 500;
+  font-weight: 600;
   user-select: none;
-  transition: border-color 0.2s;
+  transition: border-color 0.2s, color 0.2s;
 }
 .template-header:hover {
-  border-color: #f5c542;
+  border-color: #f5c54266;
+  color: #ccc;
 }
 
 .expand-arrow {
@@ -85,19 +86,20 @@ function select(tpl) {
 }
 
 .template-card {
-  padding: 12px;
-  background: #111118;
-  border: 1px solid #2a2a2a;
-  border-radius: 10px;
+  padding: 14px;
+  background: #0f0f16;
+  border: 1px solid #1e1e2e;
+  border-radius: 12px;
   cursor: pointer;
-  transition: border-color 0.2s, background 0.2s;
+  transition: border-color 0.2s, background 0.2s, transform 0.15s;
 }
 .template-card:hover {
-  border-color: #555;
+  border-color: #3a3a5a;
+  transform: translateY(-1px);
 }
 .template-card.active {
   border-color: #f5c542;
-  background: #1a1a22;
+  background: #14141e;
 }
 
 .template-name {

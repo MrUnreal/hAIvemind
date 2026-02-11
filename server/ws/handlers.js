@@ -18,8 +18,8 @@ export async function handleClientMessage(msg, ws) {
   const workspace = refs.workspace;
 
   if (msg.type === MSG.SESSION_START) {
-    const { prompt, projectSlug, templateId, variables } = msg.payload || {};
-    if (!prompt) {
+    let { prompt, projectSlug, templateId, variables } = msg.payload || {};
+    if (!prompt && !templateId) {
       ws.send(makeMsg(MSG.SESSION_ERROR, { error: 'No prompt provided' }));
       return;
     }
@@ -63,6 +63,10 @@ export async function handleClientMessage(msg, ws) {
         });
 
         predefinedPlan = { ...template, tasks };
+        // Auto-generate prompt from template if user didn't type one
+        if (!prompt) {
+          prompt = template.description || template.name || `Build from template: ${templateId}`;
+        }
       } catch (err) {
         log.error(`[session] Failed to load template "${templateId}": ${err.message}`);
         ws.send(makeMsg(MSG.SESSION_ERROR, { error: `Failed to load template "${templateId}"` }));

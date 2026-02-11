@@ -205,7 +205,7 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   height: 100%;
-  background: #0d0d14;
+  background: #0a0a0f;
 }
 
 .chat-header {
@@ -214,12 +214,12 @@ onMounted(() => {
   justify-content: space-between;
   padding: 14px 20px;
   border-bottom: 1px solid #1a1a2e;
-  background: #111118;
+  background: #0f0f16;
 }
 
 .chat-header h3 {
-  font-size: 15px;
-  font-weight: 600;
+  font-size: 14px;
+  font-weight: 700;
   color: #e0e0e0;
   margin: 0;
 }
@@ -276,17 +276,17 @@ onMounted(() => {
 }
 
 .bubble-user {
-  background: #1a2a4a;
-  border: 1px solid #2a3a5a;
+  background: #111a2e;
+  border: 1px solid #1a2a4a;
   border-bottom-left-radius: 4px;
-  color: #e0e8f0;
+  color: #d0daf0;
 }
 
 .bubble-assistant {
-  background: #1a1a2e;
-  border: 1px solid #2a2a3e;
+  background: #111118;
+  border: 1px solid #1e1e2e;
   border-bottom-right-radius: 4px;
-  color: #d0d0e0;
+  color: #c0c0d0;
 }
 
 .bubble-text {
@@ -298,7 +298,7 @@ onMounted(() => {
 }
 
 .bubble-assistant .bubble-text {
-  font-family: 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+  font-family: 'JetBrains Mono', 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
   font-size: 12px;
 }
 
@@ -338,8 +338,8 @@ onMounted(() => {
 
 .chat-input-row textarea {
   flex: 1;
-  background: #16161e;
-  border: 1px solid #2a2a3e;
+  background: #111118;
+  border: 1px solid #1e1e2e;
   border-radius: 20px;
   color: #e0e0e0;
   padding: 10px 16px;
@@ -348,10 +348,11 @@ onMounted(() => {
   resize: none;
   outline: none;
   line-height: 1.4;
+  transition: border-color 0.2s;
 }
 
 .chat-input-row textarea:focus {
-  border-color: #f5c542;
+  border-color: #f5c54266;
 }
 
 .chat-input-row textarea::placeholder {

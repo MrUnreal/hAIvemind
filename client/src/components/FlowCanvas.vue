@@ -178,14 +178,20 @@ function onNodeClick(event) {
   align-items: center;
   justify-content: center;
   height: 100%;
-  gap: 16px;
-  color: #888;
+  gap: 20px;
+  color: #666;
+}
+
+.planning-overlay p {
+  font-size: 15px;
+  font-weight: 500;
+  letter-spacing: 0.01em;
 }
 
 .spinner {
-  width: 36px;
-  height: 36px;
-  border: 3px solid #333;
+  width: 40px;
+  height: 40px;
+  border: 3px solid #1a1a2e;
   border-top-color: #f5c542;
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
@@ -200,20 +206,30 @@ function onNodeClick(event) {
   bottom: 20px;
   left: 50%;
   transform: translateX(-50%);
-  padding: 10px 24px;
-  border-radius: 10px;
+  padding: 12px 28px;
+  border-radius: 12px;
   font-size: 14px;
-  font-weight: 500;
+  font-weight: 600;
+  backdrop-filter: blur(8px);
+  animation: banner-appear 0.4s ease-out;
 }
+
+@keyframes banner-appear {
+  from { opacity: 0; transform: translateX(-50%) translateY(10px); }
+  to { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+
 .completion-banner.success {
-  background: #1a3a1a;
+  background: rgba(26, 58, 26, 0.9);
   border: 1px solid #2a5a2a;
   color: #6ecf6e;
+  box-shadow: 0 4px 24px rgba(76, 175, 80, 0.15);
 }
 .completion-banner.error {
-  background: #3a1a1a;
+  background: rgba(58, 26, 26, 0.9);
   border: 1px solid #5a2a2a;
   color: #f56a6a;
+  box-shadow: 0 4px 24px rgba(244, 67, 54, 0.15);
 }
 
 .cost {
