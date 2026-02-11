@@ -47,6 +47,7 @@ hAIvemind/
 | **SessionHistory.vue** | Browse and reload past sessions for a project. Workspace intelligence view. |
 | **CommandPalette.vue** | Ctrl+K overlay: searchable command list with navigation, actions, project switching, panel toggling. |
 | **ToastContainer.vue** | Animated toast notification stack. Renders success/error/warning/info toasts with auto-dismiss. |
+| **KeyboardShortcutsHelp.vue** | `?` key dialog: grouped list of all keyboard shortcuts with key labels. |
 
 ### Composables
 
@@ -57,6 +58,7 @@ hAIvemind/
 | **useProjects.js** | Project CRUD via REST API. Reactive `activeProject`, `sessions` list. Sort by createdAt descending. |
 | **useCommandPalette.js** | Command palette state: `paletteOpen`, `paletteQuery`, command registry with `setCommands()`, `filteredCommands`. |
 | **useToast.js** | Toast notification stack: `showToast()`, `dismissToast()`, convenience `toast.success/error/warning/info()`. |
+| **useKeyboardShortcuts.js** | Global keyboard shortcut system: `registerShortcuts()`, `installShortcutListener()`, `?` help dialog toggle. Auto-suppresses in inputs. |
 
 ### Utils
 

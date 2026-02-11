@@ -171,10 +171,11 @@
   </div>
   <CommandPalette />
   <ToastContainer />
+  <KeyboardShortcutsHelp />
 </template>
 
 <script setup>
-import { ref, onMounted, watch, computed } from 'vue';
+import { ref, onMounted, onUnmounted, watch, computed } from 'vue';
 import ProjectPicker from './components/ProjectPicker.vue';
 import PromptInput from './components/PromptInput.vue';
 import FlowCanvas from './components/FlowCanvas.vue';
@@ -187,9 +188,11 @@ import MetricsDashboard from './components/MetricsDashboard.vue';
 import AutopilotPanel from './components/AutopilotPanel.vue';
 import CommandPalette from './components/CommandPalette.vue';
 import ToastContainer from './components/ToastContainer.vue';
+import KeyboardShortcutsHelp from './components/KeyboardShortcutsHelp.vue';
 import { useWebSocket } from './composables/useWebSocket.js';
-import { setCommands } from './composables/useCommandPalette.js';
+import { setCommands, openPalette, togglePalette } from './composables/useCommandPalette.js';
 import { toast } from './composables/useToast.js';
+import { registerShortcuts, installShortcutListener } from './composables/useKeyboardShortcuts.js';
 import {
   sessionStatus,
   sessionError,
@@ -652,6 +655,62 @@ function buildCommands() {
 
 // Rebuild commands when context changes
 watch([hasActiveProject, activeProject, sessionStatus, () => projects.value.length], buildCommands, { immediate: true });
+
+// ── Keyboard Shortcuts (7.4) ──
+
+registerShortcuts([
+  {
+    key: 'h', label: 'H', description: 'Go home (project picker)',
+    group: 'Navigation', action: goHome,
+  },
+  {
+    key: 'n', label: 'N', description: 'New session',
+    group: 'Navigation', action: () => { if (hasActiveProject.value) showPrompt.value = true; },
+  },
+  {
+    key: 's', label: 'S', description: 'Back to sessions list',
+    group: 'Navigation', action: () => { if (hasActiveProject.value) goToProject(); },
+  },
+  {
+    key: '1', label: '1', description: 'Agent panel',
+    group: 'Panels', action: () => { sideTab.value = 'agent'; sidePanelCollapsed.value = false; },
+  },
+  {
+    key: '2', label: '2', description: 'Chat panel',
+    group: 'Panels', action: () => { sideTab.value = 'chat'; sidePanelCollapsed.value = false; },
+  },
+  {
+    key: '3', label: '3', description: 'Settings panel',
+    group: 'Panels', action: () => { sideTab.value = 'settings'; sidePanelCollapsed.value = false; },
+  },
+  {
+    key: '4', label: '4', description: 'Metrics panel',
+    group: 'Panels', action: () => { sideTab.value = 'metrics'; sidePanelCollapsed.value = false; },
+  },
+  {
+    key: '5', label: '5', description: 'Autopilot panel',
+    group: 'Panels', action: () => { sideTab.value = 'autopilot'; sidePanelCollapsed.value = false; },
+  },
+  {
+    key: '[', label: '[', description: 'Collapse side panel',
+    group: 'Panels', action: () => { sidePanelCollapsed.value = true; },
+  },
+  {
+    key: ']', label: ']', description: 'Expand side panel',
+    group: 'Panels', action: () => { sidePanelCollapsed.value = false; },
+  },
+  {
+    key: 'r', label: 'R', description: 'Toggle session replay',
+    group: 'Actions', action: () => { if (sessionStatus.value !== 'idle') replayMode.value = !replayMode.value; },
+  },
+  {
+    key: 'k', label: 'Ctrl+K', description: 'Open command palette',
+    group: 'Actions', ctrlKey: true, action: togglePalette,
+  },
+]);
+
+const cleanupShortcuts = installShortcutListener();
+onUnmounted(() => cleanupShortcuts());
 </script>
 
 <style>

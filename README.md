@@ -99,6 +99,7 @@ sequenceDiagram
 | **CLI Mode** | `haivemind build <project> "prompt"` — headless/CI use |
 | **Self-Dev Mode** | hAIvemind evolves its own codebase via isolated git worktrees |
 | **Command Palette** | Ctrl+K quick-action overlay: navigate, switch projects, open panels |
+| **Keyboard Shortcuts** | ?, H, N, S, 1-5, [, ], R — full help dialog with `?` key |
 | **Toast Notifications** | Animated toast stack for session events (complete, error, warning) |
 
 ## Architecture
@@ -182,7 +183,7 @@ All 7 phases shipped. 20 test files. 429 tests. ~11K lines. 100% self-built.
 | 4 — Hardening | Workspace analysis, cost ceilings, concurrency |
 | 5 — Autonomy | Shutdown/recovery, CLI, autopilot, plugins, Docker |
 | 6 — Production | CI, logging, streaming, diff viewer, WS channels, server decomposition |
-| 7 — Quality of Life | Command palette, toast notifications, enhanced health API |
+| 7 — Quality of Life | Command palette, keyboard shortcuts, toast notifications, health API |
 
 ## License
 

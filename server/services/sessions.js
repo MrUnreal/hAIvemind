@@ -374,6 +374,17 @@ export async function handleChatMessage(message, projectSlug) {
     return;
   }
 
+  // Concurrency guard: reject if an iteration is already running
+  if (ctx.iterating) {
+    broadcast(makeMsg(MSG.CHAT_RESPONSE, {
+      projectSlug,
+      role: 'assistant',
+      content: 'An iteration is already in progress. Please wait for it to finish.',
+    }));
+    return;
+  }
+  ctx.iterating = true;
+
   ctx.iterationCount = (ctx.iterationCount || 0) + 1;
   const iterNum = ctx.iterationCount;
   const promptNodeId = `__prompt_${iterNum}__`;
@@ -528,5 +539,7 @@ export async function handleChatMessage(message, projectSlug) {
       iterationId: iterNum,
       error: err.message,
     }));
+  } finally {
+    ctx.iterating = false;
   }
 }

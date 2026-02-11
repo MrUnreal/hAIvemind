@@ -85,7 +85,7 @@ const config = {
 
   maxRetriesTotal: envInt('HAIVEMIND_MAX_RETRIES', 5),
   maxCrossAgentLoops: envInt('HAIVEMIND_MAX_CROSS_AGENT_LOOPS', 3),
-  maxConcurrency: envInt('HAIVEMIND_MAX_CONCURRENCY', 3),
+  maxConcurrency: envInt('HAIVEMIND_MAX_CONCURRENCY', 5),
 
   // Working directory for agent outputs
   workDir: '.haivemind-workspace',

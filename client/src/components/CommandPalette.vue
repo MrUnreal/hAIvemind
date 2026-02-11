@@ -45,7 +45,7 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, nextTick, onMounted, onUnmounted } from 'vue';
+import { ref, computed, watch, nextTick } from 'vue';
 import {
   paletteOpen,
   paletteQuery,
@@ -133,21 +133,8 @@ function execute(cmd) {
   cmd.action();
 }
 
-// Global keyboard shortcut: Ctrl+K / Cmd+K
-function onKeydown(e) {
-  if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
-    e.preventDefault();
-    togglePalette();
-  }
-}
-
-onMounted(() => {
-  window.addEventListener('keydown', onKeydown);
-});
-
-onUnmounted(() => {
-  window.removeEventListener('keydown', onKeydown);
-});
+// Note: Ctrl+K is handled globally by useKeyboardShortcuts.js in App.vue
+// No duplicate listener needed here.
 </script>
 
 <style scoped>

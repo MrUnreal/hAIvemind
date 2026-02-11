@@ -51,13 +51,21 @@ import { activeProject } from '../composables/useProjects.js';
 import { sessionStatus, tasks, costSummary } from '../composables/useSession.js';
 import { useWebSocket } from '../composables/useWebSocket.js';
 
-const { on, send } = useWebSocket();
+const { on, send, connectionLost } = useWebSocket();
 
 const messages = ref([]);
 const input = ref('');
 const isBusy = ref(false);
 const messagesRef = ref(null);
 const inputRef = ref(null);
+
+// Reset isBusy when WS disconnects to prevent permanent input lock
+watch(connectionLost, (lost) => {
+  if (lost && isBusy.value) {
+    isBusy.value = false;
+    status('⚠️ Connection lost — input unlocked');
+  }
+});
 
 function stripAnsi(str) {
   return str.replace(/\x1b\[[0-9;]*m/g, '').replace(/\\x1b\[[0-9;]*m/g, '');
@@ -177,6 +185,9 @@ function sendMessage() {
   const text = input.value.trim();
   if (!text || isBusy.value || sessionStatus.value !== 'completed') return;
   if (!activeProject.value) return;
+
+  // Set busy immediately to prevent double-submit before server acks
+  isBusy.value = true;
 
   messages.value.push({ role: 'user', content: text, time: Date.now() });
   send('chat:message', {

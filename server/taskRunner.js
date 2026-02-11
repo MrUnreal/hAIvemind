@@ -90,12 +90,12 @@ export default class TaskRunner {
    */
   async _scheduleEligible() {
     const eligible = [];
+    const maxConc = this.overrides?.maxConcurrency ?? config.maxConcurrency;
 
     for (const [taskId, state] of this.taskStates) {
       // Skip tasks that aren't actionable
       if (state.status !== 'pending' && state.status !== 'gated') continue;
-      const maxConc = this.overrides?.maxConcurrency ?? config.maxConcurrency;
-      if (this.running >= maxConc) continue;  // Phase 4: continue (not break) to check gated tasks
+      if ((this.running + eligible.length) >= maxConc) continue;  // account for about-to-launch tasks
 
       const depsOk = state.task.dependencies.every(depId => {
         const depState = this.taskStates.get(depId);
