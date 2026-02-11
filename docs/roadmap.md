@@ -208,3 +208,20 @@ Currently single-user, no auth. Fine for local dev, but blocks team usage or hos
 | **6.6 — Autopilot Web UI** | ✅ | REST endpoints, AutopilotPanel.vue, cycle history, cost tracking, start/stop |
 | **6.7 — WS Channels** | ✅ | Per-project subscriptions, broadcastGlobal, session checkpointing, crash recovery |
 | **6.8 — Server Decomposition** | ✅ | index.js 1846→141 lines; 7 route groups, 4 services, 3 WS modules, shared state.js; 20 tests |
+
+---
+
+## Phase 7: Quality of Life & Observability
+
+> Developer experience improvements, better system observability, and polish.
+
+| Feature | Status | Notes |
+|---------|--------|-------|
+| **7.0 — Command Palette** | ✅ | Ctrl+K overlay with search, navigation, project switching, panel toggling |
+| **7.1 — Toast Notification System** | ✅ | Animated toast stack (success/error/warning/info), auto-dismiss, replaces inline alerts |
+| **7.2 — Enhanced Health API** | ✅ | /api/health + /api/health/details with memory, uptime, version, per-project stats |
+| **7.3 — Session Search** | ❌ | Full-text search across session prompts/tasks in all projects |
+| **7.4 — Keyboard Shortcuts** | ❌ | Global keybindings (?, Escape, N for new session, H for home) + help dialog |
+| **7.5 — Cost Analytics Chart** | ❌ | Historical cost breakdown in MetricsDashboard with tier-colored bars |
+| **7.6 — Export Sessions** | ❌ | Download session as JSON or Markdown report |
+| **7.7 — Webhook Notifications** | ❌ | POST session events to external URLs (Slack/Discord/custom) |

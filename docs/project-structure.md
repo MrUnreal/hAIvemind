@@ -42,9 +42,11 @@ hAIvemind/
 | **PromptNode.vue** | 💬 bridge node between iterations — shows the user's follow-up message. |
 | **OrchestratorChat.vue** | Chat panel with task-attributed messages. Shows agent assignments ("🐝 Task → model"), completions, escalations, failures, verification status. User bubbles left (blue), orchestrator bubbles right (dark). |
 | **AgentDetail.vue** | Raw output viewer for a selected agent (stdout/stderr stream). |
-| **ProjectPicker.vue** | Create/select/link projects. |
-| **PromptInput.vue** | Large textarea for the initial build prompt. |
-| **SessionHistory.vue** | Browse and reload past sessions for a project. |
+| **ProjectPicker.vue** | Landing page with hero section, project search/filter, colored avatars. |
+| **PromptInput.vue** | Textarea with gradient border, tier escalation chain cards, template selector. |
+| **SessionHistory.vue** | Browse and reload past sessions for a project. Workspace intelligence view. |
+| **CommandPalette.vue** | Ctrl+K overlay: searchable command list with navigation, actions, project switching, panel toggling. |
+| **ToastContainer.vue** | Animated toast notification stack. Renders success/error/warning/info toasts with auto-dismiss. |
 
 ### Composables
 
@@ -52,7 +54,9 @@ hAIvemind/
 |------|-------------|
 | **useSession.js** | Singleton reactive state: `sessionStatus`, `tasks`, `edges`, `taskStatusMap`, `agentMap`, `agentOutputMap`, `costSummary`. Provides `resetSession()`, `loadSession()`. |
 | **useWebSocket.js** | Singleton WebSocket connection with `on(type, callback)` multi-handler pattern and `send(type, payload)`. Auto-reconnect. |
-| **useProjects.js** | Project CRUD via REST API. Reactive `activeProject`, `sessions` list. |
+| **useProjects.js** | Project CRUD via REST API. Reactive `activeProject`, `sessions` list. Sort by createdAt descending. |
+| **useCommandPalette.js** | Command palette state: `paletteOpen`, `paletteQuery`, command registry with `setCommands()`, `filteredCommands`. |
+| **useToast.js** | Toast notification stack: `showToast()`, `dismissToast()`, convenience `toast.success/error/warning/info()`. |
 
 ### Utils
 

@@ -169,6 +169,8 @@
       </div>
     </div>
   </div>
+  <CommandPalette />
+  <ToastContainer />
 </template>
 
 <script setup>
@@ -183,7 +185,11 @@ import OrchestratorChat from './components/OrchestratorChat.vue';
 import SettingsPanel from './components/SettingsPanel.vue';
 import MetricsDashboard from './components/MetricsDashboard.vue';
 import AutopilotPanel from './components/AutopilotPanel.vue';
+import CommandPalette from './components/CommandPalette.vue';
+import ToastContainer from './components/ToastContainer.vue';
 import { useWebSocket } from './composables/useWebSocket.js';
+import { setCommands } from './composables/useCommandPalette.js';
+import { toast } from './composables/useToast.js';
 import {
   sessionStatus,
   sessionError,
@@ -200,11 +206,13 @@ import {
   loadSession,
 } from './composables/useSession.js';
 import {
+  projects,
   activeProject,
   hasActiveProject,
   clearProject,
   sessions,
   fetchSessions,
+  selectProject,
 } from './composables/useProjects.js';
 import {
   projectSkills,
@@ -290,6 +298,7 @@ watch(connectionLost, (now, prev) => {
   } else if (prev && !now) {
     reconnecting.value = false;
     reconnectedNotification.value = true;
+    toast.success('Reconnected');
     if (reconnectedTimeoutId) {
       clearTimeout(reconnectedTimeoutId);
     }
@@ -364,11 +373,13 @@ on('dag:rewrite', (payload) => {
   }
   // Show toast notification
   dagRewriteToast.value = `Unblocked "${toLabel}" from stalled "${fromLabel}"`;
+  toast.info(`DAG Rewrite: Unblocked "${toLabel}" from stalled "${fromLabel}"`, 5000);
   setTimeout(() => { dagRewriteToast.value = ''; }, 5000);
 });
 
 on('session:warning', (payload) => {
   sessionWarningToast.value = payload.message || 'Session warning';
+  toast.warning(payload.message || 'Session warning');
   setTimeout(() => { sessionWarningToast.value = ''; }, 6000);
 });
 
@@ -418,6 +429,8 @@ on('autopilot:stopped', () => { /* AutopilotPanel polls for updates */ });
 on('session:complete', (payload) => {
   sessionStatus.value = 'completed';
   costSummary.value = payload.costSummary;
+  const cost = payload.costSummary?.totalPremiumRequests || 0;
+  toast.success(`Session complete — ${cost}× premium requests used`);
   // Refresh session list so history is up to date
   if (activeProject.value) {
     fetchSessions(activeProject.value.slug);
@@ -427,6 +440,7 @@ on('session:complete', (payload) => {
 on('session:error', (payload) => {
   sessionStatus.value = 'failed';
   sessionError.value = payload?.error || 'An unexpected error occurred during this session.';
+  toast.error(payload?.error || 'Session failed');
   console.error('Session error:', payload?.error || payload);
 });
 
@@ -574,6 +588,70 @@ async function discardInterrupted(sessionId) {
     }
   } catch { /* ignore */ }
 }
+
+// ── Command Palette ──
+
+function buildCommands() {
+  const cmds = [];
+
+  // Navigation commands
+  cmds.push({
+    id: 'nav:home', label: 'Go Home', icon: '🏠', section: 'Navigation',
+    hint: 'Return to project picker',
+    action: goHome,
+  });
+
+  if (hasActiveProject.value) {
+    cmds.push({
+      id: 'nav:project', label: 'Back to Sessions', icon: '📁', section: 'Navigation',
+      hint: activeProject.value.name,
+      action: goToProject,
+    });
+    cmds.push({
+      id: 'action:new-session', label: 'New Session', icon: '✨', section: 'Actions',
+      hint: 'Start a new build session',
+      action: () => { showPrompt.value = true; },
+    });
+  }
+
+  // Project list commands (quick-switch)
+  for (const p of projects.value.slice(0, 8)) {
+    cmds.push({
+      id: `project:${p.slug}`, label: p.name, icon: '📂', section: 'Projects',
+      hint: `${p.sessionCount || 0} sessions`,
+      action: () => { selectProject(p); },
+    });
+  }
+
+  // Side panel tabs (when in active session)
+  if (sessionStatus.value !== 'idle') {
+    for (const tab of [
+      { id: 'agent', label: 'Agent Panel', icon: '🤖' },
+      { id: 'chat', label: 'Chat Panel', icon: '💬' },
+      { id: 'settings', label: 'Settings', icon: '⚙️' },
+      { id: 'metrics', label: 'Metrics', icon: '📊' },
+      { id: 'autopilot', label: 'Autopilot', icon: '🤖' },
+    ]) {
+      cmds.push({
+        id: `tab:${tab.id}`, label: tab.label, icon: tab.icon, section: 'Panels',
+        action: () => { sideTab.value = tab.id; sidePanelCollapsed.value = false; },
+      });
+    }
+    cmds.push({
+      id: 'tab:toggle', label: 'Toggle Side Panel', icon: '◀', section: 'Panels',
+      action: () => { sidePanelCollapsed.value = !sidePanelCollapsed.value; },
+    });
+    cmds.push({
+      id: 'action:replay', label: 'Toggle Replay', icon: '🔄', section: 'Actions',
+      action: () => { replayMode.value = !replayMode.value; },
+    });
+  }
+
+  setCommands(cmds);
+}
+
+// Rebuild commands when context changes
+watch([hasActiveProject, activeProject, sessionStatus, () => projects.value.length], buildCommands, { immediate: true });
 </script>
 
 <style>
