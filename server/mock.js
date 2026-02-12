@@ -11,64 +11,113 @@ export async function decomposeMock(userPrompt) {
   const isIteration = userPrompt.startsWith('The project already has');
   if (isIteration) return decomposeMockIteration(userPrompt);
 
-  // Initial build: 7-task plan with 4-wide parallel fan-out
+  // Initial build: 13-task plan with multi-level splits and merges
   //
-  //   task-1 (scaffold) ──┬── task-2 (backend API)  ──┐
-  //                       ├── task-3 (database)       ├── task-6 (integration wiring)
-  //                       ├── task-4 (frontend UI)    │        │
-  //                       └── task-5 (config/utils) ──┘        v
-  //                                                      task-7 (verify & test)
+  //   Wave 0: task-1 (scaffold)
+  //              │
+  //   Wave 1: task-2 (backend API) ─── task-3 (frontend framework) ─── task-4 (database schema)
+  //              │         │                │           │                    │
+  //   Wave 2: task-5    task-6           task-7      task-8              task-9
+  //           (auth)    (payments)       (dashboard) (settings)         (DB seed)
+  //              └────┬────┘                └────┬────┘                    │
+  //   Wave 3:   task-10                    task-11                        │
+  //           (backend tests)           (frontend tests)                 │
+  //              └──────────────┬────────────┘───────────────────────────┘
+  //   Wave 4:              task-12 (E2E integration tests)
+  //                            │
+  //   Wave 5:              task-13 (final verification)
   //
   return {
     tasks: [
       {
         id: 'task-1',
         label: 'Scaffold project',
-        description: `Create directory structure, package.json, tsconfig.json, and base config. Request: "${userPrompt.slice(0, 80)}"`,
+        description: `Create directory structure, package.json, tsconfig, linter config. Request: "${userPrompt.slice(0, 80)}"`,
         dependencies: [],
       },
+      // Wave 1: 3-wide split
       {
         id: 'task-2',
-        label: 'Implement backend API',
-        description: 'Create Express server with REST endpoints, middleware, error handling. Exports: createApp() from src/server.js.',
+        label: 'Backend API routes',
+        description: 'Create Express server, route handlers, middleware stack. Exports: createApp() from src/server.js.',
         dependencies: ['task-1'],
       },
       {
         id: 'task-3',
-        label: 'Create database layer',
-        description: 'Define models, schema, migrations, seed data. Exports: db object from src/models/index.js.',
+        label: 'Frontend framework',
+        description: 'Set up Vue/React app shell, routing, layout components, API client module.',
         dependencies: ['task-1'],
       },
       {
         id: 'task-4',
-        label: 'Build frontend UI',
-        description: 'Create components, pages, routing, styles. Entry: src/App.vue. API client at src/api/client.js.',
+        label: 'Database schema & models',
+        description: 'Define database schema, ORM models, connection pool, query builders.',
         dependencies: ['task-1'],
       },
+      // Wave 2: 5-wide split (2 from backend, 2 from frontend, 1 from database)
       {
         id: 'task-5',
-        label: 'Shared utils & config',
-        description: 'Create shared utilities, constants, validation helpers. Exports from src/utils/index.js.',
-        dependencies: ['task-1'],
+        label: 'Auth service',
+        description: 'Implement JWT auth, login/register endpoints, password hashing, session management.',
+        dependencies: ['task-2'],
       },
       {
         id: 'task-6',
-        label: 'Integration wiring',
-        description: 'Wire backend routes to database, connect frontend API client to server endpoints. Import and integrate all modules.',
-        dependencies: ['task-2', 'task-3', 'task-4', 'task-5'],
+        label: 'Payment service',
+        description: 'Implement payment processing, Stripe integration, invoice generation, webhook handlers.',
+        dependencies: ['task-2'],
       },
       {
         id: 'task-7',
-        label: 'Verify & test',
-        description: 'Run lint, type-check, unit tests. Start server and verify all endpoints respond correctly.',
-        dependencies: ['task-6'],
+        label: 'Dashboard page',
+        description: 'Build main dashboard with charts, stats cards, real-time data feeds, responsive layout.',
+        dependencies: ['task-3'],
+      },
+      {
+        id: 'task-8',
+        label: 'Settings page',
+        description: 'Build user settings page with profile editor, preferences, notification toggles.',
+        dependencies: ['task-3'],
+      },
+      {
+        id: 'task-9',
+        label: 'DB seed & migrations',
+        description: 'Create migration scripts, seed data, test fixtures, rollback procedures.',
+        dependencies: ['task-4'],
+      },
+      // Wave 3: 2-wide merge+test chains
+      {
+        id: 'task-10',
+        label: 'Backend test suite',
+        description: 'Write API tests for auth + payment endpoints, mock DB, test middleware chain.',
+        dependencies: ['task-5', 'task-6'],
+      },
+      {
+        id: 'task-11',
+        label: 'Frontend test suite',
+        description: 'Write component tests for dashboard + settings, test routing, mock API responses.',
+        dependencies: ['task-7', 'task-8'],
+      },
+      // Wave 4: full merge
+      {
+        id: 'task-12',
+        label: 'E2E integration tests',
+        description: 'End-to-end tests: login flow → dashboard → settings → payment. Full stack with seeded DB.',
+        dependencies: ['task-10', 'task-11', 'task-9'],
+      },
+      // Wave 5: final verification
+      {
+        id: 'task-13',
+        label: 'Final verification',
+        description: 'Run full CI suite: lint, type-check, unit tests, E2E tests. Verify build output.',
+        dependencies: ['task-12'],
       },
     ],
   };
 }
 
 /**
- * Mock iteration decomposer — returns a smaller, focused plan for follow-up requests.
+ * Mock iteration decomposer — returns multi-chain plans for follow-up requests.
  * Alternates between different shapes to demonstrate varied parallelism.
  */
 let iterCallCount = 0;
@@ -77,76 +126,103 @@ function decomposeMockIteration(userPrompt) {
   const variant = iterCallCount % 3;
 
   if (variant === 1) {
-    // 3-wide parallel: implement change in multiple layers simultaneously
+    // Two independent feature branches, each with implement→test, then merge
+    //   [api-changes, ui-changes] → [api-tests, ui-tests] → integration-verify
     return {
       tasks: [
         {
           id: 'task-1',
-          label: 'Update backend logic',
-          description: 'Modify server routes and controllers for the requested change.',
+          label: 'API endpoint changes',
+          description: 'Add/modify REST endpoints for the requested feature.',
           dependencies: [],
         },
         {
           id: 'task-2',
-          label: 'Update frontend components',
-          description: 'Modify UI components, add new views or controls as needed.',
+          label: 'UI component changes',
+          description: 'Add/modify frontend components and pages.',
           dependencies: [],
         },
         {
           id: 'task-3',
-          label: 'Update shared types & utils',
-          description: 'Update shared interfaces, validation, and utility functions.',
-          dependencies: [],
+          label: 'API unit tests',
+          description: 'Write tests for the new/changed API endpoints.',
+          dependencies: ['task-1'],
         },
         {
           id: 'task-4',
-          label: 'Verify iteration',
-          description: 'Run tests, lint, and verify the changes work end-to-end.',
-          dependencies: ['task-1', 'task-2', 'task-3'],
+          label: 'UI component tests',
+          description: 'Write tests for the new/changed UI components.',
+          dependencies: ['task-2'],
+        },
+        {
+          id: 'task-5',
+          label: 'Integration verify',
+          description: 'Run full test suite and verify end-to-end.',
+          dependencies: ['task-3', 'task-4'],
         },
       ],
     };
   }
 
   if (variant === 2) {
-    // Diamond: config → [2 parallel changes] → verify
+    // Deep pipeline with a mid-level 4-wide fan-out
+    //   investigate → [fix-auth, fix-payments, fix-dashboard, fix-settings] → [regression-backend, regression-frontend] → verify
     return {
       tasks: [
         {
           id: 'task-1',
-          label: 'Update config & schemas',
-          description: 'Modify configuration files and data schemas for the new feature.',
+          label: 'Investigate root cause',
+          description: 'Analyze logs, reproduce issues, identify affected code paths.',
           dependencies: [],
         },
         {
           id: 'task-2',
-          label: 'Implement server changes',
-          description: 'Update API endpoints and business logic.',
+          label: 'Fix auth module',
+          description: 'Patch authentication bugs found during investigation.',
           dependencies: ['task-1'],
         },
         {
           id: 'task-3',
-          label: 'Implement UI changes',
-          description: 'Update frontend components and styling for the new feature.',
+          label: 'Fix payment module',
+          description: 'Patch payment processing bugs found during investigation.',
           dependencies: ['task-1'],
         },
         {
           id: 'task-4',
-          label: 'Update tests',
-          description: 'Add and update tests for the changed functionality.',
-          dependencies: ['task-2', 'task-3'],
+          label: 'Fix dashboard rendering',
+          description: 'Patch dashboard component bugs found during investigation.',
+          dependencies: ['task-1'],
         },
         {
           id: 'task-5',
-          label: 'Verify iteration',
-          description: 'Run full test suite, lint, and verify integration.',
-          dependencies: ['task-4'],
+          label: 'Fix settings validation',
+          description: 'Patch settings form validation bugs found during investigation.',
+          dependencies: ['task-1'],
+        },
+        {
+          id: 'task-6',
+          label: 'Backend regression tests',
+          description: 'Run backend test suite against auth + payment fixes.',
+          dependencies: ['task-2', 'task-3'],
+        },
+        {
+          id: 'task-7',
+          label: 'Frontend regression tests',
+          description: 'Run frontend test suite against dashboard + settings fixes.',
+          dependencies: ['task-4', 'task-5'],
+        },
+        {
+          id: 'task-8',
+          label: 'Verify all fixes',
+          description: 'Full regression: lint, type-check, E2E tests across all fixed modules.',
+          dependencies: ['task-6', 'task-7'],
         },
       ],
     };
   }
 
-  // variant === 0: wide fan-out from scratch (e.g. "add dark mode" touches many files)
+  // variant === 0: Three independent feature tracks, each with its own test, then merge
+  //   [feature-a, feature-b, feature-c] → [test-a, test-b, test-c] → final-verify
   return {
     tasks: [
       {
@@ -157,21 +233,39 @@ function decomposeMockIteration(userPrompt) {
       },
       {
         id: 'task-2',
-        label: 'Update component styles',
-        description: 'Apply theme-aware CSS variables to all existing components.',
+        label: 'Add notification system',
+        description: 'Create toast/notification composable with animation stack.',
         dependencies: [],
       },
       {
         id: 'task-3',
-        label: 'Add settings persistence',
-        description: 'Store theme preference in localStorage and load on startup.',
+        label: 'Add keyboard shortcuts',
+        description: 'Create global keyboard shortcut handler with help dialog.',
         dependencies: [],
       },
       {
         id: 'task-4',
-        label: 'Verify iteration',
-        description: 'Test theme toggle, persistence, and visual regression check.',
-        dependencies: ['task-1', 'task-2', 'task-3'],
+        label: 'Test theme system',
+        description: 'Write tests for theme toggle, persistence, CSS variable injection.',
+        dependencies: ['task-1'],
+      },
+      {
+        id: 'task-5',
+        label: 'Test notification system',
+        description: 'Write tests for toast stack, auto-dismiss, animation timing.',
+        dependencies: ['task-2'],
+      },
+      {
+        id: 'task-6',
+        label: 'Test keyboard shortcuts',
+        description: 'Write tests for key bindings, input suppression, help dialog.',
+        dependencies: ['task-3'],
+      },
+      {
+        id: 'task-7',
+        label: 'Final verification',
+        description: 'Run full suite, verify no conflicts between new feature modules.',
+        dependencies: ['task-4', 'task-5', 'task-6'],
       },
     ],
   };
@@ -199,8 +293,9 @@ export function spawnMockAgent(task, modelName, tierName) {
       if (!exited) {
         exited = true;
         clearInterval(interval);
-        // 85% success rate for T0, 95% for T2+
-        const failChance = tierName === 'T0' ? 0.15 : tierName === 'T1' ? 0.08 : 0.03;
+        // 80% success rate for T0, 92% for T1, 97% for T2+
+        // Slightly higher failure rate encourages swarm features: retries, escalation, task splitting
+        const failChance = tierName === 'T0' ? 0.20 : tierName === 'T1' ? 0.08 : 0.03;
         const exitCode = Math.random() < failChance ? 1 : 0;
         for (const fn of handlers.close) fn(exitCode);
       }
@@ -277,33 +372,81 @@ function ts() {
 function generateFakeFiles(task) {
   const label = task.label.toLowerCase();
   if (label.includes('scaffold') || label.includes('setup') || label.includes('structure')) {
-    return ['package.json', 'tsconfig.json', '.gitignore', 'README.md'];
+    return ['package.json', 'tsconfig.json', '.gitignore', 'README.md', 'src/index.js'];
   }
-  if (label.includes('backend') || label.includes('api') || label.includes('server')) {
-    return ['src/server.js', 'src/routes/index.js', 'src/middleware/auth.js', 'src/controllers/main.js'];
+  if (label.includes('backend') && label.includes('route')) {
+    return ['src/server.js', 'src/routes/index.js', 'src/middleware/cors.js', 'src/middleware/auth.js'];
+  }
+  if (label.includes('auth') && !label.includes('test')) {
+    return ['src/services/auth.js', 'src/routes/auth.js', 'src/middleware/jwt.js', 'src/utils/hash.js'];
+  }
+  if (label.includes('payment') && !label.includes('test')) {
+    return ['src/services/payment.js', 'src/routes/payment.js', 'src/webhooks/stripe.js', 'src/models/invoice.js'];
+  }
+  if (label.includes('dashboard') && !label.includes('test')) {
+    return ['src/pages/Dashboard.vue', 'src/components/StatsCard.vue', 'src/components/Chart.vue', 'src/composables/useDashboard.js'];
+  }
+  if (label.includes('settings') && !label.includes('test')) {
+    return ['src/pages/Settings.vue', 'src/components/ProfileEditor.vue', 'src/components/PreferencesForm.vue'];
+  }
+  if (label.includes('frontend') && label.includes('framework')) {
+    return ['src/App.vue', 'src/router/index.js', 'src/components/Layout.vue', 'src/api/client.js'];
   }
   if (label.includes('database') || label.includes('schema') || label.includes('model')) {
-    return ['src/models/schema.sql', 'src/models/index.js', 'src/migrations/001_init.js'];
+    return ['src/models/schema.sql', 'src/models/index.js', 'src/db/connection.js'];
   }
-  if (label.includes('frontend') || label.includes('ui') || label.includes('component')) {
-    return ['src/App.vue', 'src/components/Layout.vue', 'src/pages/Home.vue', 'src/api/client.js'];
+  if (label.includes('seed') || label.includes('migration')) {
+    return ['src/migrations/001_init.js', 'src/migrations/002_seed.js', 'src/fixtures/users.json', 'src/fixtures/products.json'];
   }
-  if (label.includes('test') || label.includes('verify')) {
-    return ['tests/api.test.js', 'tests/ui.test.js', 'docs/README.md'];
+  if (label.includes('backend') && label.includes('test')) {
+    return ['tests/auth.test.js', 'tests/payment.test.js', 'tests/middleware.test.js'];
   }
-  if (label.includes('util') || label.includes('config') || label.includes('shared')) {
-    return ['src/utils/index.js', 'src/utils/validators.js', 'src/config/defaults.js'];
+  if (label.includes('frontend') && label.includes('test')) {
+    return ['tests/Dashboard.test.js', 'tests/Settings.test.js', 'tests/routing.test.js'];
   }
-  if (label.includes('integration') || label.includes('wiring')) {
-    return ['src/app.js', 'src/routes/wire.js', 'src/plugins/setup.js'];
+  if (label.includes('regression') && label.includes('backend')) {
+    return ['tests/regression/auth.test.js', 'tests/regression/payment.test.js'];
+  }
+  if (label.includes('regression') && label.includes('frontend')) {
+    return ['tests/regression/dashboard.test.js', 'tests/regression/settings.test.js'];
+  }
+  if (label.includes('e2e') || label.includes('integration') || label.includes('end-to-end')) {
+    return ['tests/e2e/login-flow.test.js', 'tests/e2e/payment-flow.test.js', 'tests/e2e/settings-flow.test.js'];
+  }
+  if (label.includes('investigate') || label.includes('root cause')) {
+    return ['docs/investigation-report.md', 'scripts/reproduce-bug.js'];
+  }
+  if (label.includes('fix')) {
+    return ['src/fixes/patch.js', 'src/fixes/validation.js'];
+  }
+  if (label.includes('api') && label.includes('test')) {
+    return ['tests/api/endpoints.test.js', 'tests/api/mocks.js'];
+  }
+  if (label.includes('ui') && label.includes('test')) {
+    return ['tests/ui/components.test.js', 'tests/ui/snapshots.js'];
+  }
+  if (label.includes('test') || label.includes('verify') || label.includes('verification')) {
+    return ['tests/suite.test.js', 'tests/integration.test.js', 'docs/test-report.md'];
   }
   if (label.includes('theme') || label.includes('style') || label.includes('dark')) {
     return ['src/composables/useTheme.js', 'src/assets/theme.css'];
   }
-  if (label.includes('persist') || label.includes('storage') || label.includes('setting')) {
-    return ['src/utils/storage.js', 'src/composables/useSettings.js'];
+  if (label.includes('notification') || label.includes('toast')) {
+    return ['src/composables/useToast.js', 'src/components/ToastContainer.vue'];
   }
-  return ['output.txt'];
+  if (label.includes('keyboard') || label.includes('shortcut')) {
+    return ['src/composables/useKeyboardShortcuts.js', 'src/components/ShortcutsHelp.vue'];
+  }
+  if (label.includes('api') || label.includes('endpoint')) {
+    return ['src/routes/api.js', 'src/controllers/main.js'];
+  }
+  if (label.includes('component') || label.includes('ui') || label.includes('frontend')) {
+    return ['src/components/Feature.vue', 'src/pages/NewPage.vue', 'src/api/client.js'];
+  }
+  if (label.includes('util') || label.includes('config') || label.includes('shared')) {
+    return ['src/utils/index.js', 'src/utils/validators.js', 'src/config/defaults.js'];
+  }
+  return ['src/output.js', 'docs/notes.md'];
 }
 
 function sleep(ms) {

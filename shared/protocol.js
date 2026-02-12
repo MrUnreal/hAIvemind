@@ -32,6 +32,12 @@ export const MSG = {
   // Phase 3 — Scaling & Extensibility
   DAG_REWRITE: 'dag:rewrite',
 
+  // Phase 7.5 — Swarm Parallelism
+  SWARM_WAVE: 'swarm:wave',
+  SWARM_SCALING: 'swarm:scaling',
+  TASK_SPLIT: 'task:split',
+  SPECULATIVE_START: 'task:speculative',
+
   // Phase 4 — Workspace Intelligence & Cost Control
   SESSION_WARNING: 'session:warning',
 

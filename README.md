@@ -84,7 +84,7 @@ sequenceDiagram
 
 | Category | What You Get |
 |----------|-------------|
-| **Parallel Execution** | All independent tasks run simultaneously — 7 tasks = 7 agents |
+| **Swarm Parallelism** | Dynamic concurrency (8→20), speculative execution, wave progress, task splitting |
 | **Live DAG** | Real-time graph with status colors, runtime timers, streaming output |
 | **Smart Escalation** | `T0→T0→T1→T2→T3` — free models first, premium only when needed |
 | **Verify-Fix Loop** | Generates & runs actual tests. Failures become fix tasks. Up to 3 rounds |
@@ -183,7 +183,7 @@ All 7 phases shipped. 20 test files. 429 tests. ~11K lines. 100% self-built.
 | 4 — Hardening | Workspace analysis, cost ceilings, concurrency |
 | 5 — Autonomy | Shutdown/recovery, CLI, autopilot, plugins, Docker |
 | 6 — Production | CI, logging, streaming, diff viewer, WS channels, server decomposition |
-| 7 — Quality of Life | Command palette, keyboard shortcuts, toast notifications, health API |
+| 7 — Quality of Life | Command palette, keyboard shortcuts, swarm parallelism, toast notifications |
 
 ## License
 

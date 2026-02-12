@@ -41,6 +41,19 @@ const eventLog = ref([]);
 /** @type {import('vue').Ref<object[]>} - raw timeline events for this session */
 export const timeline = ref([]);
 
+// ── Swarm state ──
+/** @type {import('vue').Ref<object|null>} - current wave progress */
+export const swarmWave = ref(null);
+
+/** @type {import('vue').Ref<Set<string>>} - task IDs started speculatively */
+export const speculativeTasks = ref(new Set());
+
+/** @type {import('vue').Ref<Set<string>>} - task IDs that were split into sub-tasks */
+export const splitTasks = ref(new Set());
+
+/** @type {import('vue').Ref<object|null>} - final swarm stats from session:complete */
+export const swarmStats = ref(null);
+
 /** Map taskId → latest agent info */
 export const taskAgentMap = computed(() => {
   const map = new Map();
@@ -66,6 +79,10 @@ export function resetSession() {
   costSummary.value = null;
   eventLog.value = [];
   timeline.value = [];
+  swarmWave.value = null;
+  speculativeTasks.value = new Set();
+  splitTasks.value = new Set();
+  swarmStats.value = null;
 }
 
 /** Push a human-readable event into the log (internal) */

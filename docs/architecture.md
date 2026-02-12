@@ -112,7 +112,7 @@ sequenceDiagram
 |--------|------|
 | **index.js** | Express + WS server, session lifecycle, REST API, iteration handler, verify-fix loop |
 | **orchestrator.js** | Calls T3 model for: task decomposition, code verification, failure analysis |
-| **taskRunner.js** | DAG scheduler — resolves dependencies, launches eligible tasks, handles retry/escalation |
+| **taskRunner.js** | DAG scheduler — dependency resolution, dynamic concurrency scaling (8→20), speculative execution, wave detection, task splitting, retry/escalation |
 | **agentManager.js** | Spawns `copilot` CLI processes, streams output, tracks agent lifecycle |
 | **config.js** | Model definitions, tier defaults, escalation chain |
 | **workspace.js** | Creates per-project directories, manages session persistence |
@@ -152,11 +152,14 @@ All messages are JSON: `{ type: string, payload: object }`
 | `task:status` | `{ taskId, status, startedAt, completedAt }` | Task state change |
 | `agent:status` | `{ agentId, taskId, taskLabel, model, status }` | Agent lifecycle event |
 | `agent:output` | `{ agentId, chunk }` | Streaming agent stdout/stderr |
-| `session:complete` | `{ costSummary }` | All tasks done |
+| `session:complete` | `{ costSummary, swarmStats }` | All tasks done (includes wave/concurrency/speculative stats) |
 | `session:error` | `{ error }` | Fatal error |
 | `verify:status` | `{ status, message, issues? }` | Verification progress |
 | `iteration:start` | `{ iterationId, prompt }` | Chat iteration beginning |
 | `iteration:complete` | `{ costSummary }` | Chat iteration done |
+| `swarm:wave` | `{ wave, totalWaves, stats }` | Wave progress update |
+| `task:speculative` | `{ taskId, pendingDeps }` | Task started speculatively |
+| `task:split` | `{ taskId, subTasks }` | Task split into sub-tasks |
 
 ## Verify-Fix Loop
 

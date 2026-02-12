@@ -122,12 +122,50 @@ on('agent:status', (payload) => {
 on('session:complete', (payload) => {
   isBusy.value = false;
   const cost = payload.costSummary?.totalPremiumRequests || 0;
-  status(`🏁 Build complete — ${cost}× premium requests`);
+  const ss = payload.swarmStats;
+  if (ss) {
+    const parts = [`🏁 Build complete — ${cost}× premium, ${ss.totalTasks} tasks`];
+    if (ss.totalWaves > 1) parts.push(`${ss.totalWaves} waves`);
+    if (ss.peakConcurrency > 1) parts.push(`peak ${ss.peakConcurrency} concurrent`);
+    if (ss.speculativeLaunches > 0) parts.push(`${ss.speculativeLaunches} speculative`);
+    if (ss.taskSplits > 0) parts.push(`${ss.taskSplits} splits`);
+    if (ss.dagRewrites > 0) parts.push(`${ss.dagRewrites} rewrites`);
+    status(parts.join(' · '));
+  } else {
+    status(`🏁 Build complete — ${cost}× premium requests`);
+  }
 });
 
 on('session:error', (payload) => {
   isBusy.value = false;
   status(`❌ Session error: ${payload.error}`);
+});
+
+// ── Swarm events ──
+
+on('swarm:wave', (payload) => {
+  const { currentWave, totalWaves, waveStats } = payload;
+  const running = waveStats?.running || 0;
+  const spec = waveStats?.speculative || 0;
+  const parts = [`🌊 Wave ${currentWave + 1}/${totalWaves}`];
+  if (running > 0) parts.push(`${running} agents swarming`);
+  if (spec > 0) parts.push(`${spec} speculative`);
+  if (payload.peakConcurrency > 1) parts.push(`peak ${payload.peakConcurrency}×`);
+  status(parts.join(' — '));
+});
+
+on('swarm:scaling', (payload) => {
+  status(`⚡ ${payload.reason}`);
+});
+
+on('task:split', (payload) => {
+  const subs = payload.subtasks.map(s => s.label).join(', ');
+  status(`🔀 "${payload.originalLabel}" → split into ${payload.subtasks.length} sub-tasks: ${subs}`);
+});
+
+on('task:speculative', (payload) => {
+  const pending = payload.pendingDeps?.length || 0;
+  status(`🔮 "${payload.label}" started speculatively (${pending} dep${pending !== 1 ? 's' : ''} still running)`);
 });
 
 // ── Verification events ──

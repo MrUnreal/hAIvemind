@@ -17,7 +17,7 @@ hAIvemind/
 |------|-------|-------------|
 | **index.js** | ~580 | Express HTTP + WebSocket server. Handles `session:start`, `chat:message`. Orchestrates the full lifecycle: decompose → execute → verify-fix loop → complete. REST API for project/session CRUD. |
 | **orchestrator.js** | ~260 | Calls the T3 model for three operations: `decompose()` (prompt → task plan), `verify()` (codebase review → issues + fix tasks), `analyzeFailure()` (failed output → structured report). Parses JSON from model output. |
-| **taskRunner.js** | ~170 | DAG executor. Resolves dependencies via topological scheduling, launches eligible tasks in parallel (up to `maxConcurrency`), handles failures with retry counter, broadcasts status changes. |
+| **taskRunner.js** | ~750 | DAG executor with swarm parallelism. Dynamic concurrency scaling (8→20 based on eligible tasks), speculative execution for soft deps, wave detection & progress broadcasting, task splitting at runtime, retry/escalation. |
 | **agentManager.js** | ~240 | Spawns `copilot` CLI as child processes. Manages agent lifecycle (running → success/failed), streams stdout/stderr, builds escalation reasons, tracks cost. Provides session snapshots for persistence. |
 | **config.js** | ~100 | All model definitions (13 models across 4 tiers), tier defaults, escalation chain, orchestrator tier, concurrency limits, port config. Exports helper functions: `getModelForRetry()`, `getOrchestratorModel()`. |
 | **workspace.js** | — | Creates per-project directories under `.haivemind-workspace/`, manages session JSON files, handles project linking (external directories). |

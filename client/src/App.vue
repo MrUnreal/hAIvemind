@@ -207,6 +207,10 @@ import {
   resetSession,
   timeline,
   loadSession,
+  swarmWave,
+  speculativeTasks,
+  splitTasks,
+  swarmStats,
 } from './composables/useSession.js';
 import {
   projects,
@@ -408,6 +412,25 @@ on('agent:status', (payload) => {
   }
 });
 
+// ── Swarm events (update reactive state for UI) ──
+
+on('swarm:wave', (payload) => {
+  swarmWave.value = payload;
+});
+
+on('swarm:scaling', () => {
+  // Handled by OrchestratorChat toast
+});
+
+on('task:split', (payload) => {
+  splitTasks.value.add(payload.originalTaskId);
+  toast.info(`🔀 "${payload.originalLabel}" split into ${payload.subtasks.length} sub-tasks`);
+});
+
+on('task:speculative', (payload) => {
+  speculativeTasks.value.add(payload.taskId);
+});
+
 on('agent:output', (payload) => {
   if (!agentOutputMap.has(payload.agentId)) {
     agentOutputMap.set(payload.agentId, []);
@@ -432,8 +455,14 @@ on('autopilot:stopped', () => { /* AutopilotPanel polls for updates */ });
 on('session:complete', (payload) => {
   sessionStatus.value = 'completed';
   costSummary.value = payload.costSummary;
+  swarmStats.value = payload.swarmStats || null;
   const cost = payload.costSummary?.totalPremiumRequests || 0;
-  toast.success(`Session complete — ${cost}× premium requests used`);
+  const ss = payload.swarmStats;
+  if (ss?.peakConcurrency > 1) {
+    toast.success(`Session complete — ${cost}× premium, peak ${ss.peakConcurrency} concurrent agents`);
+  } else {
+    toast.success(`Session complete — ${cost}× premium requests used`);
+  }
   // Refresh session list so history is up to date
   if (activeProject.value) {
     fetchSessions(activeProject.value.slug);

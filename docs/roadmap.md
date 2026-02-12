@@ -222,6 +222,7 @@ Currently single-user, no auth. Fine for local dev, but blocks team usage or hos
 | **7.2 — Enhanced Health API** | ✅ | /api/health + /api/health/details with memory, uptime, version, per-project stats |
 | **7.3 — Session Search** | ❌ | Full-text search across session prompts/tasks in all projects |
 | **7.4 — Keyboard Shortcuts** | ✅ | Global keybindings (?, Esc, N, H, S, 1-5, [, ], R) + help dialog, Ctrl+K palette fix |
-| **7.5 — Cost Analytics Chart** | ❌ | Historical cost breakdown in MetricsDashboard with tier-colored bars |
-| **7.6 — Export Sessions** | ❌ | Download session as JSON or Markdown report |
-| **7.7 — Webhook Notifications** | ❌ | POST session events to external URLs (Slack/Discord/custom) |
+| **7.5 — Swarm Parallelism** | ✅ | Dynamic concurrency (8→20 scaling), speculative execution for soft deps, wave detection & progress bar, parallel analysis+decompose pipeline, task splitting at runtime, swarm stats in completion |
+| **7.6 — Cost Analytics Chart** | ❌ | Historical cost breakdown in MetricsDashboard with tier-colored bars |
+| **7.7 — Export Sessions** | ❌ | Download session as JSON or Markdown report |
+| **7.8 — Webhook Notifications** | ❌ | POST session events to external URLs (Slack/Discord/custom) |

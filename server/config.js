@@ -85,7 +85,23 @@ const config = {
 
   maxRetriesTotal: envInt('HAIVEMIND_MAX_RETRIES', 5),
   maxCrossAgentLoops: envInt('HAIVEMIND_MAX_CROSS_AGENT_LOOPS', 3),
-  maxConcurrency: envInt('HAIVEMIND_MAX_CONCURRENCY', 5),
+
+  // ── Swarm Scaling — Dynamic Concurrency ──
+  // Base concurrency floor (always allow at least this many concurrent agents)
+  maxConcurrency: envInt('HAIVEMIND_MAX_CONCURRENCY', 8),
+  // Dynamic ceiling — when more tasks are eligible, scale up to this
+  swarmMaxConcurrency: envInt('HAIVEMIND_SWARM_MAX_CONCURRENCY', 20),
+
+  // ── Speculative Execution ──
+  // Start tasks before ALL deps finish if remaining deps are "soft" (non-data)
+  speculativeExecution: envBool('HAIVEMIND_SPECULATIVE_EXEC', true),
+  // Min fraction of deps that must be done before speculating (0.5 = need ≥50% deps done)
+  speculativeThreshold: parseFloat(env('HAIVEMIND_SPECULATIVE_THRESHOLD', '0.5')),
+
+  // ── Task Splitting ──
+  // When a task fails repeatedly, split it into smaller sub-tasks instead of escalating
+  taskSplitEnabled: envBool('HAIVEMIND_TASK_SPLIT', true),
+  taskSplitAfterRetries: envInt('HAIVEMIND_TASK_SPLIT_RETRIES', 2),
 
   // Working directory for agent outputs
   workDir: '.haivemind-workspace',

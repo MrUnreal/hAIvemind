@@ -113,25 +113,58 @@ export async function startSession(userPrompt, projectSlug, predefinedPlan) {
   log.info(`${'='.repeat(60)}\n`);
 
   try {
-    // Step 1: Analyze workspace for context injection
+    // Step 1 & 2: Parallel Pipeline — analyze workspace AND prepare decomposition concurrently
+    // "Hive mind" approach: start both immediately, feed analysis results if they arrive in time.
     let workspaceAnalysis = null;
-    if (!DEMO && !predefinedPlan) {
-      try {
-        const { analyzeWorkspace } = await import('../workspaceAnalyzer.js');
-        workspaceAnalysis = await analyzeWorkspace(workDir);
-        log.info(`[session] Workspace analysis: ${workspaceAnalysis.summary}`);
-      } catch (err) {
-        log.warn(`[session] Workspace analysis failed (non-fatal): ${err.message}`);
+
+    const plan = predefinedPlan || await (async () => {
+      if (DEMO) {
+        return decomposeMock(userPrompt);
       }
-    }
+
+      // Fire workspace analysis and decomposition in parallel
+      const analysisPromise = (async () => {
+        try {
+          const { analyzeWorkspace } = await import('../workspaceAnalyzer.js');
+          const result = await analyzeWorkspace(workDir);
+          log.info(`[session] Workspace analysis: ${result.summary}`);
+          return result;
+        } catch (err) {
+          log.warn(`[session] Workspace analysis failed (non-fatal): ${err.message}`);
+          return null;
+        }
+      })();
+
+      // Race: try to get analysis within 3s, then decompose with whatever we have
+      const analysisOrTimeout = await Promise.race([
+        analysisPromise,
+        new Promise(resolve => setTimeout(() => resolve(null), 3000)),
+      ]);
+
+      // If analysis came back fast, use it immediately
+      if (analysisOrTimeout) {
+        workspaceAnalysis = analysisOrTimeout;
+        log.info('[session] Parallel pipeline: analysis completed before decomposition — injecting context');
+      }
+
+      // Start decomposition (with analysis if we got it, without if we didn't)
+      const decomposePromise = decompose(userPrompt, workDir, { skills, workspaceAnalysis });
+
+      // If analysis is still running, await it in background for session metadata
+      if (!workspaceAnalysis) {
+        analysisPromise.then(result => {
+          if (result) {
+            workspaceAnalysis = result;
+            log.info('[session] Parallel pipeline: analysis completed after decomposition started');
+          }
+        }).catch(() => {});
+      }
+
+      return decomposePromise;
+    })();
 
     const stored0 = sessions.get(sessionId);
     if (stored0) stored0.workspaceAnalysis = workspaceAnalysis;
-
-    // Step 2: Decompose prompt into tasks
-    const plan = predefinedPlan || (DEMO
-      ? await decomposeMock(userPrompt)
-      : await decompose(userPrompt, workDir, { skills, workspaceAnalysis }));
 
     const stored = sessions.get(sessionId);
     stored.plan = plan;
@@ -171,12 +204,16 @@ export async function startSession(userPrompt, projectSlug, predefinedPlan) {
       }
       broadcast(msg);
     };
-    const taskRunner = new TaskRunner(plan, agentManager, taskRunnerBroadcast, workDir, { overrides });
+    const taskRunner = new TaskRunner(plan, agentManager, taskRunnerBroadcast, workDir, {
+      overrides,
+      orchestratorFn: DEMO ? null : decompose,
+    });
 
     const earlyCtx = { sessionId, workDir, plan, agentManager, taskRunner, history: [] };
     activeContexts.set(projectSlug, earlyCtx);
 
     await taskRunner.run();
+    const swarmStats = taskRunner.getSwarmStats();
     taskRunner.cleanup();
 
     // Step 3: Verify & Fix Loop
@@ -210,6 +247,7 @@ export async function startSession(userPrompt, projectSlug, predefinedPlan) {
       sessionId,
       projectSlug,
       costSummary: costSummaryData,
+      swarmStats,
     }));
 
     workspace.finalizeSession(projectSlug, sessionId, {

@@ -12,6 +12,15 @@
       <span v-if="data.multiplier !== undefined" class="cost-badge">
         {{ data.multiplier }}×
       </span>
+      <span v-if="data.speculative" class="speculative-badge">
+        🔮 speculative
+      </span>
+      <span v-if="data.splitFrom" class="split-badge">
+        🔀 split
+      </span>
+      <span v-if="data.wave !== undefined && data.wave !== null" class="wave-badge">
+        🌊 {{ data.wave + 1 }}
+      </span>
       <span v-if="data.retries > 0" class="retry-badge">
         ↻{{ data.retries }}
       </span>
@@ -165,6 +174,32 @@ const elapsed = computed(() => {
   border-radius: 4px;
   background: #2a1a1a;
   color: #f56a6a;
+}
+
+.speculative-badge {
+  font-size: 10px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: #1a1a2e;
+  color: #b88aff;
+  font-weight: 500;
+}
+
+.split-badge {
+  font-size: 10px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: #1a2a2a;
+  color: #6af5c0;
+  font-weight: 500;
+}
+
+.wave-badge {
+  font-size: 10px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: #0f1a2e;
+  color: #6aacf5;
 }
 
 .time-badge {

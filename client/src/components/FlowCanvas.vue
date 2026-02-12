@@ -35,9 +35,29 @@
     <div v-if="sessionStatus === 'completed'" class="completion-banner success">
       ✅ All tasks completed
       <span v-if="costSummary" class="cost">— {{ costSummary.totalPremiumRequests }}× premium requests used</span>
+      <span v-if="swarmStats" class="swarm-detail">
+        · {{ swarmStats.totalWaves }} waves · peak {{ swarmStats.peakConcurrency }}× concurrent
+        <span v-if="swarmStats.speculativeLaunches"> · {{ swarmStats.speculativeLaunches }} speculative</span>
+        <span v-if="swarmStats.taskSplits"> · {{ swarmStats.taskSplits }} splits</span>
+      </span>
     </div>
     <div v-if="sessionStatus === 'failed'" class="completion-banner error">
       ❌ Session failed
+    </div>
+
+    <!-- Swarm wave progress bar -->
+    <div v-if="swarmWave && sessionStatus === 'running'" class="wave-progress">
+      <div class="wave-label">
+        🌊 Wave {{ swarmWave.currentWave + 1 }}/{{ swarmWave.totalWaves }}
+        <span v-if="currentWaveStats">
+          — {{ currentWaveStats.running }} swarming
+          <span v-if="currentWaveStats.speculative"> ({{ currentWaveStats.speculative }} speculative)</span>
+          · {{ currentWaveStats.completed }}/{{ currentWaveStats.total }} done
+        </span>
+      </div>
+      <div class="wave-bar">
+        <div class="wave-fill" :style="{ width: waveProgress + '%' }"></div>
+      </div>
     </div>
 
 
@@ -65,6 +85,10 @@ import {
   taskAgentMap,
   selectedAgentId,
   costSummary,
+  swarmWave,
+  speculativeTasks,
+  splitTasks,
+  swarmStats,
 } from '../composables/useSession.js';
 
 const flowNodes = ref([]);
@@ -102,6 +126,11 @@ function applyEdgeStatuses(edgeList) {
 
     // Active: either end is running
     if (sourceStatus === 'running' || targetStatus === 'running') {
+      // Speculative edges get dashed styling
+      const isSpeculative = speculativeTasks.value.has(edge.target);
+      if (isSpeculative) {
+        return { ...edge, animated: true, style: { stroke: '#b88aff', strokeWidth: 2.5, strokeDasharray: '6 3' } };
+      }
       return { ...edge, animated: true, style: { stroke: '#4a9eff', strokeWidth: 2.5 } };
     }
     // Completed path: source is done
@@ -131,6 +160,14 @@ function applyNodeStatuses(nodes) {
     const taskStatus = taskStatusMap.get(taskId);
     const agentInfo = taskAgentMap.value.get(taskId);
     let newData = { ...node.data };
+
+    // Inject swarm metadata
+    if (speculativeTasks.value.has(taskId)) {
+      newData.speculative = true;
+    }
+    if (splitTasks.value.has(taskId)) {
+      newData.splitFrom = true;
+    }
 
     if (taskStatus) {
       newData = { ...newData, status: taskStatus.status, retries: taskStatus.retries, modelTier: taskStatus.modelTier, startedAt: taskStatus.startedAt, completedAt: taskStatus.completedAt };
@@ -164,6 +201,24 @@ function onNodeClick(event) {
     selectedAgentId.value = agentId;
   }
 }
+
+// ── Swarm wave progress ──
+const currentWaveStats = computed(() => {
+  if (!swarmWave.value?.waveStats) return null;
+  return swarmWave.value.waveStats;
+});
+
+const waveProgress = computed(() => {
+  if (!swarmWave.value?.allWaves) return 0;
+  const all = swarmWave.value.allWaves;
+  let totalDone = 0;
+  let totalTasks = 0;
+  for (const w of Object.values(all)) {
+    totalDone += (w.completed || 0);
+    totalTasks += (w.total || 0);
+  }
+  return totalTasks > 0 ? Math.round((totalDone / totalTasks) * 100) : 0;
+});
 </script>
 
 <style scoped>
@@ -234,6 +289,49 @@ function onNodeClick(event) {
 
 .cost {
   color: #f5c542;
+}
+
+.swarm-detail {
+  color: #6aacf5;
+  font-size: 12px;
+}
+
+/* ── Wave progress bar ── */
+.wave-progress {
+  position: absolute;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(15, 15, 22, 0.92);
+  border: 1px solid #1e1e2e;
+  border-radius: 10px;
+  padding: 8px 18px;
+  font-size: 12px;
+  color: #aaa;
+  backdrop-filter: blur(8px);
+  min-width: 280px;
+  animation: banner-appear 0.4s ease-out;
+  z-index: 10;
+}
+
+.wave-label {
+  margin-bottom: 6px;
+  color: #6aacf5;
+  font-weight: 600;
+}
+
+.wave-bar {
+  background: #1a1a2e;
+  border-radius: 4px;
+  height: 6px;
+  overflow: hidden;
+}
+
+.wave-fill {
+  background: linear-gradient(90deg, #4a9eff, #6af5c0);
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.5s ease;
 }
 
 /* Override vue-flow bg */
