@@ -13,6 +13,10 @@ import {
   getQueue, enqueue, dequeue,
 } from '../services/scheduler.js';
 import { computeBenchmarks } from '../services/benchmarks.js';
+import {
+  getNotifications, addNotification, markRead, markAllRead,
+  deleteNotification, clearNotifications, getUnreadCount,
+} from '../services/notifications.js';
 
 const router = Router();
 
@@ -363,6 +367,69 @@ router.delete('/queue/:entryId', (req, res) => {
   const removed = dequeue(req.params.entryId);
   if (!removed) return res.status(404).json({ error: 'Queue entry not found' });
   res.json({ success: true });
+});
+
+/* ═══ Notifications (Phase 9.2) ═══ */
+
+/** List notifications for a project */
+router.get('/projects/:slug/notifications', (req, res) => {
+  if (!refs.workspace.getProject(req.params.slug)) {
+    return res.status(404).json({ error: 'Project not found' });
+  }
+  res.json({
+    notifications: getNotifications(req.params.slug),
+    unread: getUnreadCount(req.params.slug),
+  });
+});
+
+/** Add a notification */
+router.post('/projects/:slug/notifications', (req, res) => {
+  if (!refs.workspace.getProject(req.params.slug)) {
+    return res.status(404).json({ error: 'Project not found' });
+  }
+  if (!req.body.title || !req.body.type) {
+    return res.status(400).json({ error: 'title and type are required' });
+  }
+  const notif = addNotification(req.params.slug, req.body);
+  res.status(201).json(notif);
+});
+
+/** Mark a notification as read */
+router.patch('/projects/:slug/notifications/:notifId/read', (req, res) => {
+  if (!refs.workspace.getProject(req.params.slug)) {
+    return res.status(404).json({ error: 'Project not found' });
+  }
+  const ok = markRead(req.params.slug, req.params.notifId);
+  if (!ok) return res.status(404).json({ error: 'Notification not found' });
+  res.json({ success: true });
+});
+
+/** Mark all notifications as read */
+router.post('/projects/:slug/notifications/read-all', (req, res) => {
+  if (!refs.workspace.getProject(req.params.slug)) {
+    return res.status(404).json({ error: 'Project not found' });
+  }
+  const count = markAllRead(req.params.slug);
+  res.json({ marked: count });
+});
+
+/** Delete a notification */
+router.delete('/projects/:slug/notifications/:notifId', (req, res) => {
+  if (!refs.workspace.getProject(req.params.slug)) {
+    return res.status(404).json({ error: 'Project not found' });
+  }
+  const ok = deleteNotification(req.params.slug, req.params.notifId);
+  if (!ok) return res.status(404).json({ error: 'Notification not found' });
+  res.json({ success: true });
+});
+
+/** Clear all notifications */
+router.delete('/projects/:slug/notifications', (req, res) => {
+  if (!refs.workspace.getProject(req.params.slug)) {
+    return res.status(404).json({ error: 'Project not found' });
+  }
+  const count = clearNotifications(req.params.slug);
+  res.json({ cleared: count });
 });
 
 export default router;

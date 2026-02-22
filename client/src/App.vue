@@ -11,6 +11,14 @@
         <button class="theme-toggle-btn" @click="toggleTheme" :title="isDark ? 'Switch to light theme' : 'Switch to dark theme'">
           {{ isDark ? '☀️' : '🌙' }}
         </button>
+        <button v-if="activeProject" class="notif-bell-btn" @click="showNotifications = !showNotifications" title="Notifications">
+          🔔<span v-if="notifBadge > 0" class="notif-badge">{{ notifBadge }}</span>
+        </button>
+        <NotificationCenter
+          :visible="showNotifications"
+          :projectSlug="activeProject?.slug || ''"
+          @close="showNotifications = false"
+        />
         <span :class="['status-dot', connected ? 'green' : 'red']"></span>
         <span>{{ connected ? 'Connected' : 'Disconnected' }}</span>
         <span v-if="costSummary" class="cost-badge">
@@ -192,6 +200,7 @@ import AutopilotPanel from './components/AutopilotPanel.vue';
 import CommandPalette from './components/CommandPalette.vue';
 import ToastContainer from './components/ToastContainer.vue';
 import KeyboardShortcutsHelp from './components/KeyboardShortcutsHelp.vue';
+import NotificationCenter from './components/NotificationCenter.vue';
 import { useWebSocket } from './composables/useWebSocket.js';
 import { setCommands, openPalette, togglePalette } from './composables/useCommandPalette.js';
 import { toast } from './composables/useToast.js';
@@ -238,6 +247,8 @@ const showPrompt = ref(false);
 const sideTab = ref('agent');
 const sidePanelCollapsed = ref(true);
 const replayMode = ref(false);
+const showNotifications = ref(false);
+const notifBadge = ref(0);
 const liveTasksSnapshot = ref(null);
 const liveEdgesSnapshot = ref(null);
 const liveTaskStatusSnapshot = ref(null);
@@ -834,6 +845,39 @@ onUnmounted(() => cleanupShortcuts());
   background: var(--btn-hover-bg);
   border-color: var(--accent-gold);
   transform: translateY(-1px);
+}
+
+.notif-bell-btn {
+  position: relative;
+  background: var(--btn-bg);
+  border: 1px solid var(--btn-border);
+  border-radius: 999px;
+  padding: 4px 8px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background 0.2s, border-color 0.2s, transform 0.15s;
+  line-height: 1;
+}
+.notif-bell-btn:hover {
+  background: var(--btn-hover-bg);
+  border-color: var(--accent-gold);
+  transform: translateY(-1px);
+}
+.notif-badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  background: var(--status-error);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  min-width: 16px;
+  height: 16px;
+  border-radius: 99px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 4px;
 }
 
 .status-dot {
