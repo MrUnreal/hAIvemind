@@ -418,6 +418,142 @@ router.post('/projects/:slug/sessions/bulk-export', (req, res) => {
 });
 
 // ═══════════════════════════════════════════════════════════
+//  Phase 8.4: Dependency Visualization
+// ═══════════════════════════════════════════════════════════
+
+/** Dependency analysis for a session */
+router.get('/projects/:slug/sessions/:sessionId/dependencies', (req, res) => {
+  const session = refs.workspace.getSession(req.params.slug, req.params.sessionId);
+  if (!session) return res.status(404).json({ error: 'Session not found' });
+  res.json(analyzeDependencies(session));
+});
+
+/**
+ * Analyze task dependency graph: topological layers, critical path, bottlenecks.
+ * @param {object} session
+ * @returns {object}
+ */
+export function analyzeDependencies(session) {
+  const tasks = session.tasks || [];
+  const edges = session.edges || [];
+  const agents = session.agents || {};
+
+  if (tasks.length === 0) {
+    return { layers: [], criticalPath: [], bottlenecks: [], stats: { depth: 0, width: 0, parallelism: 0 } };
+  }
+
+  // Build adjacency + in-degree
+  const taskById = new Map(tasks.map(t => [t.id, t]));
+  const children = new Map(); // parent → [child]
+  const parents = new Map();  // child → [parent]
+  const inDegree = new Map();
+
+  for (const t of tasks) {
+    children.set(t.id, []);
+    parents.set(t.id, []);
+    inDegree.set(t.id, 0);
+  }
+
+  for (const e of edges) {
+    if (taskById.has(e.source) && taskById.has(e.target)) {
+      children.get(e.source).push(e.target);
+      parents.get(e.target).push(e.source);
+      inDegree.set(e.target, (inDegree.get(e.target) || 0) + 1);
+    }
+  }
+
+  // Topological sort into layers (Kahn's algorithm)
+  const layers = [];
+  let frontier = tasks.filter(t => inDegree.get(t.id) === 0).map(t => t.id);
+
+  while (frontier.length > 0) {
+    layers.push(frontier.map(id => {
+      const t = taskById.get(id);
+      const agent = Object.values(agents).find(a => a.taskId === id);
+      return {
+        id,
+        label: t?.label || id,
+        status: t?.status || 'unknown',
+        tier: agent?.modelTier || null,
+        retries: agent?.retries ?? 0,
+      };
+    }));
+
+    const nextFrontier = [];
+    for (const id of frontier) {
+      for (const childId of children.get(id)) {
+        inDegree.set(childId, inDegree.get(childId) - 1);
+        if (inDegree.get(childId) === 0) nextFrontier.push(childId);
+      }
+    }
+    frontier = nextFrontier;
+  }
+
+  // Critical path: longest path through the DAG (by number of tasks)
+  const depth = new Map();
+  const longestPrev = new Map();
+
+  // Process in topological order (layer by layer)
+  for (const layer of layers) {
+    for (const node of layer) {
+      const pars = parents.get(node.id);
+      if (pars.length === 0) {
+        depth.set(node.id, 1);
+        longestPrev.set(node.id, null);
+      } else {
+        let maxD = 0, maxP = null;
+        for (const p of pars) {
+          if ((depth.get(p) || 0) > maxD) {
+            maxD = depth.get(p);
+            maxP = p;
+          }
+        }
+        depth.set(node.id, maxD + 1);
+        longestPrev.set(node.id, maxP);
+      }
+    }
+  }
+
+  // Trace back from the deepest node
+  let maxDepth = 0, endId = null;
+  for (const [id, d] of depth) {
+    if (d > maxDepth) { maxDepth = d; endId = id; }
+  }
+
+  const criticalPath = [];
+  let cur = endId;
+  while (cur) {
+    const t = taskById.get(cur);
+    criticalPath.unshift({ id: cur, label: t?.label || cur });
+    cur = longestPrev.get(cur);
+  }
+
+  // Bottlenecks: tasks with many dependents (high fan-out) or many dependencies (high fan-in)
+  const bottlenecks = [];
+  for (const t of tasks) {
+    const fanOut = children.get(t.id)?.length || 0;
+    const fanIn = parents.get(t.id)?.length || 0;
+    if (fanOut >= 3 || fanIn >= 3) {
+      bottlenecks.push({ id: t.id, label: t.label, fanIn, fanOut, reason: fanOut >= 3 ? 'high fan-out' : 'high fan-in' });
+    }
+  }
+
+  const maxWidth = Math.max(...layers.map(l => l.length), 0);
+
+  return {
+    layers,
+    criticalPath,
+    bottlenecks,
+    edges: edges.map(e => ({ source: e.source, target: e.target })),
+    stats: {
+      depth: layers.length,
+      width: maxWidth,
+      parallelism: tasks.length > 0 ? +(tasks.length / layers.length).toFixed(2) : 0,
+    },
+  };
+}
+
+// ═══════════════════════════════════════════════════════════
 //  Phase 8.0: Session Comparison
 // ═══════════════════════════════════════════════════════════
 

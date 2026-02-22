@@ -146,6 +146,13 @@
           >
             📊 Compare
           </button>
+          <button
+            class="dep-btn"
+            @click.stop="showDepGraph = showDepGraph === session.id ? null : session.id"
+            title="View dependency graph"
+          >
+            🔗 Deps
+          </button>
         </div>
 
         <!-- Phase 6.4: Inline Diff Viewer -->
@@ -157,6 +164,14 @@
         />
       </div>
     </div>
+
+    <!-- Phase 8.4: Dependency Graph -->
+    <DependencyGraph
+      :visible="!!showDepGraph"
+      :projectSlug="activeProject?.slug || ''"
+      :sessionId="showDepGraph || ''"
+      @close="showDepGraph = null"
+    />
 
     <!-- Phase 8.0: Session Comparison -->
     <SessionCompare
@@ -182,8 +197,11 @@ import DiffViewer from './DiffViewer.vue';
 import WorkspaceOverview from './WorkspaceOverview.vue';
 import SessionSearch from './SessionSearch.vue';
 import SessionCompare from './SessionCompare.vue';
+import DependencyGraph from './DependencyGraph.vue';
 
 defineEmits(['newSession']);
+
+const showDepGraph = ref(null);
 
 const rollingBack = ref(null);
 const viewingDiff = ref(null);
@@ -612,6 +630,20 @@ async function bulkExport(format) {
 }
 .compare-btn:hover {
   background: rgba(186, 104, 200, 0.15);
+}
+
+.dep-btn {
+  font-size: 11px;
+  padding: 3px 10px;
+  border-radius: 6px;
+  border: 1px solid #64b5f6;
+  background: transparent;
+  color: #64b5f6;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.dep-btn:hover {
+  background: rgba(100, 181, 246, 0.15);
 }
 
 .compare-banner {
