@@ -64,7 +64,7 @@
         <h4 @click="showTree = !showTree" class="toggle-heading">
           {{ showTree ? '▼' : '▶' }} File Tree
         </h4>
-        <pre v-if="showTree" class="file-tree">{{ analysis.fileTree }}</pre>
+        <pre v-if="showTree" class="file-tree" v-html="annotatedTree"></pre>
       </div>
 
       <!-- Entry Points -->
@@ -80,7 +80,8 @@
 </template>
 
 <script setup>
-import { ref, watch } from 'vue';
+import { ref, watch, computed } from 'vue';
+import { annotateFilePaths } from '../utils/fileAnnotations.js';
 
 const props = defineProps({
   projectSlug: { type: String, required: true },
@@ -90,6 +91,15 @@ const loading = ref(false);
 const error = ref('');
 const analysis = ref(null);
 const showTree = ref(false);
+
+// Phase 8.2: Annotated file tree
+function escapeHtml(str) {
+  return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+const annotatedTree = computed(() => {
+  if (!analysis.value?.fileTree) return '';
+  return annotateFilePaths(escapeHtml(analysis.value.fileTree));
+});
 
 function truncate(s, len) {
   if (!s) return '';
@@ -274,5 +284,20 @@ watch(() => props.projectSlug, (slug) => {
   color: #666;
   font-size: 11px;
   font-family: 'Fira Code', monospace;
+}
+
+/* Phase 8.2: File path annotations */
+:deep(.file-annotation) {
+  color: #64b5f6;
+  cursor: pointer;
+  text-decoration: underline;
+  text-decoration-style: dotted;
+  text-underline-offset: 2px;
+  border-radius: 2px;
+  transition: background 0.15s;
+}
+:deep(.file-annotation:hover) {
+  background: rgba(100, 181, 246, 0.15);
+  text-decoration-style: solid;
 }
 </style>

@@ -14,7 +14,7 @@
   <img src="https://img.shields.io/badge/Vue%203-Flow%20DAG-4FC08D?logo=vue.js" alt="Vue 3">
   <img src="https://img.shields.io/badge/Copilot%20CLI-Agent%20Backend-0078D4?logo=github" alt="Copilot CLI">
   <img src="https://img.shields.io/badge/Cost-Free_Tier_Default-brightgreen" alt="Free">
-  <img src="https://img.shields.io/badge/Tests-551_passing-blue" alt="551 Tests">
+  <img src="https://img.shields.io/badge/Tests-574_passing-blue" alt="574 Tests">
   <img src="https://img.shields.io/badge/Self--Evolving-🧬-blueviolet" alt="Self-Evolving">
 </p>
 
@@ -107,6 +107,7 @@ sequenceDiagram
 | **Webhook Notifications** | POST session events to external URLs — Slack/Discord/custom integrations |
 | **Session Comparison** | Side-by-side diff of two sessions: task overlap, cost delta, model/duration comparison |
 | **Bulk Session Actions** | Multi-select sessions for batch export (JSON/MD) or delete with action bar |
+| **Agent Output Annotations** | Clickable file paths + line numbers in console output and workspace file tree |
 
 ## Architecture
 
@@ -178,7 +179,7 @@ npm test                                        # 466 Playwright tests
 
 ## Status
 
-All 7 phases shipped. 26 test files. 551 tests. ~11K lines. 100% self-built.
+All 7 phases shipped. 27 test files. 574 tests. ~12K lines. 100% self-built.
 
 | Phase | What |
 |-------|------|

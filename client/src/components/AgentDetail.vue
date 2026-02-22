@@ -68,6 +68,7 @@ import {
   agentOutputMap,
   tasks,
 } from '../composables/useSession.js';
+import { annotateFilePaths } from '../utils/fileAnnotations.js';
 
 const consoleRef = ref(null);
 const searchQuery = ref('');
@@ -114,11 +115,13 @@ const summaryOutput = computed(() => {
   return important.length > 0 ? important.join('\n') : '(no notable lines detected)';
 });
 
-/** Display output — applies search highlighting and summary toggle */
+/** Display output — applies search highlighting, file annotations, and summary toggle */
 const displayOutput = computed(() => {
   const text = showSummary.value ? summaryOutput.value : cleanOutput.value;
   if (!text) return '';
-  const escaped = escapeHtml(text);
+  let escaped = escapeHtml(text);
+  // Phase 8.2: Annotate file paths before search highlighting
+  escaped = annotateFilePaths(escaped);
   if (!searchQuery.value) return escaped;
   try {
     const regex = new RegExp(`(${searchQuery.value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
@@ -347,5 +350,20 @@ watch(cleanOutput, async () => {
   border-top: 1px solid #333;
   font-size: 11px;
   color: #888;
+}
+
+/* Phase 8.2: File path annotations */
+:deep(.file-annotation) {
+  color: #64b5f6;
+  cursor: pointer;
+  text-decoration: underline;
+  text-decoration-style: dotted;
+  text-underline-offset: 2px;
+  border-radius: 2px;
+  transition: background 0.15s;
+}
+:deep(.file-annotation:hover) {
+  background: rgba(100, 181, 246, 0.15);
+  text-decoration-style: solid;
 }
 </style>

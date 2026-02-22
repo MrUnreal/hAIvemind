@@ -237,7 +237,7 @@ Currently single-user, no auth. Fine for local dev, but blocks team usage or hos
 |---------|--------|-------|
 | **8.0 — Session Comparison** | ✅ | Side-by-side diff of two sessions: task overlap, cost delta, model usage comparison |
 | **8.1 — Bulk Session Actions** | ✅ | Select multiple sessions for export, delete, or re-run; batch operations in SessionHistory |
-| **8.2 — Agent Output Annotations** | ❌ | Clickable file paths + line numbers in agent output, jump-to-file in workspace overview |
+| **8.2 — Agent Output Annotations** | ✅ | Clickable file paths + line numbers in agent output, jump-to-file in workspace overview |
 | **8.3 — Smart Retry Policies** | ❌ | Per-project retry config (max retries, backoff strategy, skip-after-N), retry reason tracking |
 | **8.4 — Dependency Visualization** | ❌ | Interactive task dependency graph in session detail, critical path highlighting, bottleneck detection |
 | **8.5 — Session Tags & Filtering** | ❌ | User-defined tags on sessions, filter by tag/status/date range, saved filters |
