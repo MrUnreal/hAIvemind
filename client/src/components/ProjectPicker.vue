@@ -100,10 +100,18 @@
       </div>
     </div>
   </div>
+
+  <!-- Onboarding wizard for first-time users -->
+  <OnboardingWizard
+    :visible="showOnboarding"
+    @complete="onOnboardingComplete"
+    @skip="showOnboarding = false"
+  />
 </template>
 
 <script setup>
 import { ref, computed, onMounted } from 'vue';
+import OnboardingWizard from './OnboardingWizard.vue';
 import {
   projects,
   loading,
@@ -119,6 +127,7 @@ const linkName = ref('');
 const linkDir = ref('');
 const error = ref('');
 const search = ref('');
+const showOnboarding = ref(false);
 
 const filteredProjects = computed(() => {
   if (!search.value.trim()) return projects.value;
@@ -145,9 +154,35 @@ function avatarColor(slug) {
   return avatarColors[Math.abs(hash) % avatarColors.length];
 }
 
-onMounted(() => {
-  fetchProjects();
+onMounted(async () => {
+  await fetchProjects();
+  // Show onboarding wizard for first-time users (no projects yet)
+  if (projects.value.length === 0) {
+    showOnboarding.value = true;
+  }
 });
+
+async function onOnboardingComplete(config) {
+  showOnboarding.value = false;
+  error.value = '';
+  try {
+    const project = await createProject(config.name, config.description);
+    // Apply escalation settings via REST API
+    try {
+      await fetch(`/api/projects/${project.slug}/settings`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          escalation: config.escalation,
+          defaultBackend: config.backend,
+        }),
+      });
+    } catch { /* settings are optional — project still works */ }
+    selectProject(project);
+  } catch (err) {
+    error.value = err.message;
+  }
+}
 
 async function onCreate() {
   if (!newName.value.trim()) return;

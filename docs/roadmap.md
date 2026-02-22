@@ -254,7 +254,7 @@ Currently single-user, no auth. Fine for local dev, but blocks team usage or hos
 | Feature | Status | Notes |
 |---------|--------|-------|
 | **9.0 — Dark/Light Theme System** | ✅ | CSS custom properties for theming, theme toggle in header, persist preference, auto-detect OS theme |
-| **9.1 — Onboarding Wizard** | ❌ | First-run setup wizard: configure backend, create first project, run sample session, guided tour |
+| **9.1 — Onboarding Wizard** | ✅ | First-run setup wizard: configure backend, create first project, run sample session, guided tour |
 | **9.2 — Notification Center** | ❌ | Persistent notification inbox: session completions, regression alerts, webhook failures, schedule triggers |
 | **9.3 — Live Session Dashboard** | ❌ | Real-time overview of all running sessions across projects, resource usage, agent activity heatmap |
 | **9.4 — API Key Management** | ❌ | Secure storage for API keys (Ollama, OpenAI, etc.), per-backend configuration, key rotation |
