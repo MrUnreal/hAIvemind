@@ -45,6 +45,10 @@ import {
   getTrackedProcesses, killProcess, recordSnapshot, getSnapshots,
   getAlerts, clearAlerts, formatBytes,
 } from '../services/resourceMonitor.js';
+import {
+  getDiffs, getDiff, addDiff, reviewHunk, bulkReview,
+  revertDiff, removeDiff, clearDiffs, getReviewStats,
+} from '../services/diffReview.js';
 
 const router = Router();
 
@@ -911,6 +915,94 @@ router.put('/projects/:slug/resources/limits', (req, res) => {
     return res.status(404).json({ error: 'Project not found' });
   }
   res.json(setLimits(req.params.slug, req.body));
+});
+
+// ═════════════════════════════════════════════════════════════════
+//  Diff Review (Phase 10.4)
+// ═════════════════════════════════════════════════════════════════
+
+/** List diffs for a project */
+router.get('/projects/:slug/diffs', (req, res) => {
+  if (!refs.workspace.getProject(req.params.slug)) {
+    return res.status(404).json({ error: 'Project not found' });
+  }
+  const { sessionId, status, file } = req.query;
+  res.json(getDiffs(req.params.slug, { sessionId, status, file }));
+});
+
+/** Get review stats */
+router.get('/projects/:slug/diffs/stats', (req, res) => {
+  if (!refs.workspace.getProject(req.params.slug)) {
+    return res.status(404).json({ error: 'Project not found' });
+  }
+  res.json(getReviewStats(req.params.slug));
+});
+
+/** Get single diff */
+router.get('/projects/:slug/diffs/:diffId', (req, res) => {
+  if (!refs.workspace.getProject(req.params.slug)) {
+    return res.status(404).json({ error: 'Project not found' });
+  }
+  const diff = getDiff(req.params.slug, req.params.diffId);
+  if (!diff) return res.status(404).json({ error: 'Diff not found' });
+  res.json(diff);
+});
+
+/** Add a diff */
+router.post('/projects/:slug/diffs', (req, res) => {
+  if (!refs.workspace.getProject(req.params.slug)) {
+    return res.status(404).json({ error: 'Project not found' });
+  }
+  res.status(201).json(addDiff(req.params.slug, req.body));
+});
+
+/** Review a hunk */
+router.post('/projects/:slug/diffs/:diffId/hunks/:hunkId/review', (req, res) => {
+  if (!refs.workspace.getProject(req.params.slug)) {
+    return res.status(404).json({ error: 'Project not found' });
+  }
+  const result = reviewHunk(req.params.slug, req.params.diffId, req.params.hunkId, req.body.status, req.body.reviewer);
+  if (!result) return res.status(404).json({ error: 'Diff or hunk not found' });
+  res.json(result);
+});
+
+/** Bulk review all hunks */
+router.post('/projects/:slug/diffs/:diffId/bulk-review', (req, res) => {
+  if (!refs.workspace.getProject(req.params.slug)) {
+    return res.status(404).json({ error: 'Project not found' });
+  }
+  const result = bulkReview(req.params.slug, req.params.diffId, req.body.status, req.body.reviewer);
+  if (!result) return res.status(404).json({ error: 'Diff not found' });
+  res.json(result);
+});
+
+/** Revert a diff */
+router.post('/projects/:slug/diffs/:diffId/revert', (req, res) => {
+  if (!refs.workspace.getProject(req.params.slug)) {
+    return res.status(404).json({ error: 'Project not found' });
+  }
+  const result = revertDiff(req.params.slug, req.params.diffId);
+  if (!result) return res.status(404).json({ error: 'Diff not found' });
+  res.json(result);
+});
+
+/** Delete a diff */
+router.delete('/projects/:slug/diffs/:diffId', (req, res) => {
+  if (!refs.workspace.getProject(req.params.slug)) {
+    return res.status(404).json({ error: 'Project not found' });
+  }
+  const ok = removeDiff(req.params.slug, req.params.diffId);
+  if (!ok) return res.status(404).json({ error: 'Diff not found' });
+  res.json({ ok: true });
+});
+
+/** Clear all diffs */
+router.delete('/projects/:slug/diffs', (req, res) => {
+  if (!refs.workspace.getProject(req.params.slug)) {
+    return res.status(404).json({ error: 'Project not found' });
+  }
+  clearDiffs(req.params.slug);
+  res.json({ ok: true });
 });
 
 export default router;

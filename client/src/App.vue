@@ -190,6 +190,12 @@
             📊 Resources
           </button>
           <button
+            :class="['tab-btn', { active: sideTab === 'diffs' }]"
+            @click="sideTab = 'diffs'; sidePanelCollapsed = false"
+          >
+            📝 Diffs
+          </button>
+          <button
             :class="['tab-btn', { active: sideTab === 'live' }]"
             @click="sideTab = 'live'; sidePanelCollapsed = false"
           >
@@ -261,6 +267,12 @@
             :projectSlug="activeProject?.slug"
             @close="sidePanelCollapsed = true"
           />
+          <DiffReviewPanel
+            v-if="sideTab === 'diffs'"
+            :visible="sideTab === 'diffs' && !sidePanelCollapsed"
+            :projectSlug="activeProject?.slug"
+            @close="sidePanelCollapsed = true"
+          />
           <LiveDashboard
             v-if="sideTab === 'live'"
             :visible="sideTab === 'live' && !sidePanelCollapsed"
@@ -318,6 +330,7 @@ import AnalyticsPanel from './components/AnalyticsPanel.vue';
 import MemoryPanel from './components/MemoryPanel.vue';
 import SuggestionsPanel from './components/SuggestionsPanel.vue';
 import ResourcePanel from './components/ResourcePanel.vue';
+import DiffReviewPanel from './components/DiffReviewPanel.vue';
 import { useWebSocket } from './composables/useWebSocket.js';
 import { setCommands, openPalette, togglePalette } from './composables/useCommandPalette.js';
 import { toast } from './composables/useToast.js';
