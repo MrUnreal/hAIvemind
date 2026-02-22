@@ -14,11 +14,11 @@
   <img src="https://img.shields.io/badge/Vue%203-Flow%20DAG-4FC08D?logo=vue.js" alt="Vue 3">
   <img src="https://img.shields.io/badge/Copilot%20CLI-Agent%20Backend-0078D4?logo=github" alt="Copilot CLI">
   <img src="https://img.shields.io/badge/Cost-Free_Tier_Default-brightgreen" alt="Free">
-  <img src="https://img.shields.io/badge/Tests-452_passing-blue" alt="452 Tests">
+  <img src="https://img.shields.io/badge/Tests-466_passing-blue" alt="466 Tests">
   <img src="https://img.shields.io/badge/Self--Evolving-🧬-blueviolet" alt="Self-Evolving">
 </p>
 
-> **Every line of this codebase was written by hAIvemind itself.** The platform decomposes its own feature requests, spawns agents to implement them, verifies the results, and merges passing changes. 11K+ lines, 452 tests, zero manual code.
+> **Every line of this codebase was written by hAIvemind itself.** The platform decomposes its own feature requests, spawns agents to implement them, verifies the results, and merges passing changes. 11K+ lines, 466 tests, zero manual code.
 
 ---
 
@@ -151,7 +151,7 @@ haivemind projects                              # List projects
 haivemind build my-app "Add JWT auth"           # Build something
 haivemind autopilot my-app --cycles=5           # Autonomous mode
 haivemind status                                # Session status
-npm test                                        # 452 Playwright tests
+npm test                                        # 466 Playwright tests
 ```
 
 ## Screenshots
@@ -173,7 +173,7 @@ npm test                                        # 452 Playwright tests
 
 ## Status
 
-All 7 phases shipped. 21 test files. 452 tests. ~11K lines. 100% self-built.
+All 7 phases shipped. 22 test files. 466 tests. ~11K lines. 100% self-built.
 
 | Phase | What |
 |-------|------|

@@ -47,6 +47,12 @@
         </div>
       </div>
 
+      <!-- Phase 7.6: Cost Analytics Chart -->
+      <CostChart
+        v-if="activeProject?.slug"
+        :projectSlug="activeProject.slug"
+      />
+
       <!-- Individual reflections -->
       <div class="reflections-section">
         <h4>Session Reflections</h4>
@@ -107,6 +113,7 @@
 import { computed, onMounted } from 'vue';
 import { activeProject } from '../composables/useProjects.js';
 import { projectReflections, fetchReflections } from '../composables/useProjectSettings.js';
+import CostChart from './CostChart.vue';
 
 const emit = defineEmits(['close']);
 
