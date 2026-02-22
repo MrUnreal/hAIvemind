@@ -31,9 +31,23 @@ router.get('/sessions/search', (req, res) => {
   res.json(result);
 });
 
-/** List sessions for a project */
+/** List sessions for a project (with optional filtering) */
 router.get('/projects/:slug/sessions', (req, res) => {
-  const sessionList = refs.workspace.listSessions(req.params.slug);
+  let sessionList = refs.workspace.listSessions(req.params.slug);
+
+  // Phase 8.5: Filtering
+  const { status: filterStatus, tag, from, to } = req.query;
+  if (filterStatus) sessionList = sessionList.filter(s => s.status === filterStatus);
+  if (tag) {
+    const filterTags = tag.split(',').map(t => t.trim().toLowerCase());
+    sessionList = sessionList.filter(s => {
+      const sTags = (s.tags || []).map(t => t.toLowerCase());
+      return filterTags.some(ft => sTags.includes(ft));
+    });
+  }
+  if (from) sessionList = sessionList.filter(s => (s.createdAt || 0) >= Number(from));
+  if (to) sessionList = sessionList.filter(s => (s.createdAt || 0) <= Number(to));
+
   res.json(sessionList.map(s => {
     const agentCount = s.agents ? Object.keys(s.agents).length : 0;
     const totalCost = s.costSummary?.totalPremiumRequests || 0;
@@ -62,6 +76,7 @@ router.get('/projects/:slug/sessions', (req, res) => {
       agentCount,
       totalCost,
       taskSummary,
+      tags: s.tags || [],
     };
   }));
 });
@@ -72,6 +87,77 @@ router.get('/projects/:slug/sessions/:sessionId', (req, res) => {
   if (!session) return res.status(404).json({ error: 'Session not found' });
   res.json(session);
 });
+
+// ═══════════════════════════════════════════════════════════
+//  Phase 8.5: Session Tags & Filtering
+// ═══════════════════════════════════════════════════════════
+
+/** Get tags for a session */
+router.get('/projects/:slug/sessions/:sessionId/tags', (req, res) => {
+  const session = refs.workspace.getSession(req.params.slug, req.params.sessionId);
+  if (!session) return res.status(404).json({ error: 'Session not found' });
+  res.json({ tags: session.tags || [] });
+});
+
+/** Set tags on a session (replace all) */
+router.put('/projects/:slug/sessions/:sessionId/tags', (req, res) => {
+  const { tags } = req.body;
+  if (!Array.isArray(tags)) return res.status(400).json({ error: 'tags must be an array' });
+  const cleaned = normalizeTags(tags);
+  const updated = refs.workspace.updateSession(req.params.slug, req.params.sessionId, { tags: cleaned });
+  if (!updated) return res.status(404).json({ error: 'Session not found' });
+  res.json({ tags: updated.tags });
+});
+
+/** Add tags to a session (merge) */
+router.post('/projects/:slug/sessions/:sessionId/tags', (req, res) => {
+  const { tags } = req.body;
+  if (!Array.isArray(tags)) return res.status(400).json({ error: 'tags must be an array' });
+  const session = refs.workspace.getSession(req.params.slug, req.params.sessionId);
+  if (!session) return res.status(404).json({ error: 'Session not found' });
+  const merged = normalizeTags([...(session.tags || []), ...tags]);
+  const updated = refs.workspace.updateSession(req.params.slug, req.params.sessionId, { tags: merged });
+  res.json({ tags: updated.tags });
+});
+
+/** Remove a specific tag from a session */
+router.delete('/projects/:slug/sessions/:sessionId/tags/:tag', (req, res) => {
+  const session = refs.workspace.getSession(req.params.slug, req.params.sessionId);
+  if (!session) return res.status(404).json({ error: 'Session not found' });
+  const tagToRemove = req.params.tag.toLowerCase();
+  const filtered = (session.tags || []).filter(t => t.toLowerCase() !== tagToRemove);
+  const updated = refs.workspace.updateSession(req.params.slug, req.params.sessionId, { tags: filtered });
+  res.json({ tags: updated.tags });
+});
+
+/** List all unique tags across a project's sessions */
+router.get('/projects/:slug/tags', (req, res) => {
+  const sessions = refs.workspace.listSessions(req.params.slug);
+  const tagSet = new Set();
+  for (const s of sessions) {
+    for (const t of (s.tags || [])) tagSet.add(t);
+  }
+  res.json({ tags: [...tagSet].sort() });
+});
+
+/**
+ * Normalize tags: trim, lowercase, deduplicate, max 20 tags, max 50 chars each.
+ * @param {string[]} tags
+ * @returns {string[]}
+ */
+export function normalizeTags(tags) {
+  const seen = new Set();
+  const result = [];
+  for (const raw of tags) {
+    if (typeof raw !== 'string') continue;
+    const tag = raw.trim().toLowerCase().slice(0, 50);
+    if (!tag || seen.has(tag)) continue;
+    seen.add(tag);
+    result.push(tag);
+    if (result.length >= 20) break;
+  }
+  return result;
+}
 
 /** Phase 5.1: Get per-task output summaries */
 router.get('/projects/:slug/sessions/:sessionId/summaries', (req, res) => {

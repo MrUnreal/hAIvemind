@@ -24,6 +24,23 @@
       @select="onSearchSelect"
     />
 
+    <!-- Phase 8.5: Filter Bar -->
+    <div class="filter-bar" v-if="sessions.length > 0">
+      <select v-model="filterStatus" class="filter-select">
+        <option value="">All statuses</option>
+        <option value="completed">✅ Completed</option>
+        <option value="failed">❌ Failed</option>
+        <option value="running">⏳ Running</option>
+      </select>
+      <select v-model="filterTag" class="filter-select" v-if="allTags.length > 0">
+        <option value="">All tags</option>
+        <option v-for="t in allTags" :key="t" :value="t">🏷 {{ t }}</option>
+      </select>
+      <button v-if="filterStatus || filterTag" class="clear-filters" @click="filterStatus = ''; filterTag = ''">
+        ✕ Clear
+      </button>
+    </div>
+
     <!-- Phase 8.0: Compare Mode Banner -->
     <div v-if="compareMode" class="compare-banner">
       <span v-if="!compareA">Select first session to compare</span>
@@ -110,6 +127,32 @@
           </span>
         </div>
 
+        <!-- Phase 8.5: Session Tags -->
+        <div class="session-tags">
+          <span
+            v-for="tag in (session.tags || [])"
+            :key="tag"
+            class="tag-chip"
+            @click.stop="filterTag = tag"
+          >
+            🏷 {{ tag }}
+            <button class="tag-remove" @click.stop="removeTag(session.id, tag)" title="Remove tag">×</button>
+          </span>
+          <button class="tag-add-btn" @click.stop="startAddTag(session.id)" v-if="editingTagSession !== session.id">+ tag</button>
+          <span v-if="editingTagSession === session.id" class="tag-input-wrap">
+            <input
+              class="tag-input"
+              v-model="newTagText"
+              @keydown.enter.stop="addTag(session.id)"
+              @keydown.escape.stop="editingTagSession = null"
+              placeholder="tag name"
+              maxlength="50"
+              ref="tagInputRef"
+            />
+            <button class="tag-save" @click.stop="addTag(session.id)">✓</button>
+          </span>
+        </div>
+
         <!-- Phase 5.2: Rollback button + Phase 6.4: View Diff + Phase 7.7: Export -->
         <div class="session-actions" v-if="session.status === 'completed' || session.status === 'failed'">
           <button
@@ -186,7 +229,7 @@
 </template>
 
 <script setup>
-import { computed, ref } from 'vue';
+import { computed, ref, nextTick } from 'vue';
 import {
   activeProject,
   sessions,
@@ -212,8 +255,26 @@ const showCompare = ref(false);
 const bulkMode = ref(false);
 const bulkSelected = ref(new Set());
 
+// Phase 8.5: Tags & Filtering
+const filterStatus = ref('');
+const filterTag = ref('');
+const editingTagSession = ref(null);
+const newTagText = ref('');
+const tagInputRef = ref(null);
+
+const allTags = computed(() => {
+  const tags = new Set();
+  for (const s of sessions.value) {
+    for (const t of (s.tags || [])) tags.add(t);
+  }
+  return [...tags].sort();
+});
+
 const sortedSessions = computed(() => {
-  return [...sessions.value].sort((a, b) => (b.startedAt || 0) - (a.startedAt || 0));
+  let list = [...sessions.value].sort((a, b) => (b.startedAt || 0) - (a.startedAt || 0));
+  if (filterStatus.value) list = list.filter(s => s.status === filterStatus.value);
+  if (filterTag.value) list = list.filter(s => (s.tags || []).includes(filterTag.value));
+  return list;
 });
 
 function statusLabel(status) {
@@ -335,6 +396,48 @@ function exitCompare() {
   compareA.value = null;
   compareB.value = null;
   showCompare.value = false;
+}
+
+// Phase 8.5: Tag management
+function startAddTag(sessionId) {
+  editingTagSession.value = sessionId;
+  newTagText.value = '';
+  nextTick(() => {
+    if (tagInputRef.value) tagInputRef.value.focus();
+  });
+}
+
+async function addTag(sessionId) {
+  const tag = newTagText.value.trim().toLowerCase();
+  if (!tag || !activeProject.value) return;
+  editingTagSession.value = null;
+  newTagText.value = '';
+  try {
+    const res = await fetch(`/api/projects/${activeProject.value.slug}/sessions/${sessionId}/tags`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ tags: [tag] }),
+    });
+    if (res.ok) {
+      const data = await res.json();
+      const session = sessions.value.find(s => s.id === sessionId);
+      if (session) session.tags = data.tags;
+    }
+  } catch { /* ignore */ }
+}
+
+async function removeTag(sessionId, tag) {
+  if (!activeProject.value) return;
+  try {
+    const res = await fetch(`/api/projects/${activeProject.value.slug}/sessions/${sessionId}/tags/${encodeURIComponent(tag)}`, {
+      method: 'DELETE',
+    });
+    if (res.ok) {
+      const data = await res.json();
+      const session = sessions.value.find(s => s.id === sessionId);
+      if (session) session.tags = data.tags;
+    }
+  } catch { /* ignore */ }
 }
 
 // Phase 8.1: Bulk session actions
@@ -752,5 +855,104 @@ async function bulkExport(format) {
 .bulk-selected {
   border-color: #ffb74d !important;
   background: rgba(255, 183, 77, 0.08) !important;
+}
+
+/* Phase 8.5: Filter Bar */
+.filter-bar {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.filter-select {
+  background: #1a1a2e;
+  color: #ccc;
+  border: 1px solid #333;
+  border-radius: 6px;
+  padding: 5px 10px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.clear-filters {
+  background: none;
+  border: 1px solid #666;
+  color: #888;
+  border-radius: 6px;
+  padding: 4px 10px;
+  font-size: 11px;
+  cursor: pointer;
+}
+.clear-filters:hover { color: #ef5350; border-color: #ef5350; }
+
+/* Phase 8.5: Session Tags */
+.session-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  align-items: center;
+  margin-top: 6px;
+}
+
+.tag-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  background: rgba(100, 181, 246, 0.1);
+  border: 1px solid #335;
+  color: #90caf9;
+  border-radius: 12px;
+  padding: 1px 8px;
+  font-size: 11px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.tag-chip:hover { background: rgba(100, 181, 246, 0.2); }
+
+.tag-remove {
+  background: none;
+  border: none;
+  color: #666;
+  font-size: 13px;
+  cursor: pointer;
+  padding: 0 2px;
+  line-height: 1;
+}
+.tag-remove:hover { color: #ef5350; }
+
+.tag-add-btn {
+  background: none;
+  border: 1px dashed #444;
+  color: #666;
+  border-radius: 12px;
+  padding: 1px 8px;
+  font-size: 11px;
+  cursor: pointer;
+}
+.tag-add-btn:hover { color: #90caf9; border-color: #90caf9; }
+
+.tag-input-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.tag-input {
+  background: #1a1a2e;
+  border: 1px solid #64b5f6;
+  color: #e0e0e0;
+  border-radius: 6px;
+  padding: 2px 6px;
+  font-size: 11px;
+  width: 100px;
+}
+
+.tag-save {
+  background: none;
+  border: none;
+  color: #81c784;
+  font-size: 14px;
+  cursor: pointer;
 }
 </style>

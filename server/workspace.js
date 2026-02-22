@@ -246,6 +246,29 @@ export default class WorkspaceManager {
   }
 
   /**
+   * Update a session's data by merging a patch object.
+   * @param {string} slug
+   * @param {string} sessionId
+   * @param {object} patch — shallow merge into session root
+   * @returns {object|null} updated session or null
+   */
+  updateSession(slug, sessionId, patch) {
+    const entry = this._registry.projects[slug];
+    if (!entry) return null;
+    const dir = this._getProjectDir(slug);
+    const sessionFile = join(dir, '.haivemind', 'sessions', `${sessionId}.json`);
+    if (!existsSync(sessionFile)) return null;
+    try {
+      const session = JSON.parse(readFileSync(sessionFile, 'utf-8'));
+      Object.assign(session, patch);
+      writeFileSync(sessionFile, JSON.stringify(session, null, 2));
+      return session;
+    } catch {
+      return null;
+    }
+  }
+
+  /**
    * List sessions for a project.
    * @param {string} slug
    * @returns {object[]}
