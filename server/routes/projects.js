@@ -20,6 +20,10 @@ import {
 import {
   getApiKeys, addApiKey, removeApiKey, rotateApiKey, toggleApiKey,
 } from '../services/apiKeys.js';
+import {
+  getTemplates, getTemplate, addTemplate, updateTemplate,
+  removeTemplate, useTemplate, duplicateTemplate,
+} from '../services/sessionTemplates.js';
 
 const router = Router();
 
@@ -488,6 +492,79 @@ router.patch('/projects/:slug/api-keys/:keyId/toggle', (req, res) => {
   const ok = toggleApiKey(req.params.slug, req.params.keyId);
   if (!ok) return res.status(404).json({ error: 'API key not found' });
   res.json({ success: true });
+});
+
+// ────── Session Templates ──────
+
+/** List templates */
+router.get('/projects/:slug/templates', (req, res) => {
+  if (!refs.workspace.getProject(req.params.slug)) {
+    return res.status(404).json({ error: 'Project not found' });
+  }
+  res.json(getTemplates(req.params.slug));
+});
+
+/** Get single template */
+router.get('/projects/:slug/templates/:templateId', (req, res) => {
+  if (!refs.workspace.getProject(req.params.slug)) {
+    return res.status(404).json({ error: 'Project not found' });
+  }
+  const tmpl = getTemplate(req.params.slug, req.params.templateId);
+  if (!tmpl) return res.status(404).json({ error: 'Template not found' });
+  res.json(tmpl);
+});
+
+/** Create template */
+router.post('/projects/:slug/templates', (req, res) => {
+  if (!refs.workspace.getProject(req.params.slug)) {
+    return res.status(404).json({ error: 'Project not found' });
+  }
+  const { name, prompt, description, category, settings } = req.body;
+  if (!name || !prompt) {
+    return res.status(400).json({ error: 'name and prompt are required' });
+  }
+  const tmpl = addTemplate(req.params.slug, { name, prompt, description, category, settings });
+  res.status(201).json(tmpl);
+});
+
+/** Update template */
+router.patch('/projects/:slug/templates/:templateId', (req, res) => {
+  if (!refs.workspace.getProject(req.params.slug)) {
+    return res.status(404).json({ error: 'Project not found' });
+  }
+  const tmpl = updateTemplate(req.params.slug, req.params.templateId, req.body);
+  if (!tmpl) return res.status(404).json({ error: 'Template not found' });
+  res.json(tmpl);
+});
+
+/** Delete template */
+router.delete('/projects/:slug/templates/:templateId', (req, res) => {
+  if (!refs.workspace.getProject(req.params.slug)) {
+    return res.status(404).json({ error: 'Project not found' });
+  }
+  const ok = removeTemplate(req.params.slug, req.params.templateId);
+  if (!ok) return res.status(404).json({ error: 'Template not found' });
+  res.json({ success: true });
+});
+
+/** Use (launch) template — increments useCount */
+router.post('/projects/:slug/templates/:templateId/use', (req, res) => {
+  if (!refs.workspace.getProject(req.params.slug)) {
+    return res.status(404).json({ error: 'Project not found' });
+  }
+  const tmpl = useTemplate(req.params.slug, req.params.templateId);
+  if (!tmpl) return res.status(404).json({ error: 'Template not found' });
+  res.json(tmpl);
+});
+
+/** Duplicate template */
+router.post('/projects/:slug/templates/:templateId/duplicate', (req, res) => {
+  if (!refs.workspace.getProject(req.params.slug)) {
+    return res.status(404).json({ error: 'Project not found' });
+  }
+  const tmpl = duplicateTemplate(req.params.slug, req.params.templateId);
+  if (!tmpl) return res.status(404).json({ error: 'Template not found' });
+  res.status(201).json(tmpl);
 });
 
 export default router;

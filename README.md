@@ -14,7 +14,7 @@
   <img src="https://img.shields.io/badge/Vue%203-Flow%20DAG-4FC08D?logo=vue.js" alt="Vue 3">
   <img src="https://img.shields.io/badge/Copilot%20CLI-Agent%20Backend-0078D4?logo=github" alt="Copilot CLI">
   <img src="https://img.shields.io/badge/Cost-Free_Tier_Default-brightgreen" alt="Free">
-  <img src="https://img.shields.io/badge/Tests-875_passing-blue" alt="875 Tests">
+  <img src="https://img.shields.io/badge/Tests-912_passing-blue" alt="912 Tests">
   <img src="https://img.shields.io/badge/Self--Evolving-🧬-blueviolet" alt="Self-Evolving">
 </p>
 
@@ -180,7 +180,7 @@ npm test                                        # 466 Playwright tests
 
 ## Status
 
-All 8 phases shipped. 38 test files. 875 tests. ~14K lines. 100% self-built.
+All 8 phases shipped. 39 test files. 912 tests. ~14K lines. 100% self-built.
 
 | Phase | What |
 |-------|------|

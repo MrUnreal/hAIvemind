@@ -160,6 +160,12 @@
             🤖 Autopilot
           </button>
           <button
+            :class="['tab-btn', { active: sideTab === 'templates' }]"
+            @click="sideTab = 'templates'; sidePanelCollapsed = false"
+          >
+            📋 Templates
+          </button>
+          <button
             :class="['tab-btn', { active: sideTab === 'keys' }]"
             @click="sideTab = 'keys'; sidePanelCollapsed = false"
           >
@@ -187,6 +193,13 @@
             v-if="sideTab === 'autopilot' && activeProject?.slug"
             :projectSlug="activeProject.slug"
             @close="sidePanelCollapsed = true"
+          />
+          <TemplatesPanel
+            v-if="sideTab === 'templates'"
+            :visible="sideTab === 'templates' && !sidePanelCollapsed"
+            :projectSlug="activeProject?.slug"
+            @close="sidePanelCollapsed = true"
+            @launch="handleTemplateLaunch"
           />
           <ApiKeyPanel
             v-if="sideTab === 'keys'"
@@ -226,6 +239,7 @@ import ToastContainer from './components/ToastContainer.vue';
 import KeyboardShortcutsHelp from './components/KeyboardShortcutsHelp.vue';
 import NotificationCenter from './components/NotificationCenter.vue';
 import ApiKeyPanel from './components/ApiKeyPanel.vue';
+import TemplatesPanel from './components/TemplatesPanel.vue';
 import { useWebSocket } from './composables/useWebSocket.js';
 import { setCommands, openPalette, togglePalette } from './composables/useCommandPalette.js';
 import { toast } from './composables/useToast.js';
@@ -617,6 +631,10 @@ function onSubmit(payload) {
     ? { prompt: payload, projectSlug: activeProject.value.slug }
     : { ...payload, projectSlug: activeProject.value.slug };
   send('session:start', data);
+}
+
+function handleTemplateLaunch({ prompt }) {
+  onSubmit(prompt);
 }
 
 function retrySession() {
