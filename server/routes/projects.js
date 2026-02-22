@@ -7,6 +7,7 @@ import { Router } from 'express';
 import { MSG, makeMsg } from '../../shared/protocol.js';
 import { refs } from '../state.js';
 import { broadcast } from '../ws/broadcast.js';
+import { validateRetrySettings, buildRetryPolicy } from '../services/retryPolicy.js';
 
 const router = Router();
 
@@ -216,6 +217,27 @@ router.patch('/projects/:slug/webhooks/:id', (req, res) => {
   const hook = toggleWebhook(req.params.slug, req.params.id, enabled);
   if (!hook) return res.status(404).json({ error: 'Webhook not found' });
   res.json(hook);
+});
+
+// ═══════════════════════════════════════════════════════════
+//  Phase 8.3: Smart Retry Policies
+// ═══════════════════════════════════════════════════════════
+
+/** Get retry policy for a project (merged with defaults) */
+router.get('/projects/:slug/retry-policy', (req, res) => {
+  const settings = refs.workspace.getProjectSettings(req.params.slug);
+  res.json(buildRetryPolicy(settings));
+});
+
+/** Update retry policy for a project */
+router.put('/projects/:slug/retry-policy', (req, res) => {
+  const { valid, policy, errors } = validateRetrySettings(req.body);
+  if (!valid) return res.status(400).json({ error: errors.join('; ') });
+
+  const settings = refs.workspace.getProjectSettings(req.params.slug);
+  const merged = { ...settings, ...policy };
+  refs.workspace.updateProjectSettings(req.params.slug, merged);
+  res.json(buildRetryPolicy(merged));
 });
 
 export default router;

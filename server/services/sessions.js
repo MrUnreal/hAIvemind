@@ -76,6 +76,10 @@ export async function startSession(userPrompt, projectSlug, predefinedPlan) {
     pinnedModels: settings.pinnedModels,
     costCeiling: settings.costCeiling ?? null,
     maxConcurrency: settings.maxConcurrency ?? null,
+    // Phase 8.3: Smart Retry Policies
+    backoffStrategy: settings.backoffStrategy,
+    backoffBaseMs: settings.backoffBaseMs,
+    skipAfterConsecutiveFailures: settings.skipAfterConsecutiveFailures,
   };
 
   const { sessionId, workDir, session } = workspace.startSession(projectSlug, userPrompt);
