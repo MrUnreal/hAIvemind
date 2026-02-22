@@ -178,6 +178,12 @@
             📜 Audit
           </button>
           <button
+            :class="['tab-btn', { active: sideTab === 'analytics' }]"
+            @click="sideTab = 'analytics'; sidePanelCollapsed = false"
+          >
+            📈 Stats
+          </button>
+          <button
             :class="['tab-btn', { active: sideTab === 'live' }]"
             @click="sideTab = 'live'; sidePanelCollapsed = false"
           >
@@ -225,6 +231,12 @@
             :projectSlug="activeProject?.slug"
             @close="sidePanelCollapsed = true"
           />
+          <AnalyticsPanel
+            v-if="sideTab === 'analytics'"
+            :visible="sideTab === 'analytics' && !sidePanelCollapsed"
+            :projectSlug="activeProject?.slug"
+            @close="sidePanelCollapsed = true"
+          />
           <LiveDashboard
             v-if="sideTab === 'live'"
             :visible="sideTab === 'live' && !sidePanelCollapsed"
@@ -265,6 +277,7 @@ import ApiKeyPanel from './components/ApiKeyPanel.vue';
 import TemplatesPanel from './components/TemplatesPanel.vue';
 import AuditLogPanel from './components/AuditLogPanel.vue';
 import AuthPanel from './components/AuthPanel.vue';
+import AnalyticsPanel from './components/AnalyticsPanel.vue';
 import { useWebSocket } from './composables/useWebSocket.js';
 import { setCommands, openPalette, togglePalette } from './composables/useCommandPalette.js';
 import { toast } from './composables/useToast.js';

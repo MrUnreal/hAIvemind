@@ -262,3 +262,21 @@ Currently single-user, no auth. Fine for local dev, but blocks team usage or hos
 | **9.6 — Audit Log** | ✅ | Immutable log of all state changes: session starts/stops, config changes, webhook deliveries, schedule executions |
 | **9.7 — E2E Test Overhaul** | ✅ | Convert client integration tests from source reading to actual browser-rendered component tests with Playwright |
 | **9.8 — Multi-User Auth** | ✅ | Optional auth middleware (Bearer/OAuth), user identity on sessions, project-level access control |
+
+---
+
+## Phase 10: Intelligence & Observability
+
+> Deepen the platform's analytical capabilities, improve agent intelligence, and add production-grade observability.
+
+| Feature | Status | Notes |
+|---------|--------|-------|
+| **10.0 — Session Analytics** | ✅ | Per-project session stats (avg duration, success rate, cost trends), weekly digests, exportable CSV reports |
+| **10.1 — Agent Memory** | ❌ | Persistent agent context across sessions: learned patterns, project conventions, error history, preference recall |
+| **10.2 — Smart Prompt Suggestions** | ❌ | Context-aware prompt autocomplete based on project state, recent sessions, and common patterns |
+| **10.3 — Resource Monitor** | ❌ | Real-time CPU/memory/disk tracking per agent process, resource limit enforcement, kill runaway agents |
+| **10.4 — Diff Review Panel** | ❌ | Side-by-side diff viewer for agent changes, approve/reject individual hunks, bulk approve, revert support |
+| **10.5 — Event Bus** | ❌ | Internal pub/sub event system: decouple services, enable plugin hooks, support async event processing |
+| **10.6 — Rate Limiting** | ❌ | Per-user and per-project rate limits, configurable thresholds, cooldown periods, admin override |
+| **10.7 — Workspace Snapshots** | ❌ | Full workspace backup/restore, snapshot before risky operations, diff between snapshots, named checkpoints |
+| **10.8 — Health Dashboard** | ❌ | Production health page: uptime, error rates, latency percentiles, backend availability, alert thresholds |

@@ -27,6 +27,10 @@ import {
 import {
   getAuditLog, appendAuditEntry, getActors, clearAuditLog,
 } from '../services/auditLog.js';
+import {
+  getProjectStats, getTimeSeries, getModelBreakdown,
+  getWeeklyDigest, exportSessionsCsv, getTopSessions,
+} from '../services/analytics.js';
 
 const router = Router();
 
@@ -612,6 +616,67 @@ router.delete('/projects/:slug/audit-log', (req, res) => {
   }
   const count = clearAuditLog(req.params.slug);
   res.json({ cleared: count });
+});
+
+// ═══════════════════════════════════════════════════════════════════
+//  Session Analytics (Phase 10.0)
+// ═══════════════════════════════════════════════════════════════════
+
+/** Get aggregate project stats */
+router.get('/projects/:slug/analytics/stats', (req, res) => {
+  if (!refs.workspace.getProject(req.params.slug)) {
+    return res.status(404).json({ error: 'Project not found' });
+  }
+  const { from, to } = req.query;
+  res.json(getProjectStats(req.params.slug, { from, to }));
+});
+
+/** Get time-series data */
+router.get('/projects/:slug/analytics/timeseries', (req, res) => {
+  if (!refs.workspace.getProject(req.params.slug)) {
+    return res.status(404).json({ error: 'Project not found' });
+  }
+  const granularity = req.query.granularity || 'day';
+  const periods = parseInt(req.query.periods) || 14;
+  res.json(getTimeSeries(req.params.slug, granularity, periods));
+});
+
+/** Get model usage breakdown */
+router.get('/projects/:slug/analytics/models', (req, res) => {
+  if (!refs.workspace.getProject(req.params.slug)) {
+    return res.status(404).json({ error: 'Project not found' });
+  }
+  res.json(getModelBreakdown(req.params.slug));
+});
+
+/** Get weekly digest */
+router.get('/projects/:slug/analytics/digest', (req, res) => {
+  if (!refs.workspace.getProject(req.params.slug)) {
+    return res.status(404).json({ error: 'Project not found' });
+  }
+  res.json(getWeeklyDigest(req.params.slug));
+});
+
+/** Export sessions as CSV */
+router.get('/projects/:slug/analytics/export', (req, res) => {
+  if (!refs.workspace.getProject(req.params.slug)) {
+    return res.status(404).json({ error: 'Project not found' });
+  }
+  const { from, to } = req.query;
+  const csv = exportSessionsCsv(req.params.slug, { from, to });
+  res.setHeader('Content-Type', 'text/csv');
+  res.setHeader('Content-Disposition', `attachment; filename="${req.params.slug}-sessions.csv"`);
+  res.send(csv);
+});
+
+/** Get top sessions by duration or cost */
+router.get('/projects/:slug/analytics/top', (req, res) => {
+  if (!refs.workspace.getProject(req.params.slug)) {
+    return res.status(404).json({ error: 'Project not found' });
+  }
+  const sortBy = req.query.sortBy || 'duration';
+  const limit = parseInt(req.query.limit) || 10;
+  res.json(getTopSessions(req.params.slug, sortBy, limit));
 });
 
 export default router;
