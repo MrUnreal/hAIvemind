@@ -17,6 +17,20 @@ import log from '../logger.js';
 
 const router = Router();
 
+/** Phase 7.3: Full-text search across all sessions */
+router.get('/sessions/search', (req, res) => {
+  const q = req.query.q || '';
+  const projectSlug = req.query.project || undefined;
+  const limit = Math.min(parseInt(req.query.limit) || 50, 200);
+
+  if (!q.trim()) {
+    return res.json({ results: [], total: 0 });
+  }
+
+  const result = refs.workspace.searchSessions(q, { projectSlug, limit });
+  res.json(result);
+});
+
 /** List sessions for a project */
 router.get('/projects/:slug/sessions', (req, res) => {
   const sessionList = refs.workspace.listSessions(req.params.slug);

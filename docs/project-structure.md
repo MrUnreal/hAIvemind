@@ -45,6 +45,7 @@ hAIvemind/
 | **ProjectPicker.vue** | Landing page with hero section, project search/filter, colored avatars. |
 | **PromptInput.vue** | Textarea with gradient border, tier escalation chain cards, template selector. |
 | **SessionHistory.vue** | Browse and reload past sessions for a project. Workspace intelligence view. |
+| **SessionSearch.vue** | Full-text search across sessions by prompt/task. Debounced input, match highlighting, cross-project results. |
 | **CommandPalette.vue** | Ctrl+K overlay: searchable command list with navigation, actions, project switching, panel toggling. |
 | **ToastContainer.vue** | Animated toast notification stack. Renders success/error/warning/info toasts with auto-dismiss. |
 | **KeyboardShortcutsHelp.vue** | `?` key dialog: grouped list of all keyboard shortcuts with key labels. |

@@ -248,6 +248,66 @@ export default class WorkspaceManager {
   }
 
   // ═══════════════════════════════════════════════════════════
+  //  Session Search (Phase 7.3)
+  // ═══════════════════════════════════════════════════════════
+
+  /**
+   * Full-text search across all sessions in all (or specific) projects.
+   * Matches against prompt text and task labels.
+   * @param {string} query - Search query (case-insensitive substring match)
+   * @param {object} [opts]
+   * @param {string} [opts.projectSlug] - Limit to a specific project
+   * @param {number} [opts.limit=50] - Max results
+   * @returns {{ results: object[], total: number }}
+   */
+  searchSessions(query, opts = {}) {
+    const { projectSlug, limit = 50 } = opts;
+    const q = (query || '').toLowerCase().trim();
+    if (!q) return { results: [], total: 0 };
+
+    const projects = projectSlug
+      ? [this.getProject(projectSlug)].filter(Boolean)
+      : this.listProjects();
+
+    const results = [];
+
+    for (const project of projects) {
+      const sessions = this.listSessions(project.slug);
+
+      for (const session of sessions) {
+        const promptMatch = (session.prompt || '').toLowerCase().includes(q);
+        const matchingTasks = Array.isArray(session.tasks)
+          ? session.tasks.filter(t => (t.label || '').toLowerCase().includes(q))
+          : [];
+        const taskMatch = matchingTasks.length > 0;
+
+        if (promptMatch || taskMatch) {
+          results.push({
+            sessionId: session.id,
+            projectSlug: project.slug,
+            projectName: project.name,
+            prompt: session.prompt,
+            status: session.status,
+            createdAt: session.createdAt,
+            completedAt: session.completedAt,
+            taskCount: Array.isArray(session.tasks) ? session.tasks.length : 0,
+            matchedTasks: matchingTasks.map(t => t.label),
+            matchType: promptMatch && taskMatch ? 'both' : promptMatch ? 'prompt' : 'task',
+          });
+        }
+      }
+    }
+
+    // Sort newest first
+    results.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+
+    return {
+      results: results.slice(0, limit),
+      total: results.length,
+    };
+  }
+
+  // ═══════════════════════════════════════════════════════════
   //  Persistent Skills
   // ═══════════════════════════════════════════════════════════
 

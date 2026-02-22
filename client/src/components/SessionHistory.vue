@@ -12,6 +12,13 @@
       </button>
     </div>
 
+    <!-- Phase 7.3: Session Search -->
+    <SessionSearch
+      :projectSlug="activeProject?.slug"
+      :projectName="activeProject?.name"
+      @select="onSearchSelect"
+    />
+
     <div v-if="sessionsLoading" class="loading">Loading sessions...</div>
 
     <!-- Phase 6.4: Workspace Intelligence -->
@@ -114,6 +121,7 @@ import {
 import { loadSession } from '../composables/useSession.js';
 import DiffViewer from './DiffViewer.vue';
 import WorkspaceOverview from './WorkspaceOverview.vue';
+import SessionSearch from './SessionSearch.vue';
 
 defineEmits(['newSession']);
 
@@ -153,6 +161,18 @@ function truncate(s, len) {
 async function onLoadSession(sessionId) {
   if (!activeProject.value) return;
   await loadSession(activeProject.value.slug, sessionId);
+}
+
+// Phase 7.3: Navigate to a session from search results
+async function onSearchSelect(result) {
+  if (!result?.sessionId) return;
+  // If the result is in a different project, switch projects first
+  if (result.projectSlug && result.projectSlug !== activeProject.value?.slug) {
+    const { selectProject, projects } = await import('../composables/useProjects.js');
+    const project = projects.value.find(p => p.slug === result.projectSlug);
+    if (project) await selectProject(project);
+  }
+  await loadSession(result.projectSlug || activeProject.value?.slug, result.sessionId);
 }
 
 // Phase 5.2 + 6.4: Rollback workspace — show diff preview first
