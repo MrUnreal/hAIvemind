@@ -40,6 +40,11 @@ import {
   getSuggestions, getCategories, getPromptHistory,
   recordPrompt, clearHistory,
 } from '../services/promptSuggestions.js';
+import {
+  getSystemMetrics, getLimits, setLimits, trackProcess, untrackProcess,
+  getTrackedProcesses, killProcess, recordSnapshot, getSnapshots,
+  getAlerts, clearAlerts, formatBytes,
+} from '../services/resourceMonitor.js';
 
 const router = Router();
 
@@ -838,6 +843,74 @@ router.delete('/projects/:slug/suggestions/history', (req, res) => {
   }
   clearHistory(req.params.slug);
   res.json({ ok: true });
+});
+
+// ═════════════════════════════════════════════════════════════════
+//  Resource Monitor (Phase 10.3)
+// ═════════════════════════════════════════════════════════════════
+
+/** Get system metrics (global, no project needed) */
+router.get('/resources/system', (_req, res) => {
+  res.json(getSystemMetrics());
+});
+
+/** Get resource snapshots */
+router.get('/resources/snapshots', (req, res) => {
+  const limit = req.query.limit ? parseInt(req.query.limit) : undefined;
+  res.json(getSnapshots(limit));
+});
+
+/** Record a snapshot */
+router.post('/resources/snapshots', (_req, res) => {
+  res.json(recordSnapshot());
+});
+
+/** Get resource alerts */
+router.get('/resources/alerts', (req, res) => {
+  const limit = req.query.limit ? parseInt(req.query.limit) : undefined;
+  res.json(getAlerts(limit));
+});
+
+/** Clear alerts */
+router.delete('/resources/alerts', (_req, res) => {
+  clearAlerts();
+  res.json({ ok: true });
+});
+
+/** Get tracked processes */
+router.get('/resources/processes', (_req, res) => {
+  res.json(getTrackedProcesses());
+});
+
+/** Track a process */
+router.post('/resources/processes', (req, res) => {
+  const { pid, label, slug } = req.body;
+  if (!pid) return res.status(400).json({ error: 'pid required' });
+  trackProcess(pid, label || `Process ${pid}`, slug);
+  res.status(201).json({ ok: true, pid });
+});
+
+/** Kill a tracked process */
+router.delete('/resources/processes/:pid', (req, res) => {
+  const pid = parseInt(req.params.pid);
+  if (isNaN(pid)) return res.status(400).json({ error: 'invalid pid' });
+  res.json(killProcess(pid));
+});
+
+/** Get resource limits for a project */
+router.get('/projects/:slug/resources/limits', (req, res) => {
+  if (!refs.workspace.getProject(req.params.slug)) {
+    return res.status(404).json({ error: 'Project not found' });
+  }
+  res.json(getLimits(req.params.slug));
+});
+
+/** Set resource limits for a project */
+router.put('/projects/:slug/resources/limits', (req, res) => {
+  if (!refs.workspace.getProject(req.params.slug)) {
+    return res.status(404).json({ error: 'Project not found' });
+  }
+  res.json(setLimits(req.params.slug, req.body));
 });
 
 export default router;

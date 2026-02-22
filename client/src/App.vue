@@ -184,6 +184,12 @@
             📈 Stats
           </button>
           <button
+            :class="['tab-btn', { active: sideTab === 'resources' }]"
+            @click="sideTab = 'resources'; sidePanelCollapsed = false"
+          >
+            📊 Resources
+          </button>
+          <button
             :class="['tab-btn', { active: sideTab === 'live' }]"
             @click="sideTab = 'live'; sidePanelCollapsed = false"
           >
@@ -249,6 +255,12 @@
             :projectSlug="activeProject?.slug"
             @close="sidePanelCollapsed = true"
           />
+          <ResourcePanel
+            v-if="sideTab === 'resources'"
+            :visible="sideTab === 'resources' && !sidePanelCollapsed"
+            :projectSlug="activeProject?.slug"
+            @close="sidePanelCollapsed = true"
+          />
           <LiveDashboard
             v-if="sideTab === 'live'"
             :visible="sideTab === 'live' && !sidePanelCollapsed"
@@ -305,6 +317,7 @@ import AuthPanel from './components/AuthPanel.vue';
 import AnalyticsPanel from './components/AnalyticsPanel.vue';
 import MemoryPanel from './components/MemoryPanel.vue';
 import SuggestionsPanel from './components/SuggestionsPanel.vue';
+import ResourcePanel from './components/ResourcePanel.vue';
 import { useWebSocket } from './composables/useWebSocket.js';
 import { setCommands, openPalette, togglePalette } from './composables/useCommandPalette.js';
 import { toast } from './composables/useToast.js';
