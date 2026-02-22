@@ -190,6 +190,12 @@
             📡 Live
           </button>
           <button
+            :class="['tab-btn', { active: sideTab === 'memory' }]"
+            @click="sideTab = 'memory'; sidePanelCollapsed = false"
+          >
+            🧠 Memory
+          </button>
+          <button
             :class="['tab-btn', { active: sideTab === 'auth' }]"
             @click="sideTab = 'auth'; sidePanelCollapsed = false"
           >
@@ -242,6 +248,12 @@
             :visible="sideTab === 'live' && !sidePanelCollapsed"
             @close="sidePanelCollapsed = true"
           />
+          <MemoryPanel
+            v-if="sideTab === 'memory'"
+            :visible="sideTab === 'memory' && !sidePanelCollapsed"
+            :projectSlug="activeProject?.slug"
+            @close="sidePanelCollapsed = true"
+          />
           <AuthPanel
             v-if="sideTab === 'auth'"
             :visible="sideTab === 'auth' && !sidePanelCollapsed"
@@ -278,6 +290,7 @@ import TemplatesPanel from './components/TemplatesPanel.vue';
 import AuditLogPanel from './components/AuditLogPanel.vue';
 import AuthPanel from './components/AuthPanel.vue';
 import AnalyticsPanel from './components/AnalyticsPanel.vue';
+import MemoryPanel from './components/MemoryPanel.vue';
 import { useWebSocket } from './composables/useWebSocket.js';
 import { setCommands, openPalette, togglePalette } from './composables/useCommandPalette.js';
 import { toast } from './composables/useToast.js';
