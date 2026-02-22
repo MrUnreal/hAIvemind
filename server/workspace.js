@@ -507,6 +507,39 @@ export default class WorkspaceManager {
   }
 
   // ═══════════════════════════════════════════════════════════
+  //  Global settings (workspace-wide, not per-project)
+  // ═══════════════════════════════════════════════════════════
+
+  /**
+   * Get workspace-level global settings.
+   * @returns {object}
+   */
+  getGlobalSettings() {
+    const settingsPath = join(this.baseDir, 'global-settings.json');
+    if (existsSync(settingsPath)) {
+      try {
+        return JSON.parse(readFileSync(settingsPath, 'utf-8'));
+      } catch {
+        return {};
+      }
+    }
+    return {};
+  }
+
+  /**
+   * Update workspace-level global settings (shallow merge).
+   * @param {object} patch
+   * @returns {object} updated settings
+   */
+  updateGlobalSettings(patch) {
+    const settingsPath = join(this.baseDir, 'global-settings.json');
+    const existing = this.getGlobalSettings();
+    const updated = { ...existing, ...patch, updatedAt: Date.now() };
+    writeFileSync(settingsPath, JSON.stringify(updated, null, 2));
+    return updated;
+  }
+
+  // ═══════════════════════════════════════════════════════════
   //  External project linking (for existing repos)
   // ═══════════════════════════════════════════════════════════
 

@@ -261,4 +261,4 @@ Currently single-user, no auth. Fine for local dev, but blocks team usage or hos
 | **9.5 — Session Templates** | ✅ | Save reusable session prompts with preset configs, project-scoped and global templates, quick-launch |
 | **9.6 — Audit Log** | ✅ | Immutable log of all state changes: session starts/stops, config changes, webhook deliveries, schedule executions |
 | **9.7 — E2E Test Overhaul** | ✅ | Convert client integration tests from source reading to actual browser-rendered component tests with Playwright |
-| **9.8 — Multi-User Auth** | ❌ | Optional auth middleware (Bearer/OAuth), user identity on sessions, project-level access control |
+| **9.8 — Multi-User Auth** | ✅ | Optional auth middleware (Bearer/OAuth), user identity on sessions, project-level access control |

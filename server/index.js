@@ -34,6 +34,7 @@ import templatesRouter from './routes/templates.js';
 import backendsRouter from './routes/backends.js';
 import pluginsRouter from './routes/plugins.js';
 import autopilotRouter from './routes/autopilot.js';
+import authRouter from './routes/auth.js';
 
 // ── WebSocket ──
 import { createWss } from './ws/setup.js';
@@ -89,6 +90,7 @@ app.use('/api', templatesRouter);
 app.use('/api', backendsRouter);
 app.use('/api', pluginsRouter);
 app.use('/api', autopilotRouter);
+app.use('/api', authRouter);
 
 // ── Serve built client in production ──
 const clientDist = join(__dirname, '..', 'client', 'dist');

@@ -184,6 +184,12 @@
             📡 Live
           </button>
           <button
+            :class="['tab-btn', { active: sideTab === 'auth' }]"
+            @click="sideTab = 'auth'; sidePanelCollapsed = false"
+          >
+            🔐 Auth
+          </button>
+          <button
             class="tab-collapse"
             @click="sidePanelCollapsed = !sidePanelCollapsed"
           >
@@ -224,6 +230,11 @@
             :visible="sideTab === 'live' && !sidePanelCollapsed"
             @close="sidePanelCollapsed = true"
           />
+          <AuthPanel
+            v-if="sideTab === 'auth'"
+            :visible="sideTab === 'auth' && !sidePanelCollapsed"
+            @close="sidePanelCollapsed = true"
+          />
         </div>
       </div>
     </div>
@@ -253,6 +264,7 @@ import NotificationCenter from './components/NotificationCenter.vue';
 import ApiKeyPanel from './components/ApiKeyPanel.vue';
 import TemplatesPanel from './components/TemplatesPanel.vue';
 import AuditLogPanel from './components/AuditLogPanel.vue';
+import AuthPanel from './components/AuthPanel.vue';
 import { useWebSocket } from './composables/useWebSocket.js';
 import { setCommands, openPalette, togglePalette } from './composables/useCommandPalette.js';
 import { toast } from './composables/useToast.js';
