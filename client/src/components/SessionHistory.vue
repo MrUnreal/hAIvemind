@@ -8,6 +8,9 @@
         </p>
       </div>
       <div class="header-actions">
+        <button class="webhook-toggle-btn" @click="showWebhooks = !showWebhooks" title="Manage webhooks">
+          🔔
+        </button>
         <button v-if="sessions.length > 0" class="bulk-toggle-btn" @click="toggleBulkMode">
           {{ bulkMode ? '✕ Cancel' : '☑ Select' }}
         </button>
@@ -16,6 +19,13 @@
         </button>
       </div>
     </div>
+
+    <!-- Phase 8.6: Webhook Panel -->
+    <WebhookPanel
+      :visible="showWebhooks"
+      :projectSlug="activeProject?.slug || ''"
+      @close="showWebhooks = false"
+    />
 
     <!-- Phase 7.3: Session Search -->
     <SessionSearch
@@ -241,10 +251,12 @@ import WorkspaceOverview from './WorkspaceOverview.vue';
 import SessionSearch from './SessionSearch.vue';
 import SessionCompare from './SessionCompare.vue';
 import DependencyGraph from './DependencyGraph.vue';
+import WebhookPanel from './WebhookPanel.vue';
 
 defineEmits(['newSession']);
 
 const showDepGraph = ref(null);
+const showWebhooks = ref(false);
 
 const rollingBack = ref(null);
 const viewingDiff = ref(null);
@@ -954,5 +966,19 @@ async function bulkExport(format) {
   color: #81c784;
   font-size: 14px;
   cursor: pointer;
+}
+
+.webhook-toggle-btn {
+  background: none;
+  border: 1px solid #444;
+  border-radius: 6px;
+  padding: 4px 8px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.webhook-toggle-btn:hover {
+  border-color: #ffb74d;
+  background: rgba(255, 183, 77, 0.1);
 }
 </style>

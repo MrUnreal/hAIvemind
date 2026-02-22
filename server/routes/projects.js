@@ -219,6 +219,35 @@ router.patch('/projects/:slug/webhooks/:id', (req, res) => {
   res.json(hook);
 });
 
+/** Phase 8.6: Test a webhook by sending a test event */
+router.post('/projects/:slug/webhooks/:id/test', async (req, res) => {
+  const project = refs.workspace.getProject(req.params.slug);
+  if (!project) return res.status(404).json({ error: 'Project not found' });
+  const hooks = getWebhooks(req.params.slug);
+  const hook = hooks.find(h => h.id === req.params.id);
+  if (!hook) return res.status(404).json({ error: 'Webhook not found' });
+
+  try {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 10_000);
+    const body = JSON.stringify({
+      event: 'webhook:test',
+      project: req.params.slug,
+      timestamp: new Date().toISOString(),
+      payload: { message: 'Test delivery from hAIvemind', webhookId: hook.id },
+    });
+
+    const headers = { 'Content-Type': 'application/json', 'User-Agent': 'hAIvemind-Webhook/1.0', 'X-hAIvemind-Event': 'webhook:test' };
+    if (hook.secret) headers['X-hAIvemind-Secret'] = hook.secret;
+
+    const result = await fetch(hook.url, { method: 'POST', headers, body, signal: controller.signal });
+    clearTimeout(timer);
+    res.json({ success: result.ok, status: result.status, statusText: result.statusText });
+  } catch (err) {
+    res.json({ success: false, error: err.message });
+  }
+});
+
 // ═══════════════════════════════════════════════════════════
 //  Phase 8.3: Smart Retry Policies
 // ═══════════════════════════════════════════════════════════

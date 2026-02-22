@@ -49,10 +49,10 @@
     <div v-if="swarmWave && sessionStatus === 'running'" class="wave-progress">
       <div class="wave-label">
         🌊 Wave {{ swarmWave.currentWave + 1 }}/{{ swarmWave.totalWaves }}
-        <span v-if="currentWaveStats">
-          — {{ currentWaveStats.running }} swarming
-          <span v-if="currentWaveStats.speculative"> ({{ currentWaveStats.speculative }} speculative)</span>
-          · {{ currentWaveStats.completed }}/{{ currentWaveStats.total }} done
+        <span v-if="crossWaveRunning > 0 || currentWaveStats">
+          — {{ crossWaveRunning || currentWaveStats?.running || 0 }} swarming
+          <span v-if="crossWaveSpeculative > 0"> ({{ crossWaveSpeculative }} speculative)</span>
+          <span v-if="currentWaveStats">· {{ currentWaveStats.completed }}/{{ currentWaveStats.total }} done</span>
         </span>
       </div>
       <div class="wave-bar">
@@ -207,6 +207,9 @@ const currentWaveStats = computed(() => {
   if (!swarmWave.value?.waveStats) return null;
   return swarmWave.value.waveStats;
 });
+
+const crossWaveRunning = computed(() => swarmWave.value?.totalRunning || 0);
+const crossWaveSpeculative = computed(() => swarmWave.value?.totalSpeculative || 0);
 
 const waveProgress = computed(() => {
   if (!swarmWave.value?.allWaves) return 0;

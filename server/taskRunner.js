@@ -172,17 +172,21 @@ export default class TaskRunner {
   /**
    * Calculate dynamic concurrency limit based on current eligible count.
    * Swarm Scaling: more eligible tasks → higher concurrency cap.
+   * Uses aggressive sqrt-based curve to reach high parallelism quickly.
    */
   _dynamicConcurrencyLimit(eligibleCount) {
     const baseCap = this.overrides?.maxConcurrency ?? config.maxConcurrency;
     const swarmCap = config.swarmMaxConcurrency;
 
-    // Scale up: allow up to swarmMaxConcurrency when we have many eligible tasks
-    // Use a smooth curve: base + log2(eligible) * 2
+    // Scale up aggressively: base + sqrt(eligible) * 3
+    // 10 eligible → base + 9 = 19
+    // 15 eligible → base + 11 = 21
+    // 20 eligible → base + 13 = 23
+    // This lets the system ramp fast when many tasks are runnable
     if (eligibleCount <= baseCap) return baseCap;
 
     const scaled = Math.min(
-      baseCap + Math.ceil(Math.log2(eligibleCount + 1) * 2),
+      baseCap + Math.ceil(Math.sqrt(eligibleCount) * 3),
       swarmCap,
     );
     return scaled;
@@ -190,33 +194,51 @@ export default class TaskRunner {
 
   /**
    * Find and launch tasks whose dependencies are all met.
-   * Includes speculative execution for tasks with soft dependencies.
+   * Includes speculative execution with cross-wave look-ahead.
+   *
+   * Cross-wave speculation: Look up to `speculativeDepth` waves ahead.
+   * If a task's deps are mostly done/running AND remaining deps are soft,
+   * start it early. This lets tasks from wave N+2 begin while wave N is
+   * still finishing — dramatically increasing peak concurrency.
    */
   async _scheduleEligible() {
     const eligible = [];
     const speculative = [];
 
-    // Count total eligible first (before concurrency cap) for dynamic scaling
-    let totalEligible = 0;
+    // Build a full candidate pool: eligible + potentially speculative tasks
+    // Count everything for dynamic scaling (don't limit by concurrency yet)
+    let totalCandidates = 0;
     for (const [, state] of this.taskStates) {
       if (state.status !== 'pending' && state.status !== 'gated') continue;
-      const depsOk = state.task.dependencies.every(depId => {
+      const deps = state.task.dependencies || [];
+      const depsOk = deps.every(depId => {
         const depState = this.taskStates.get(depId);
         return depState && depState.status === 'success';
       });
-      if (depsOk) totalEligible++;
+      if (depsOk) {
+        totalCandidates++;
+      } else if (config.speculativeExecution && state.status === 'pending' && deps.length > 0) {
+        // Also count speculative candidates for scaling purposes
+        const depStates = deps.map(depId => this.taskStates.get(depId));
+        const doneDeps = depStates.filter(ds => ds && ds.status === 'success').length;
+        const runningDeps = depStates.filter(ds => ds && ds.status === 'running').length;
+        const failedDeps = depStates.filter(ds => ds && (ds.status === 'blocked' || ds.status === 'failed')).length;
+        if (failedDeps === 0 && (doneDeps + runningDeps) === deps.length) {
+          totalCandidates++;
+        }
+      }
     }
 
-    // Dynamic concurrency: scale based on how many tasks are ready
-    const maxConc = this._dynamicConcurrencyLimit(totalEligible);
+    // Dynamic concurrency: scale based on total runnable pipeline
+    const maxConc = this._dynamicConcurrencyLimit(totalCandidates);
 
     // Broadcast scaling events when concurrency changes dynamically
-    if (totalEligible > (this.overrides?.maxConcurrency ?? config.maxConcurrency)) {
+    if (totalCandidates > (this.overrides?.maxConcurrency ?? config.maxConcurrency)) {
       this.broadcast(makeMsg(MSG.SWARM_SCALING, {
         currentConcurrency: this.running,
         dynamicLimit: maxConc,
-        eligibleTasks: totalEligible,
-        reason: `Scaling up: ${totalEligible} eligible tasks → cap raised to ${maxConc}`,
+        eligibleTasks: totalCandidates,
+        reason: `Scaling up: ${totalCandidates} runnable tasks → cap raised to ${maxConc}`,
       }));
     }
 
@@ -239,8 +261,9 @@ export default class TaskRunner {
         continue;
       }
 
-      // ── Speculative Execution ──
-      // If speculative execution is enabled, check if this task can start early
+      // ── Cross-Wave Speculative Execution ──
+      // Look ahead up to `speculativeDepth` waves. Tasks from wave N+D can start
+      // if their deps are all done or running, with enough fraction complete.
       if (config.speculativeExecution && state.status === 'pending' && deps.length > 0) {
         const doneDeps = depStates.filter(ds => ds && ds.status === 'success').length;
         const runningDeps = depStates.filter(ds => ds && ds.status === 'running').length;
@@ -250,11 +273,22 @@ export default class TaskRunner {
         if (failedDeps > 0) continue;
 
         const fractionDone = deps.length > 0 ? doneDeps / deps.length : 1;
-        const allRemainingRunning = (doneDeps + runningDeps) === deps.length;
+        const allRemainingActive = (doneDeps + runningDeps) === deps.length;
 
-        // Speculate if: enough deps are done AND all remaining are actively running
-        // AND no remaining deps have true data dependencies
-        if (fractionDone >= config.speculativeThreshold && allRemainingRunning) {
+        // Check wave distance — allow deeper speculation for tasks closer to completion
+        const taskWave = this._waveMap.get(taskId) ?? 0;
+        const activeWave = this._currentWave;
+        const waveDistance = taskWave - activeWave;
+        const maxDepth = config.speculativeDepth ?? 2;
+
+        // Allow speculation if:
+        // 1. Within speculative depth range
+        // 2. All remaining deps are actively running (not stalled/pending)
+        // 3. Enough deps are done based on threshold (lower threshold for closer waves)
+        // Adaptive threshold: closer waves get more aggressive speculation
+        const adaptiveThreshold = config.speculativeThreshold * (waveDistance <= 1 ? 1.0 : 1.5);
+
+        if (waveDistance <= maxDepth && fractionDone >= adaptiveThreshold && allRemainingActive) {
           const incompleteDeps = deps.filter(depId => {
             const ds = this.taskStates.get(depId);
             return ds && ds.status !== 'success';
@@ -340,6 +374,7 @@ export default class TaskRunner {
 
   /**
    * Broadcast execution wave progress to the client.
+   * Also updates _currentWave for cross-wave speculation decisions.
    */
   _broadcastWaveProgress() {
     // Determine current active wave (lowest wave number with running/pending tasks)
@@ -362,13 +397,26 @@ export default class TaskRunner {
       else waveStats[wave].pending++;
     }
 
-    // Find the active wave
+    // Find the active wave (lowest with running/pending)
     for (let w = 0; w < this._totalWaves; w++) {
       const ws = waveStats[w];
       if (ws && (ws.running > 0 || ws.pending > 0)) {
         currentWave = w;
         break;
       }
+    }
+
+    // Update current wave for speculation decisions
+    if (currentWave >= 0) {
+      this._currentWave = currentWave;
+    }
+
+    // Count total active across all waves for high-concurrency display
+    let totalRunning = 0;
+    let totalSpeculative = 0;
+    for (const ws of Object.values(waveStats)) {
+      totalRunning += ws.running || 0;
+      totalSpeculative += ws.speculative || 0;
     }
 
     if (currentWave >= 0 && currentWave !== this._lastBroadcastedWave) {
@@ -380,8 +428,10 @@ export default class TaskRunner {
         waveStats: ws,
         allWaves: waveStats,
         peakConcurrency: this._peakConcurrency,
+        totalRunning,
+        totalSpeculative,
       }));
-      console.log(`[taskRunner] 🌊 Wave ${currentWave + 1}/${this._totalWaves}: ${ws.running || 0} running, ${ws.completed || 0} done, ${ws.pending || 0} pending${ws.speculative ? `, ${ws.speculative} speculative` : ''}`);
+      console.log(`[taskRunner] 🌊 Wave ${currentWave + 1}/${this._totalWaves}: ${totalRunning} running (${totalSpeculative} speculative), peak ${this._peakConcurrency}×`);
     }
   }
 

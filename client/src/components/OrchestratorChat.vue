@@ -144,9 +144,9 @@ on('session:error', (payload) => {
 // ── Swarm events ──
 
 on('swarm:wave', (payload) => {
-  const { currentWave, totalWaves, waveStats } = payload;
-  const running = waveStats?.running || 0;
-  const spec = waveStats?.speculative || 0;
+  const { currentWave, totalWaves, totalRunning, totalSpeculative } = payload;
+  const running = totalRunning || payload.waveStats?.running || 0;
+  const spec = totalSpeculative || payload.waveStats?.speculative || 0;
   const parts = [`🌊 Wave ${currentWave + 1}/${totalWaves}`];
   if (running > 0) parts.push(`${running} agents swarming`);
   if (spec > 0) parts.push(`${spec} speculative`);

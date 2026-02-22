@@ -88,15 +88,17 @@ const config = {
 
   // ── Swarm Scaling — Dynamic Concurrency ──
   // Base concurrency floor (always allow at least this many concurrent agents)
-  maxConcurrency: envInt('HAIVEMIND_MAX_CONCURRENCY', 8),
+  maxConcurrency: envInt('HAIVEMIND_MAX_CONCURRENCY', 10),
   // Dynamic ceiling — when more tasks are eligible, scale up to this
-  swarmMaxConcurrency: envInt('HAIVEMIND_SWARM_MAX_CONCURRENCY', 20),
+  swarmMaxConcurrency: envInt('HAIVEMIND_SWARM_MAX_CONCURRENCY', 30),
 
   // ── Speculative Execution ──
   // Start tasks before ALL deps finish if remaining deps are "soft" (non-data)
   speculativeExecution: envBool('HAIVEMIND_SPECULATIVE_EXEC', true),
-  // Min fraction of deps that must be done before speculating (0.5 = need ≥50% deps done)
-  speculativeThreshold: parseFloat(env('HAIVEMIND_SPECULATIVE_THRESHOLD', '0.5')),
+  // Min fraction of deps that must be done before speculating (0.25 = need ≥25% deps done)
+  speculativeThreshold: parseFloat(env('HAIVEMIND_SPECULATIVE_THRESHOLD', '0.25')),
+  // How many waves ahead to speculatively look (1 = only next wave, 2 = two waves ahead)
+  speculativeDepth: envInt('HAIVEMIND_SPECULATIVE_DEPTH', 2),
 
   // ── Task Splitting ──
   // When a task fails repeatedly, split it into smaller sub-tasks instead of escalating
