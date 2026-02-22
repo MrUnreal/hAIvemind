@@ -190,6 +190,12 @@
             📡 Live
           </button>
           <button
+            :class="['tab-btn', { active: sideTab === 'suggestions' }]"
+            @click="sideTab = 'suggestions'; sidePanelCollapsed = false"
+          >
+            💡 Hints
+          </button>
+          <button
             :class="['tab-btn', { active: sideTab === 'memory' }]"
             @click="sideTab = 'memory'; sidePanelCollapsed = false"
           >
@@ -248,6 +254,13 @@
             :visible="sideTab === 'live' && !sidePanelCollapsed"
             @close="sidePanelCollapsed = true"
           />
+          <SuggestionsPanel
+            v-if="sideTab === 'suggestions'"
+            :visible="sideTab === 'suggestions' && !sidePanelCollapsed"
+            :projectSlug="activeProject?.slug"
+            @close="sidePanelCollapsed = true"
+            @usePrompt="handleSuggestionUse"
+          />
           <MemoryPanel
             v-if="sideTab === 'memory'"
             :visible="sideTab === 'memory' && !sidePanelCollapsed"
@@ -291,6 +304,7 @@ import AuditLogPanel from './components/AuditLogPanel.vue';
 import AuthPanel from './components/AuthPanel.vue';
 import AnalyticsPanel from './components/AnalyticsPanel.vue';
 import MemoryPanel from './components/MemoryPanel.vue';
+import SuggestionsPanel from './components/SuggestionsPanel.vue';
 import { useWebSocket } from './composables/useWebSocket.js';
 import { setCommands, openPalette, togglePalette } from './composables/useCommandPalette.js';
 import { toast } from './composables/useToast.js';
@@ -686,6 +700,18 @@ function onSubmit(payload) {
 
 function handleTemplateLaunch({ prompt }) {
   onSubmit(prompt);
+}
+
+function handleSuggestionUse(text) {
+  showPrompt.value = true;
+  // Small delay to let PromptInput mount, then pre-fill
+  setTimeout(() => {
+    const textarea = document.querySelector('.prompt-input textarea');
+    if (textarea) {
+      textarea.value = text;
+      textarea.dispatchEvent(new Event('input', { bubbles: true }));
+    }
+  }, 100);
 }
 
 function retrySession() {

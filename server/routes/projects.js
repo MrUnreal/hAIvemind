@@ -36,6 +36,10 @@ import {
   removeMemory, touchMemory, recallMemories, getTags,
   clearMemories, getMemoryStats,
 } from '../services/agentMemory.js';
+import {
+  getSuggestions, getCategories, getPromptHistory,
+  recordPrompt, clearHistory,
+} from '../services/promptSuggestions.js';
 
 const router = Router();
 
@@ -781,6 +785,58 @@ router.delete('/projects/:slug/memory', (req, res) => {
     return res.status(404).json({ error: 'Project not found' });
   }
   clearMemories(req.params.slug);
+  res.json({ ok: true });
+});
+
+// ═════════════════════════════════════════════════════════════════
+//  Smart Prompt Suggestions (Phase 10.2)
+// ═════════════════════════════════════════════════════════════════
+
+/** Get smart suggestions */
+router.get('/projects/:slug/suggestions', (req, res) => {
+  if (!refs.workspace.getProject(req.params.slug)) {
+    return res.status(404).json({ error: 'Project not found' });
+  }
+  const { query, category, limit } = req.query;
+  res.json(getSuggestions(req.params.slug, {
+    query, category,
+    limit: limit ? parseInt(limit) : undefined,
+  }));
+});
+
+/** Get suggestion categories */
+router.get('/projects/:slug/suggestions/categories', (req, res) => {
+  if (!refs.workspace.getProject(req.params.slug)) {
+    return res.status(404).json({ error: 'Project not found' });
+  }
+  res.json(getCategories());
+});
+
+/** Get prompt history */
+router.get('/projects/:slug/suggestions/history', (req, res) => {
+  if (!refs.workspace.getProject(req.params.slug)) {
+    return res.status(404).json({ error: 'Project not found' });
+  }
+  const limit = req.query.limit ? parseInt(req.query.limit) : undefined;
+  res.json(getPromptHistory(req.params.slug, limit));
+});
+
+/** Record a prompt */
+router.post('/projects/:slug/suggestions/history', (req, res) => {
+  if (!refs.workspace.getProject(req.params.slug)) {
+    return res.status(404).json({ error: 'Project not found' });
+  }
+  const { text, sessionId } = req.body;
+  if (!text) return res.status(400).json({ error: 'text required' });
+  res.status(201).json(recordPrompt(req.params.slug, text, sessionId));
+});
+
+/** Clear prompt history */
+router.delete('/projects/:slug/suggestions/history', (req, res) => {
+  if (!refs.workspace.getProject(req.params.slug)) {
+    return res.status(404).json({ error: 'Project not found' });
+  }
+  clearHistory(req.params.slug);
   res.json({ ok: true });
 });
 
