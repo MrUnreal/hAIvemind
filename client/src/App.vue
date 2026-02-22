@@ -172,6 +172,12 @@
             🔑 Keys
           </button>
           <button
+            :class="['tab-btn', { active: sideTab === 'audit' }]"
+            @click="sideTab = 'audit'; sidePanelCollapsed = false"
+          >
+            📜 Audit
+          </button>
+          <button
             :class="['tab-btn', { active: sideTab === 'live' }]"
             @click="sideTab = 'live'; sidePanelCollapsed = false"
           >
@@ -204,6 +210,12 @@
           <ApiKeyPanel
             v-if="sideTab === 'keys'"
             :visible="sideTab === 'keys' && !sidePanelCollapsed"
+            :projectSlug="activeProject?.slug"
+            @close="sidePanelCollapsed = true"
+          />
+          <AuditLogPanel
+            v-if="sideTab === 'audit'"
+            :visible="sideTab === 'audit' && !sidePanelCollapsed"
             :projectSlug="activeProject?.slug"
             @close="sidePanelCollapsed = true"
           />
@@ -240,6 +252,7 @@ import KeyboardShortcutsHelp from './components/KeyboardShortcutsHelp.vue';
 import NotificationCenter from './components/NotificationCenter.vue';
 import ApiKeyPanel from './components/ApiKeyPanel.vue';
 import TemplatesPanel from './components/TemplatesPanel.vue';
+import AuditLogPanel from './components/AuditLogPanel.vue';
 import { useWebSocket } from './composables/useWebSocket.js';
 import { setCommands, openPalette, togglePalette } from './composables/useCommandPalette.js';
 import { toast } from './composables/useToast.js';

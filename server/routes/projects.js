@@ -24,6 +24,9 @@ import {
   getTemplates, getTemplate, addTemplate, updateTemplate,
   removeTemplate, useTemplate, duplicateTemplate,
 } from '../services/sessionTemplates.js';
+import {
+  getAuditLog, appendAuditEntry, getActors, clearAuditLog,
+} from '../services/auditLog.js';
 
 const router = Router();
 
@@ -565,6 +568,50 @@ router.post('/projects/:slug/templates/:templateId/duplicate', (req, res) => {
   const tmpl = duplicateTemplate(req.params.slug, req.params.templateId);
   if (!tmpl) return res.status(404).json({ error: 'Template not found' });
   res.status(201).json(tmpl);
+});
+
+// ────── Audit Log ──────
+
+/** Get audit log with optional filters */
+router.get('/projects/:slug/audit-log', (req, res) => {
+  if (!refs.workspace.getProject(req.params.slug)) {
+    return res.status(404).json({ error: 'Project not found' });
+  }
+  const { action, actor, limit, offset } = req.query;
+  const result = getAuditLog(req.params.slug, {
+    action, actor,
+    limit: limit ? parseInt(limit, 10) : undefined,
+    offset: offset ? parseInt(offset, 10) : undefined,
+  });
+  res.json(result);
+});
+
+/** Append audit entry */
+router.post('/projects/:slug/audit-log', (req, res) => {
+  if (!refs.workspace.getProject(req.params.slug)) {
+    return res.status(404).json({ error: 'Project not found' });
+  }
+  const { action, actor, details } = req.body;
+  if (!action) return res.status(400).json({ error: 'action is required' });
+  const entry = appendAuditEntry(req.params.slug, { action, actor, details });
+  res.status(201).json(entry);
+});
+
+/** Get unique actors */
+router.get('/projects/:slug/audit-log/actors', (req, res) => {
+  if (!refs.workspace.getProject(req.params.slug)) {
+    return res.status(404).json({ error: 'Project not found' });
+  }
+  res.json(getActors(req.params.slug));
+});
+
+/** Clear audit log */
+router.delete('/projects/:slug/audit-log', (req, res) => {
+  if (!refs.workspace.getProject(req.params.slug)) {
+    return res.status(404).json({ error: 'Project not found' });
+  }
+  const count = clearAuditLog(req.params.slug);
+  res.json({ cleared: count });
 });
 
 export default router;

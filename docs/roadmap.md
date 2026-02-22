@@ -259,6 +259,6 @@ Currently single-user, no auth. Fine for local dev, but blocks team usage or hos
 | **9.3 — Live Session Dashboard** | ✅ | Real-time overview of all running sessions across projects, resource usage, agent activity heatmap |
 | **9.4 — API Key Management** | ✅ | Secure storage for API keys (Ollama, OpenAI, etc.), per-backend configuration, key rotation |
 | **9.5 — Session Templates** | ✅ | Save reusable session prompts with preset configs, project-scoped and global templates, quick-launch |
-| **9.6 — Audit Log** | ❌ | Immutable log of all state changes: session starts/stops, config changes, webhook deliveries, schedule executions |
+| **9.6 — Audit Log** | ✅ | Immutable log of all state changes: session starts/stops, config changes, webhook deliveries, schedule executions |
 | **9.7 — E2E Test Overhaul** | ❌ | Convert client integration tests from source reading to actual browser-rendered component tests with Playwright |
 | **9.8 — Multi-User Auth** | ❌ | Optional auth middleware (Bearer/OAuth), user identity on sessions, project-level access control |
