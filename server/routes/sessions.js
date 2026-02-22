@@ -372,5 +372,107 @@ router.post('/interrupted-sessions/:id/resume', async (req, res) => {
   }
 });
 
+// ═══════════════════════════════════════════════════════════
+//  Phase 8.0: Session Comparison
+// ═══════════════════════════════════════════════════════════
+
+/** Compare two sessions side-by-side */
+router.get('/sessions/compare', (req, res) => {
+  const { a, b, projectA, projectB } = req.query;
+  if (!a || !b) return res.status(400).json({ error: 'Both session IDs (a, b) are required' });
+
+  const slugA = projectA || req.query.project;
+  const slugB = projectB || req.query.project;
+  if (!slugA || !slugB) return res.status(400).json({ error: 'Project slug(s) required (project or projectA+projectB)' });
+
+  const sessionA = refs.workspace.getSession(slugA, a);
+  const sessionB = refs.workspace.getSession(slugB, b);
+  if (!sessionA) return res.status(404).json({ error: `Session ${a} not found in ${slugA}` });
+  if (!sessionB) return res.status(404).json({ error: `Session ${b} not found in ${slugB}` });
+
+  res.json(compareSessions(sessionA, sessionB, slugA, slugB));
+});
+
+/**
+ * Compare two sessions and produce a structured diff.
+ * @param {object} a
+ * @param {object} b
+ * @param {string} slugA
+ * @param {string} slugB
+ * @returns {object}
+ */
+export function compareSessions(a, b, slugA, slugB) {
+  const tasksA = a.tasks || [];
+  const tasksB = b.tasks || [];
+  const agentsA = Object.entries(a.agents || {});
+  const agentsB = Object.entries(b.agents || {});
+
+  // Task overlap analysis
+  const labelsA = new Set(tasksA.map(t => t.label));
+  const labelsB = new Set(tasksB.map(t => t.label));
+  const sharedLabels = [...labelsA].filter(l => labelsB.has(l));
+  const onlyA = [...labelsA].filter(l => !labelsB.has(l));
+  const onlyB = [...labelsB].filter(l => !labelsA.has(l));
+
+  // Cost comparison
+  const costA = a.costSummary || {};
+  const costB = b.costSummary || {};
+  const premiumA = costA.totalPremiumRequests || 0;
+  const premiumB = costB.totalPremiumRequests || 0;
+
+  // Model usage comparison
+  const modelsA = {};
+  for (const [, ag] of agentsA) {
+    const tier = ag.modelTier || 'unknown';
+    modelsA[tier] = (modelsA[tier] || 0) + 1;
+  }
+  const modelsB = {};
+  for (const [, ag] of agentsB) {
+    const tier = ag.modelTier || 'unknown';
+    modelsB[tier] = (modelsB[tier] || 0) + 1;
+  }
+
+  // Duration comparison
+  const durationA = a.createdAt && a.completedAt ? a.completedAt - a.createdAt : null;
+  const durationB = b.createdAt && b.completedAt ? b.completedAt - b.createdAt : null;
+
+  return {
+    sessions: {
+      a: { id: a.id, project: slugA, prompt: a.prompt, status: a.status, createdAt: a.createdAt },
+      b: { id: b.id, project: slugB, prompt: b.prompt, status: b.status, createdAt: b.createdAt },
+    },
+    tasks: {
+      countA: tasksA.length,
+      countB: tasksB.length,
+      shared: sharedLabels,
+      onlyA,
+      onlyB,
+      overlapPct: labelsA.size + labelsB.size > 0
+        ? Math.round((sharedLabels.length * 2) / (labelsA.size + labelsB.size) * 100)
+        : 0,
+    },
+    cost: {
+      premiumA,
+      premiumB,
+      delta: premiumB - premiumA,
+      byTierA: costA.byTier || {},
+      byTierB: costB.byTier || {},
+    },
+    models: {
+      a: modelsA,
+      b: modelsB,
+    },
+    duration: {
+      a: durationA,
+      b: durationB,
+      deltaMs: durationA != null && durationB != null ? durationB - durationA : null,
+    },
+    agents: {
+      countA: agentsA.length,
+      countB: agentsB.length,
+    },
+  };
+}
+
 export { sessionToMarkdown };
 export default router;

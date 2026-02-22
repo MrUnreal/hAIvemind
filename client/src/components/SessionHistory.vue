@@ -19,6 +19,13 @@
       @select="onSearchSelect"
     />
 
+    <!-- Phase 8.0: Compare Mode Banner -->
+    <div v-if="compareMode" class="compare-banner">
+      <span v-if="!compareA">Select first session to compare</span>
+      <span v-else-if="!compareB">Select second session (A: {{ truncate(compareA.prompt, 40) }})</span>
+      <button class="compare-cancel" @click="exitCompare">✕ Cancel</button>
+    </div>
+
     <div v-if="sessionsLoading" class="loading">Loading sessions...</div>
 
     <!-- Phase 6.4: Workspace Intelligence -->
@@ -111,6 +118,13 @@
           >
             📝 MD
           </button>
+          <button
+            class="compare-btn"
+            @click.stop="onCompareSelect(session)"
+            :title="compareMode ? 'Select for comparison' : 'Compare with another session'"
+          >
+            📊 Compare
+          </button>
         </div>
 
         <!-- Phase 6.4: Inline Diff Viewer -->
@@ -122,6 +136,16 @@
         />
       </div>
     </div>
+
+    <!-- Phase 8.0: Session Comparison -->
+    <SessionCompare
+      :visible="showCompare"
+      :sessionA="compareA"
+      :sessionB="compareB"
+      :projectA="activeProject?.slug"
+      :projectB="activeProject?.slug"
+      @close="exitCompare"
+    />
   </div>
 </template>
 
@@ -136,11 +160,16 @@ import { loadSession } from '../composables/useSession.js';
 import DiffViewer from './DiffViewer.vue';
 import WorkspaceOverview from './WorkspaceOverview.vue';
 import SessionSearch from './SessionSearch.vue';
+import SessionCompare from './SessionCompare.vue';
 
 defineEmits(['newSession']);
 
 const rollingBack = ref(null);
 const viewingDiff = ref(null);
+const compareMode = ref(false);
+const compareA = ref(null);
+const compareB = ref(null);
+const showCompare = ref(false);
 
 const sortedSessions = computed(() => {
   return [...sessions.value].sort((a, b) => (b.startedAt || 0) - (a.startedAt || 0));
@@ -242,6 +271,29 @@ async function onExport(sessionId, format) {
   } catch (err) {
     alert(`Export error: ${err.message}`);
   }
+}
+
+// Phase 8.0: Session comparison
+function onCompareSelect(session) {
+  if (!compareMode.value) {
+    compareMode.value = true;
+    compareA.value = session;
+    compareB.value = null;
+    showCompare.value = false;
+  } else if (!compareA.value) {
+    compareA.value = session;
+  } else if (!compareB.value) {
+    if (session.id === compareA.value.id) return; // Same session
+    compareB.value = session;
+    showCompare.value = true;
+  }
+}
+
+function exitCompare() {
+  compareMode.value = false;
+  compareA.value = null;
+  compareB.value = null;
+  showCompare.value = false;
 }
 </script>
 
@@ -452,5 +504,44 @@ async function onExport(sessionId, format) {
 }
 .export-btn:hover {
   background: rgba(110, 207, 110, 0.15);
+}
+
+.compare-btn {
+  font-size: 11px;
+  padding: 3px 10px;
+  border-radius: 6px;
+  border: 1px solid #ba68c8;
+  background: transparent;
+  color: #ba68c8;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.compare-btn:hover {
+  background: rgba(186, 104, 200, 0.15);
+}
+
+.compare-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: rgba(186, 104, 200, 0.1);
+  border: 1px solid #ba68c8;
+  border-radius: 6px;
+  padding: 8px 12px;
+  margin: 8px 0;
+  font-size: 13px;
+  color: #ce93d8;
+}
+.compare-cancel {
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 4px;
+  border: 1px solid #ba68c8;
+  background: transparent;
+  color: #ba68c8;
+  cursor: pointer;
+}
+.compare-cancel:hover {
+  background: rgba(186, 104, 200, 0.2);
 }
 </style>
