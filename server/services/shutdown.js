@@ -8,6 +8,7 @@ import { MSG, makeMsg } from '../../shared/protocol.js';
 import { sessions, activeContexts, refs } from '../state.js';
 import { broadcastGlobal } from '../ws/broadcast.js';
 import { releaseLock } from './sessions.js';
+import { cleanupWebhooks } from './webhooks.js';
 import log from '../logger.js';
 
 export async function gracefulShutdown() {
@@ -92,6 +93,9 @@ export async function gracefulShutdown() {
   if (refs.pluginManager) {
     await refs.pluginManager.emit('onShutdown').catch(() => {});
   }
+
+  // 4.6 Cleanup webhook retry timers
+  cleanupWebhooks();
 
   // 5. Close connections
   if (refs.wss) refs.wss.close();

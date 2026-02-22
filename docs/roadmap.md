@@ -225,4 +225,4 @@ Currently single-user, no auth. Fine for local dev, but blocks team usage or hos
 | **7.5 — Swarm Parallelism** | ✅ | Dynamic concurrency (8→20 scaling), speculative execution for soft deps, wave detection & progress bar, parallel analysis+decompose pipeline, task splitting at runtime, swarm stats in completion |
 | **7.6 — Cost Analytics Chart** | ✅ | Historical cost breakdown per session with tier-colored stacked bars, hover details, totals summary |
 | **7.7 — Export Sessions** | ✅ | JSON + Markdown export with download, sessionToMarkdown() helper, task/agent/cost tables |
-| **7.8 — Webhook Notifications** | ❌ | POST session events to external URLs (Slack/Discord/custom) |
+| **7.8 — Webhook Notifications** | ✅ | Per-project webhook CRUD, fireWebhook on session:complete/failed, retry logic, graceful cleanup |

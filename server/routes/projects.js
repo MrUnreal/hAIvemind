@@ -173,4 +173,49 @@ router.get('/projects/:slug/analysis', async (req, res) => {
   }
 });
 
+// ═══════════════════════════════════════════════════════════
+//  Phase 7.8: Webhook Notifications
+// ═══════════════════════════════════════════════════════════
+
+import { getWebhooks, addWebhook, removeWebhook, toggleWebhook } from '../services/webhooks.js';
+
+/** List webhooks for a project */
+router.get('/projects/:slug/webhooks', (req, res) => {
+  const project = refs.workspace.getProject(req.params.slug);
+  if (!project) return res.status(404).json({ error: 'Project not found' });
+  res.json(getWebhooks(req.params.slug));
+});
+
+/** Add a webhook */
+router.post('/projects/:slug/webhooks', (req, res) => {
+  const project = refs.workspace.getProject(req.params.slug);
+  if (!project) return res.status(404).json({ error: 'Project not found' });
+  try {
+    const webhook = addWebhook(req.params.slug, req.body);
+    res.status(201).json(webhook);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+/** Delete a webhook */
+router.delete('/projects/:slug/webhooks/:id', (req, res) => {
+  const project = refs.workspace.getProject(req.params.slug);
+  if (!project) return res.status(404).json({ error: 'Project not found' });
+  const removed = removeWebhook(req.params.slug, req.params.id);
+  if (!removed) return res.status(404).json({ error: 'Webhook not found' });
+  res.json({ ok: true });
+});
+
+/** Toggle a webhook enabled/disabled */
+router.patch('/projects/:slug/webhooks/:id', (req, res) => {
+  const project = refs.workspace.getProject(req.params.slug);
+  if (!project) return res.status(404).json({ error: 'Project not found' });
+  const { enabled } = req.body;
+  if (typeof enabled !== 'boolean') return res.status(400).json({ error: 'enabled (boolean) required' });
+  const hook = toggleWebhook(req.params.slug, req.params.id, enabled);
+  if (!hook) return res.status(404).json({ error: 'Webhook not found' });
+  res.json(hook);
+});
+
 export default router;

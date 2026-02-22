@@ -13,6 +13,7 @@ import { createSnapshot } from '../snapshot.js';
 import { writeCheckpoint, deleteCheckpoint } from '../sessionCheckpoint.js';
 import { broadcast } from '../ws/broadcast.js';
 import { generateReflection, extractSkills } from './analysis.js';
+import { fireWebhook } from './webhooks.js';
 import { sessions, taskToSession, activeContexts, workDirLocks, refs } from '../state.js';
 import log from '../logger.js';
 
@@ -250,6 +251,15 @@ export async function startSession(userPrompt, projectSlug, predefinedPlan) {
       swarmStats,
     }));
 
+    // Phase 7.8: Fire webhook notifications
+    fireWebhook(projectSlug, 'session:complete', {
+      sessionId,
+      prompt: session.prompt,
+      status: 'completed',
+      costSummary: costSummaryData,
+      taskCount: plan.tasks.length,
+    }).catch(() => {});
+
     workspace.finalizeSession(projectSlug, sessionId, {
       status: 'completed',
       tasks: plan.tasks,
@@ -294,6 +304,14 @@ export async function startSession(userPrompt, projectSlug, predefinedPlan) {
       projectSlug,
       error: err.message,
     }));
+
+    // Phase 7.8: Fire webhook notifications for failure
+    fireWebhook(projectSlug, 'session:failed', {
+      sessionId,
+      prompt: session?.prompt,
+      status: 'failed',
+      error: err.message,
+    }).catch(() => {});
 
     workspace.finalizeSession(projectSlug, sessionId, { status: 'failed', timeline, snapshot });
     releaseLock(workDir, sessionId);

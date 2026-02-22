@@ -14,11 +14,11 @@
   <img src="https://img.shields.io/badge/Vue%203-Flow%20DAG-4FC08D?logo=vue.js" alt="Vue 3">
   <img src="https://img.shields.io/badge/Copilot%20CLI-Agent%20Backend-0078D4?logo=github" alt="Copilot CLI">
   <img src="https://img.shields.io/badge/Cost-Free_Tier_Default-brightgreen" alt="Free">
-  <img src="https://img.shields.io/badge/Tests-486_passing-blue" alt="486 Tests">
+  <img src="https://img.shields.io/badge/Tests-509_passing-blue" alt="509 Tests">
   <img src="https://img.shields.io/badge/Self--Evolving-🧬-blueviolet" alt="Self-Evolving">
 </p>
 
-> **Every line of this codebase was written by hAIvemind itself.** The platform decomposes its own feature requests, spawns agents to implement them, verifies the results, and merges passing changes. 11K+ lines, 486 tests, zero manual code.
+> **Every line of this codebase was written by hAIvemind itself.** The platform decomposes its own feature requests, spawns agents to implement them, verifies the results, and merges passing changes. 11K+ lines, 509 tests, zero manual code.
 
 ---
 
@@ -104,6 +104,7 @@ sequenceDiagram
 | **Toast Notifications** | Animated toast stack for session events (complete, error, warning) |
 | **Cost Analytics** | Per-session cost chart with tier-colored stacked bars, hover details |
 | **Session Export** | Download sessions as JSON or Markdown reports with task/agent/cost tables |
+| **Webhook Notifications** | POST session events to external URLs — Slack/Discord/custom integrations |
 
 ## Architecture
 
@@ -175,7 +176,7 @@ npm test                                        # 466 Playwright tests
 
 ## Status
 
-All 7 phases shipped. 23 test files. 486 tests. ~11K lines. 100% self-built.
+All 7 phases shipped. 24 test files. 509 tests. ~11K lines. 100% self-built.
 
 | Phase | What |
 |-------|------|
