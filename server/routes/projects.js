@@ -17,6 +17,9 @@ import {
   getNotifications, addNotification, markRead, markAllRead,
   deleteNotification, clearNotifications, getUnreadCount,
 } from '../services/notifications.js';
+import {
+  getApiKeys, addApiKey, removeApiKey, rotateApiKey, toggleApiKey,
+} from '../services/apiKeys.js';
 
 const router = Router();
 
@@ -430,6 +433,61 @@ router.delete('/projects/:slug/notifications', (req, res) => {
   }
   const count = clearNotifications(req.params.slug);
   res.json({ cleared: count });
+});
+
+// ────── API Keys ──────
+
+/** List API keys (masked) */
+router.get('/projects/:slug/api-keys', (req, res) => {
+  if (!refs.workspace.getProject(req.params.slug)) {
+    return res.status(404).json({ error: 'Project not found' });
+  }
+  res.json(getApiKeys(req.params.slug));
+});
+
+/** Add API key */
+router.post('/projects/:slug/api-keys', (req, res) => {
+  if (!refs.workspace.getProject(req.params.slug)) {
+    return res.status(404).json({ error: 'Project not found' });
+  }
+  const { backend, label, key } = req.body;
+  if (!backend || !key) {
+    return res.status(400).json({ error: 'backend and key are required' });
+  }
+  const entry = addApiKey(req.params.slug, { backend, label, key });
+  res.status(201).json(entry);
+});
+
+/** Remove API key */
+router.delete('/projects/:slug/api-keys/:keyId', (req, res) => {
+  if (!refs.workspace.getProject(req.params.slug)) {
+    return res.status(404).json({ error: 'Project not found' });
+  }
+  const ok = removeApiKey(req.params.slug, req.params.keyId);
+  if (!ok) return res.status(404).json({ error: 'API key not found' });
+  res.json({ success: true });
+});
+
+/** Rotate API key */
+router.post('/projects/:slug/api-keys/:keyId/rotate', (req, res) => {
+  if (!refs.workspace.getProject(req.params.slug)) {
+    return res.status(404).json({ error: 'Project not found' });
+  }
+  const { key } = req.body;
+  if (!key) return res.status(400).json({ error: 'key is required' });
+  const entry = rotateApiKey(req.params.slug, req.params.keyId, key);
+  if (!entry) return res.status(404).json({ error: 'API key not found' });
+  res.json(entry);
+});
+
+/** Toggle API key active/inactive */
+router.patch('/projects/:slug/api-keys/:keyId/toggle', (req, res) => {
+  if (!refs.workspace.getProject(req.params.slug)) {
+    return res.status(404).json({ error: 'Project not found' });
+  }
+  const ok = toggleApiKey(req.params.slug, req.params.keyId);
+  if (!ok) return res.status(404).json({ error: 'API key not found' });
+  res.json({ success: true });
 });
 
 export default router;

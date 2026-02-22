@@ -160,6 +160,12 @@
             🤖 Autopilot
           </button>
           <button
+            :class="['tab-btn', { active: sideTab === 'keys' }]"
+            @click="sideTab = 'keys'; sidePanelCollapsed = false"
+          >
+            🔑 Keys
+          </button>
+          <button
             :class="['tab-btn', { active: sideTab === 'live' }]"
             @click="sideTab = 'live'; sidePanelCollapsed = false"
           >
@@ -180,6 +186,12 @@
           <AutopilotPanel
             v-if="sideTab === 'autopilot' && activeProject?.slug"
             :projectSlug="activeProject.slug"
+            @close="sidePanelCollapsed = true"
+          />
+          <ApiKeyPanel
+            v-if="sideTab === 'keys'"
+            :visible="sideTab === 'keys' && !sidePanelCollapsed"
+            :projectSlug="activeProject?.slug"
             @close="sidePanelCollapsed = true"
           />
           <LiveDashboard
@@ -213,6 +225,7 @@ import CommandPalette from './components/CommandPalette.vue';
 import ToastContainer from './components/ToastContainer.vue';
 import KeyboardShortcutsHelp from './components/KeyboardShortcutsHelp.vue';
 import NotificationCenter from './components/NotificationCenter.vue';
+import ApiKeyPanel from './components/ApiKeyPanel.vue';
 import { useWebSocket } from './composables/useWebSocket.js';
 import { setCommands, openPalette, togglePalette } from './composables/useCommandPalette.js';
 import { toast } from './composables/useToast.js';
