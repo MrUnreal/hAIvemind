@@ -160,6 +160,141 @@ router.post('/projects/:slug/sessions', async (req, res) => {
 });
 
 // ═══════════════════════════════════════════════════════════
+//  Phase 7.7: Session Export
+// ═══════════════════════════════════════════════════════════
+
+/** Export a session as JSON or Markdown */
+router.get('/projects/:slug/sessions/:sessionId/export', (req, res) => {
+  const session = refs.workspace.getSession(req.params.slug, req.params.sessionId);
+  if (!session) return res.status(404).json({ error: 'Session not found' });
+
+  const format = (req.query.format || 'json').toLowerCase();
+
+  if (format === 'markdown' || format === 'md') {
+    const md = sessionToMarkdown(session, req.params.slug);
+    res.setHeader('Content-Type', 'text/markdown; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="session-${session.id}.md"`);
+    return res.send(md);
+  }
+
+  // Default: JSON export
+  const exportData = {
+    exported: new Date().toISOString(),
+    project: req.params.slug,
+    session: {
+      id: session.id,
+      prompt: session.prompt,
+      status: session.status,
+      createdAt: session.createdAt,
+      completedAt: session.completedAt,
+      tasks: (session.tasks || []).map(t => ({
+        id: t.id,
+        label: t.label,
+        status: t.status,
+        dependencies: t.dependencies,
+      })),
+      agents: Object.entries(session.agents || {}).map(([id, a]) => ({
+        id,
+        taskId: a.taskId,
+        model: a.model,
+        modelTier: a.modelTier,
+        status: a.status,
+        retries: a.retries,
+      })),
+      costSummary: session.costSummary || null,
+      edges: session.edges || [],
+    },
+  };
+
+  res.setHeader('Content-Type', 'application/json; charset=utf-8');
+  res.setHeader('Content-Disposition', `attachment; filename="session-${session.id}.json"`);
+  res.json(exportData);
+});
+
+/**
+ * Convert a session to a Markdown report.
+ * @param {object} session
+ * @param {string} projectSlug
+ * @returns {string}
+ */
+function sessionToMarkdown(session, projectSlug) {
+  const lines = [];
+  const status = session.status === 'completed' ? '✅ Completed' :
+                 session.status === 'failed' ? '❌ Failed' :
+                 session.status || 'unknown';
+  const created = session.createdAt ? new Date(session.createdAt).toISOString() : 'N/A';
+  const completed = session.completedAt ? new Date(session.completedAt).toISOString() : 'N/A';
+  const duration = session.createdAt && session.completedAt
+    ? Math.round((session.completedAt - session.createdAt) / 1000)
+    : null;
+
+  lines.push(`# Session Report`);
+  lines.push('');
+  lines.push(`**Project:** ${projectSlug}`);
+  lines.push(`**Session ID:** ${session.id}`);
+  lines.push(`**Status:** ${status}`);
+  lines.push(`**Created:** ${created}`);
+  lines.push(`**Completed:** ${completed}`);
+  if (duration !== null) lines.push(`**Duration:** ${duration}s`);
+  lines.push('');
+  lines.push(`## Prompt`);
+  lines.push('');
+  lines.push(`> ${(session.prompt || '').replace(/\n/g, '\n> ')}`);
+  lines.push('');
+
+  // Tasks
+  const tasks = session.tasks || [];
+  if (tasks.length > 0) {
+    lines.push(`## Tasks (${tasks.length})`);
+    lines.push('');
+    lines.push('| # | Task | Status | Dependencies |');
+    lines.push('|---|------|--------|--------------|');
+    tasks.forEach((t, i) => {
+      const deps = Array.isArray(t.dependencies) && t.dependencies.length > 0
+        ? t.dependencies.join(', ')
+        : '—';
+      const statusIcon = t.status === 'success' ? '✅' : t.status === 'failed' ? '❌' : '⬜';
+      lines.push(`| ${i + 1} | ${t.label || t.id} | ${statusIcon} ${t.status || 'pending'} | ${deps} |`);
+    });
+    lines.push('');
+  }
+
+  // Agents
+  const agents = session.agents || {};
+  const agentEntries = Object.entries(agents);
+  if (agentEntries.length > 0) {
+    lines.push(`## Agents (${agentEntries.length})`);
+    lines.push('');
+    lines.push('| Agent | Task | Model | Tier | Status | Retries |');
+    lines.push('|-------|------|-------|------|--------|---------|');
+    for (const [id, a] of agentEntries) {
+      const taskLabel = tasks.find(t => t.id === a.taskId)?.label || a.taskId || '—';
+      lines.push(`| ${id.slice(0, 8)} | ${taskLabel} | ${a.model || '—'} | ${a.modelTier || '—'} | ${a.status || '—'} | ${a.retries || 0} |`);
+    }
+    lines.push('');
+  }
+
+  // Cost
+  const cost = session.costSummary;
+  if (cost) {
+    lines.push(`## Cost Summary`);
+    lines.push('');
+    lines.push(`- **Total Premium Requests:** ${cost.totalPremiumRequests || 0}`);
+    if (cost.byTier) {
+      for (const [tier, data] of Object.entries(cost.byTier)) {
+        lines.push(`- **${tier}:** ${data.count || 0} requests`);
+      }
+    }
+    lines.push('');
+  }
+
+  lines.push('---');
+  lines.push(`*Exported from hAIvemind on ${new Date().toISOString()}*`);
+
+  return lines.join('\n');
+}
+
+// ═══════════════════════════════════════════════════════════
 //  Session Checkpoints (Phase 6.7)
 // ═══════════════════════════════════════════════════════════
 
@@ -237,4 +372,5 @@ router.post('/interrupted-sessions/:id/resume', async (req, res) => {
   }
 });
 
+export { sessionToMarkdown };
 export default router;

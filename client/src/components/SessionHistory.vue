@@ -82,7 +82,7 @@
           </span>
         </div>
 
-        <!-- Phase 5.2: Rollback button + Phase 6.4: View Diff -->
+        <!-- Phase 5.2: Rollback button + Phase 6.4: View Diff + Phase 7.7: Export -->
         <div class="session-actions" v-if="session.status === 'completed' || session.status === 'failed'">
           <button
             class="diff-btn"
@@ -96,6 +96,20 @@
             :disabled="rollingBack === session.id"
           >
             {{ rollingBack === session.id ? '↩ Rolling back...' : '↩ Rollback' }}
+          </button>
+          <button
+            class="export-btn"
+            @click.stop="onExport(session.id, 'json')"
+            title="Export as JSON"
+          >
+            📥 JSON
+          </button>
+          <button
+            class="export-btn"
+            @click.stop="onExport(session.id, 'markdown')"
+            title="Export as Markdown"
+          >
+            📝 MD
           </button>
         </div>
 
@@ -202,6 +216,31 @@ async function onRollback(sessionId) {
     alert(`Rollback error: ${err.message}`);
   } finally {
     rollingBack.value = null;
+  }
+}
+
+// Phase 7.7: Export session as JSON or Markdown
+async function onExport(sessionId, format) {
+  if (!activeProject.value) return;
+  const url = `/api/projects/${activeProject.value.slug}/sessions/${sessionId}/export?format=${format}`;
+  try {
+    const res = await fetch(url);
+    if (!res.ok) {
+      alert('Export failed');
+      return;
+    }
+    const blob = await res.blob();
+    const ext = format === 'markdown' || format === 'md' ? 'md' : 'json';
+    const filename = `session-${sessionId}.${ext}`;
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(a.href);
+  } catch (err) {
+    alert(`Export error: ${err.message}`);
   }
 }
 </script>
@@ -399,5 +438,19 @@ async function onRollback(sessionId) {
 }
 .diff-btn:hover {
   background: rgba(96, 165, 250, 0.15);
+}
+
+.export-btn {
+  font-size: 11px;
+  padding: 3px 10px;
+  border-radius: 6px;
+  border: 1px solid #6ecf6e;
+  background: transparent;
+  color: #6ecf6e;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.export-btn:hover {
+  background: rgba(110, 207, 110, 0.15);
 }
 </style>
