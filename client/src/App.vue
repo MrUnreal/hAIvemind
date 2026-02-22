@@ -160,6 +160,12 @@
             🤖 Autopilot
           </button>
           <button
+            :class="['tab-btn', { active: sideTab === 'live' }]"
+            @click="sideTab = 'live'; sidePanelCollapsed = false"
+          >
+            📡 Live
+          </button>
+          <button
             class="tab-collapse"
             @click="sidePanelCollapsed = !sidePanelCollapsed"
           >
@@ -174,6 +180,11 @@
           <AutopilotPanel
             v-if="sideTab === 'autopilot' && activeProject?.slug"
             :projectSlug="activeProject.slug"
+            @close="sidePanelCollapsed = true"
+          />
+          <LiveDashboard
+            v-if="sideTab === 'live'"
+            :visible="sideTab === 'live' && !sidePanelCollapsed"
             @close="sidePanelCollapsed = true"
           />
         </div>
@@ -196,6 +207,7 @@ import SessionHistory from './components/SessionHistory.vue';
 import OrchestratorChat from './components/OrchestratorChat.vue';
 import SettingsPanel from './components/SettingsPanel.vue';
 import MetricsDashboard from './components/MetricsDashboard.vue';
+import LiveDashboard from './components/LiveDashboard.vue';
 import AutopilotPanel from './components/AutopilotPanel.vue';
 import CommandPalette from './components/CommandPalette.vue';
 import ToastContainer from './components/ToastContainer.vue';
