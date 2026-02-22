@@ -14,6 +14,9 @@
         <button class="scheduler-toggle-btn" @click="showScheduler = !showScheduler" title="Session scheduler">
           📅
         </button>
+        <button class="benchmark-toggle-btn" @click="showBenchmarks = !showBenchmarks" title="Performance benchmarks">
+          📊
+        </button>
         <button v-if="sessions.length > 0" class="bulk-toggle-btn" @click="toggleBulkMode">
           {{ bulkMode ? '✕ Cancel' : '☑ Select' }}
         </button>
@@ -35,6 +38,13 @@
       :visible="showScheduler"
       :projectSlug="activeProject?.slug || ''"
       @close="showScheduler = false"
+    />
+
+    <!-- Phase 8.8: Benchmark Panel -->
+    <BenchmarkPanel
+      :visible="showBenchmarks"
+      :projectSlug="activeProject?.slug || ''"
+      @close="showBenchmarks = false"
     />
 
     <!-- Phase 7.3: Session Search -->
@@ -263,12 +273,14 @@ import SessionCompare from './SessionCompare.vue';
 import DependencyGraph from './DependencyGraph.vue';
 import WebhookPanel from './WebhookPanel.vue';
 import SchedulerPanel from './SchedulerPanel.vue';
+import BenchmarkPanel from './BenchmarkPanel.vue';
 
 defineEmits(['newSession']);
 
 const showDepGraph = ref(null);
 const showWebhooks = ref(false);
 const showScheduler = ref(false);
+const showBenchmarks = ref(false);
 
 const rollingBack = ref(null);
 const viewingDiff = ref(null);
@@ -1005,5 +1017,18 @@ async function bulkExport(format) {
 .scheduler-toggle-btn:hover {
   border-color: #4c8dff;
   background: rgba(76, 141, 255, 0.1);
+}
+.benchmark-toggle-btn {
+  background: none;
+  border: 1px solid #444;
+  border-radius: 6px;
+  padding: 4px 8px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.benchmark-toggle-btn:hover {
+  border-color: #51cf66;
+  background: rgba(81, 207, 102, 0.1);
 }
 </style>

@@ -243,4 +243,4 @@ Currently single-user, no auth. Fine for local dev, but blocks team usage or hos
 | **8.5 — Session Tags & Filtering** | ✅ | User-defined tags on sessions, filter by tag/status/date range, saved filters |
 | **8.6 — Webhook UI Panel** | ✅ | WebhookPanel.vue: add/remove/test webhooks, delivery stats, event picker, toggle enable/disable |
 | **8.7 — Session Scheduling** | ✅ | Cron-like scheduling, priority queue (high/normal/low), one-shot & recurring, scheduler service + REST API + SchedulerPanel.vue |
-| **8.8 — Performance Benchmarks** | ❌ | Track session duration/cost trends over time, regression alerts, model performance comparison |
+| **8.8 — Performance Benchmarks** | ✅ | Duration/cost trend charts, regression detection, model tier comparison, summary stats, BenchmarkPanel.vue |

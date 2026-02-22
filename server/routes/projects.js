@@ -12,6 +12,7 @@ import {
   getSchedules, addSchedule, updateSchedule, removeSchedule,
   getQueue, enqueue, dequeue,
 } from '../services/scheduler.js';
+import { computeBenchmarks } from '../services/benchmarks.js';
 
 const router = Router();
 
@@ -271,6 +272,19 @@ router.put('/projects/:slug/retry-policy', (req, res) => {
   const merged = { ...settings, ...policy };
   refs.workspace.updateProjectSettings(req.params.slug, merged);
   res.json(buildRetryPolicy(merged));
+});
+
+// ═══════════════════════════════════════════════════════════
+//  Benchmarks — Phase 8.8
+// ═══════════════════════════════════════════════════════════
+
+/** Get performance benchmarks for a project */
+router.get('/projects/:slug/benchmarks', (req, res) => {
+  if (!refs.workspace.getProject(req.params.slug)) {
+    return res.status(404).json({ error: 'Project not found' });
+  }
+  const sessions = refs.workspace.listSessions(req.params.slug);
+  res.json(computeBenchmarks(sessions));
 });
 
 // ═══════════════════════════════════════════════════════════
