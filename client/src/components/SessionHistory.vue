@@ -11,6 +11,9 @@
         <button class="webhook-toggle-btn" @click="showWebhooks = !showWebhooks" title="Manage webhooks">
           🔔
         </button>
+        <button class="scheduler-toggle-btn" @click="showScheduler = !showScheduler" title="Session scheduler">
+          📅
+        </button>
         <button v-if="sessions.length > 0" class="bulk-toggle-btn" @click="toggleBulkMode">
           {{ bulkMode ? '✕ Cancel' : '☑ Select' }}
         </button>
@@ -25,6 +28,13 @@
       :visible="showWebhooks"
       :projectSlug="activeProject?.slug || ''"
       @close="showWebhooks = false"
+    />
+
+    <!-- Phase 8.7: Scheduler Panel -->
+    <SchedulerPanel
+      :visible="showScheduler"
+      :projectSlug="activeProject?.slug || ''"
+      @close="showScheduler = false"
     />
 
     <!-- Phase 7.3: Session Search -->
@@ -252,11 +262,13 @@ import SessionSearch from './SessionSearch.vue';
 import SessionCompare from './SessionCompare.vue';
 import DependencyGraph from './DependencyGraph.vue';
 import WebhookPanel from './WebhookPanel.vue';
+import SchedulerPanel from './SchedulerPanel.vue';
 
 defineEmits(['newSession']);
 
 const showDepGraph = ref(null);
 const showWebhooks = ref(false);
+const showScheduler = ref(false);
 
 const rollingBack = ref(null);
 const viewingDiff = ref(null);
@@ -980,5 +992,18 @@ async function bulkExport(format) {
 .webhook-toggle-btn:hover {
   border-color: #ffb74d;
   background: rgba(255, 183, 77, 0.1);
+}
+.scheduler-toggle-btn {
+  background: none;
+  border: 1px solid #444;
+  border-radius: 6px;
+  padding: 4px 8px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.scheduler-toggle-btn:hover {
+  border-color: #4c8dff;
+  background: rgba(76, 141, 255, 0.1);
 }
 </style>

@@ -8,6 +8,10 @@ import { MSG, makeMsg } from '../../shared/protocol.js';
 import { refs } from '../state.js';
 import { broadcast } from '../ws/broadcast.js';
 import { validateRetrySettings, buildRetryPolicy } from '../services/retryPolicy.js';
+import {
+  getSchedules, addSchedule, updateSchedule, removeSchedule,
+  getQueue, enqueue, dequeue,
+} from '../services/scheduler.js';
 
 const router = Router();
 
@@ -267,6 +271,84 @@ router.put('/projects/:slug/retry-policy', (req, res) => {
   const merged = { ...settings, ...policy };
   refs.workspace.updateProjectSettings(req.params.slug, merged);
   res.json(buildRetryPolicy(merged));
+});
+
+// ═══════════════════════════════════════════════════════════
+//  Schedules — Phase 8.7
+// ═══════════════════════════════════════════════════════════
+
+/** List schedules for a project */
+router.get('/projects/:slug/schedules', (req, res) => {
+  if (!refs.workspace.getProject(req.params.slug)) {
+    return res.status(404).json({ error: 'Project not found' });
+  }
+  res.json(getSchedules(req.params.slug));
+});
+
+/** Create a schedule */
+router.post('/projects/:slug/schedules', (req, res) => {
+  if (!refs.workspace.getProject(req.params.slug)) {
+    return res.status(404).json({ error: 'Project not found' });
+  }
+  try {
+    const schedule = addSchedule(req.params.slug, req.body);
+    res.status(201).json(schedule);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+/** Update a schedule */
+router.patch('/projects/:slug/schedules/:scheduleId', (req, res) => {
+  if (!refs.workspace.getProject(req.params.slug)) {
+    return res.status(404).json({ error: 'Project not found' });
+  }
+  try {
+    const updated = updateSchedule(req.params.slug, req.params.scheduleId, req.body);
+    if (!updated) return res.status(404).json({ error: 'Schedule not found' });
+    res.json(updated);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+/** Delete a schedule */
+router.delete('/projects/:slug/schedules/:scheduleId', (req, res) => {
+  if (!refs.workspace.getProject(req.params.slug)) {
+    return res.status(404).json({ error: 'Project not found' });
+  }
+  const removed = removeSchedule(req.params.slug, req.params.scheduleId);
+  if (!removed) return res.status(404).json({ error: 'Schedule not found' });
+  res.json({ success: true });
+});
+
+// ═══════════════════════════════════════════════════════════
+//  Queue — Phase 8.7
+// ═══════════════════════════════════════════════════════════
+
+/** Get the current execution queue */
+router.get('/queue', (_req, res) => {
+  res.json(getQueue());
+});
+
+/** Enqueue a session manually */
+router.post('/projects/:slug/queue', (req, res) => {
+  if (!refs.workspace.getProject(req.params.slug)) {
+    return res.status(404).json({ error: 'Project not found' });
+  }
+  if (!req.body.prompt) return res.status(400).json({ error: 'Prompt is required' });
+  const entry = enqueue(req.params.slug, req.body.prompt, {
+    priority: req.body.priority,
+    scheduleId: req.body.scheduleId,
+  });
+  res.status(201).json(entry);
+});
+
+/** Remove a queue entry */
+router.delete('/queue/:entryId', (req, res) => {
+  const removed = dequeue(req.params.entryId);
+  if (!removed) return res.status(404).json({ error: 'Queue entry not found' });
+  res.json({ success: true });
 });
 
 export default router;
