@@ -226,6 +226,26 @@ export default class WorkspaceManager {
   }
 
   /**
+   * Delete a single session file.
+   * @param {string} slug
+   * @param {string} sessionId
+   * @returns {boolean} true if deleted, false if not found
+   */
+  deleteSession(slug, sessionId) {
+    const entry = this._registry.projects[slug];
+    if (!entry) return false;
+    const dir = this._getProjectDir(slug);
+    const sessionFile = join(dir, '.haivemind', 'sessions', `${sessionId}.json`);
+    if (!existsSync(sessionFile)) return false;
+    try {
+      rmSync(sessionFile, { force: true });
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  /**
    * List sessions for a project.
    * @param {string} slug
    * @returns {object[]}

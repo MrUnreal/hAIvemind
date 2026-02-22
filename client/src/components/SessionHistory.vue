@@ -7,9 +7,14 @@
           {{ sessions.length }} previous session{{ sessions.length !== 1 ? 's' : '' }}
         </p>
       </div>
-      <button class="new-session-btn" @click="$emit('newSession')">
-        + New Session
-      </button>
+      <div class="header-actions">
+        <button v-if="sessions.length > 0" class="bulk-toggle-btn" @click="toggleBulkMode">
+          {{ bulkMode ? '✕ Cancel' : '☑ Select' }}
+        </button>
+        <button class="new-session-btn" @click="$emit('newSession')">
+          + New Session
+        </button>
+      </div>
     </div>
 
     <!-- Phase 7.3: Session Search -->
@@ -24,6 +29,17 @@
       <span v-if="!compareA">Select first session to compare</span>
       <span v-else-if="!compareB">Select second session (A: {{ truncate(compareA.prompt, 40) }})</span>
       <button class="compare-cancel" @click="exitCompare">✕ Cancel</button>
+    </div>
+
+    <!-- Phase 8.1: Bulk Action Bar -->
+    <div v-if="bulkMode && bulkSelected.size > 0" class="bulk-bar">
+      <span>{{ bulkSelected.size }} selected</span>
+      <div class="bulk-actions">
+        <button class="bulk-action-btn bulk-export" @click="bulkExport('json')">📥 Export JSON</button>
+        <button class="bulk-action-btn bulk-export" @click="bulkExport('markdown')">📝 Export MD</button>
+        <button class="bulk-action-btn bulk-delete" @click="bulkDelete">🗑 Delete</button>
+        <button class="bulk-action-btn bulk-select-all" @click="bulkSelectAll">Select All</button>
+      </div>
     </div>
 
     <div v-if="sessionsLoading" class="loading">Loading sessions...</div>
@@ -46,8 +62,13 @@
         v-for="session in sortedSessions"
         :key="session.id"
         class="session-card"
-        @click="onLoadSession(session.id)"
+        :class="{ 'bulk-selected': bulkMode && bulkSelected.has(session.id) }"
+        @click="bulkMode ? toggleBulkSelect(session.id) : onLoadSession(session.id)"
       >
+        <!-- Phase 8.1: Bulk checkbox -->
+        <div v-if="bulkMode" class="bulk-checkbox" @click.stop="toggleBulkSelect(session.id)">
+          <span>{{ bulkSelected.has(session.id) ? '☑' : '☐' }}</span>
+        </div>
         <div class="session-top">
           <span :class="['status-pill', `pill-${session.status}`]">
             {{ statusLabel(session.status) }}
@@ -170,6 +191,8 @@ const compareMode = ref(false);
 const compareA = ref(null);
 const compareB = ref(null);
 const showCompare = ref(false);
+const bulkMode = ref(false);
+const bulkSelected = ref(new Set());
 
 const sortedSessions = computed(() => {
   return [...sessions.value].sort((a, b) => (b.startedAt || 0) - (a.startedAt || 0));
@@ -294,6 +317,77 @@ function exitCompare() {
   compareA.value = null;
   compareB.value = null;
   showCompare.value = false;
+}
+
+// Phase 8.1: Bulk session actions
+function toggleBulkMode() {
+  bulkMode.value = !bulkMode.value;
+  bulkSelected.value = new Set();
+}
+
+function toggleBulkSelect(sessionId) {
+  const next = new Set(bulkSelected.value);
+  if (next.has(sessionId)) next.delete(sessionId);
+  else next.add(sessionId);
+  bulkSelected.value = next;
+}
+
+function bulkSelectAll() {
+  const all = new Set(sortedSessions.value.map(s => s.id));
+  bulkSelected.value = all;
+}
+
+async function bulkDelete() {
+  if (!activeProject.value || bulkSelected.value.size === 0) return;
+  const count = bulkSelected.value.size;
+  if (!confirm(`Delete ${count} session${count > 1 ? 's' : ''}? This cannot be undone.`)) return;
+
+  try {
+    const res = await fetch(`/api/projects/${activeProject.value.slug}/sessions/bulk-delete`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ sessionIds: [...bulkSelected.value] }),
+    });
+    const data = await res.json();
+    if (res.ok) {
+      alert(`Deleted ${data.deleted.length} session(s).${data.notFound.length > 0 ? ` ${data.notFound.length} not found.` : ''}`);
+      // Refresh sessions list
+      const { fetchSessions } = await import('../composables/useProjects.js');
+      await fetchSessions(activeProject.value.slug);
+      bulkSelected.value = new Set();
+    } else {
+      alert(`Bulk delete failed: ${data.error}`);
+    }
+  } catch (err) {
+    alert(`Bulk delete error: ${err.message}`);
+  }
+}
+
+async function bulkExport(format) {
+  if (!activeProject.value || bulkSelected.value.size === 0) return;
+  try {
+    const res = await fetch(`/api/projects/${activeProject.value.slug}/sessions/bulk-export`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ sessionIds: [...bulkSelected.value], format }),
+    });
+    if (!res.ok) {
+      alert('Bulk export failed');
+      return;
+    }
+    const blob = await res.blob();
+    const ext = format === 'markdown' || format === 'md' ? 'md' : 'json';
+    const filename = `sessions-bulk-${Date.now()}.${ext}`;
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(a.href);
+  } catch (err) {
+    alert(`Bulk export error: ${err.message}`);
+  }
 }
 </script>
 
@@ -543,5 +637,88 @@ function exitCompare() {
 }
 .compare-cancel:hover {
   background: rgba(186, 104, 200, 0.2);
+}
+
+/* Phase 8.1: Bulk Mode */
+.header-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.bulk-toggle-btn {
+  font-size: 12px;
+  padding: 6px 14px;
+  border-radius: 6px;
+  border: 1px solid #888;
+  background: transparent;
+  color: #bbb;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.bulk-toggle-btn:hover {
+  border-color: #aaa;
+  color: #fff;
+}
+
+.bulk-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: rgba(255, 183, 77, 0.1);
+  border: 1px solid #ffb74d;
+  border-radius: 6px;
+  padding: 8px 12px;
+  margin: 8px 0;
+  font-size: 13px;
+  color: #ffcc80;
+}
+
+.bulk-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.bulk-action-btn {
+  font-size: 11px;
+  padding: 3px 10px;
+  border-radius: 6px;
+  border: 1px solid;
+  background: transparent;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.bulk-export {
+  border-color: #6ecf6e;
+  color: #6ecf6e;
+}
+.bulk-export:hover {
+  background: rgba(110, 207, 110, 0.15);
+}
+.bulk-delete {
+  border-color: #ef5350;
+  color: #ef5350;
+}
+.bulk-delete:hover {
+  background: rgba(239, 83, 80, 0.15);
+}
+.bulk-select-all {
+  border-color: #90caf9;
+  color: #90caf9;
+}
+.bulk-select-all:hover {
+  background: rgba(144, 202, 249, 0.15);
+}
+
+.bulk-checkbox {
+  font-size: 18px;
+  cursor: pointer;
+  margin-right: 8px;
+  line-height: 1;
+}
+
+.bulk-selected {
+  border-color: #ffb74d !important;
+  background: rgba(255, 183, 77, 0.08) !important;
 }
 </style>

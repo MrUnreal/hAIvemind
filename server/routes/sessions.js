@@ -373,6 +373,51 @@ router.post('/interrupted-sessions/:id/resume', async (req, res) => {
 });
 
 // ═══════════════════════════════════════════════════════════
+//  Phase 8.1: Bulk Session Actions
+// ═══════════════════════════════════════════════════════════
+
+/** Bulk delete sessions */
+router.post('/projects/:slug/sessions/bulk-delete', (req, res) => {
+  const { slug } = req.params;
+  const { sessionIds } = req.body || {};
+  if (!Array.isArray(sessionIds) || sessionIds.length === 0) {
+    return res.status(400).json({ error: 'sessionIds array is required' });
+  }
+
+  const results = { deleted: [], notFound: [] };
+  for (const id of sessionIds) {
+    const ok = refs.workspace.deleteSession(slug, id);
+    (ok ? results.deleted : results.notFound).push(id);
+  }
+  res.json(results);
+});
+
+/** Bulk export sessions (returns array of session objects) */
+router.post('/projects/:slug/sessions/bulk-export', (req, res) => {
+  const { slug } = req.params;
+  const { sessionIds, format } = req.body || {};
+  if (!Array.isArray(sessionIds) || sessionIds.length === 0) {
+    return res.status(400).json({ error: 'sessionIds array is required' });
+  }
+
+  const sessions = [];
+  const notFound = [];
+  for (const id of sessionIds) {
+    const session = refs.workspace.getSession(slug, id);
+    if (session) {
+      if (format === 'markdown' || format === 'md') {
+        sessions.push({ id, markdown: sessionToMarkdown(session, slug) });
+      } else {
+        sessions.push(session);
+      }
+    } else {
+      notFound.push(id);
+    }
+  }
+  res.json({ sessions, notFound });
+});
+
+// ═══════════════════════════════════════════════════════════
 //  Phase 8.0: Session Comparison
 // ═══════════════════════════════════════════════════════════
 
