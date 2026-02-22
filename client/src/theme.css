@@ -1,0 +1,166 @@
+/**
+ * Theme Variables — Phase 9.0
+ *
+ * CSS custom properties for dark/light theming.
+ * Default: dark theme. Add .light-theme to <html> for light mode.
+ */
+
+/* ═══════════════════════════════════════════════════════════
+   Dark Theme (default)
+   ═══════════════════════════════════════════════════════════ */
+:root,
+.dark-theme {
+  /* Backgrounds */
+  --bg-primary: #0d0d14;
+  --bg-secondary: #111118;
+  --bg-tertiary: #14141e;
+  --bg-card: #1e1e2e;
+  --bg-input: #1a1a2a;
+  --bg-hover: #262636;
+  --bg-overlay: rgba(0, 0, 0, 0.7);
+
+  /* Borders */
+  --border-primary: #1a1a2e;
+  --border-secondary: #22223a;
+  --border-subtle: #333;
+  --border-input: #444;
+
+  /* Text */
+  --text-primary: #e0e0e0;
+  --text-secondary: #999;
+  --text-tertiary: #666;
+  --text-muted: #888;
+  --text-link: #4c8dff;
+
+  /* Accent colors */
+  --accent-gold: #f5c542;
+  --accent-gold-dim: rgba(245, 197, 66, 0.3);
+  --accent-blue: #4c8dff;
+  --accent-blue-dim: rgba(76, 141, 255, 0.15);
+  --accent-green: #51cf66;
+  --accent-green-dim: rgba(81, 207, 102, 0.15);
+  --accent-red: #ff6b6b;
+  --accent-red-dim: rgba(255, 107, 107, 0.15);
+  --accent-orange: #ffa94d;
+  --accent-orange-dim: rgba(255, 169, 77, 0.15);
+  --accent-purple: #cc99ff;
+
+  /* Status colors */
+  --status-success: #51cf66;
+  --status-error: #ff6b6b;
+  --status-warning: #ffa94d;
+  --status-info: #4c8dff;
+  --status-pending: #888;
+
+  /* Component-specific */
+  --header-bg: #111118;
+  --header-border: #1a1a2e;
+  --panel-bg: #1e1e2e;
+  --panel-border: #444;
+  --btn-bg: #1a1a2a;
+  --btn-border: #444;
+  --btn-text: #ccc;
+  --btn-hover-bg: #333;
+  --btn-primary-bg: #4c8dff;
+  --btn-primary-text: #fff;
+  --badge-bg: #14141e;
+  --badge-border: #22223a;
+  --scrollbar-thumb: #333;
+  --scrollbar-track: transparent;
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.5);
+}
+
+/* ═══════════════════════════════════════════════════════════
+   Light Theme
+   ═══════════════════════════════════════════════════════════ */
+.light-theme {
+  /* Backgrounds */
+  --bg-primary: #f5f5f7;
+  --bg-secondary: #ffffff;
+  --bg-tertiary: #f0f0f4;
+  --bg-card: #fff;
+  --bg-input: #f8f8fb;
+  --bg-hover: #e8e8ee;
+  --bg-overlay: rgba(0, 0, 0, 0.3);
+
+  /* Borders */
+  --border-primary: #e0e0e8;
+  --border-secondary: #d0d0d8;
+  --border-subtle: #ccc;
+  --border-input: #c0c0c8;
+
+  /* Text */
+  --text-primary: #1a1a2e;
+  --text-secondary: #555;
+  --text-tertiary: #888;
+  --text-muted: #999;
+  --text-link: #2563eb;
+
+  /* Accent colors */
+  --accent-gold: #c5941e;
+  --accent-gold-dim: rgba(197, 148, 30, 0.15);
+  --accent-blue: #2563eb;
+  --accent-blue-dim: rgba(37, 99, 235, 0.1);
+  --accent-green: #16a34a;
+  --accent-green-dim: rgba(22, 163, 74, 0.1);
+  --accent-red: #dc2626;
+  --accent-red-dim: rgba(220, 38, 38, 0.1);
+  --accent-orange: #d97706;
+  --accent-orange-dim: rgba(217, 119, 6, 0.1);
+  --accent-purple: #7c3aed;
+
+  /* Status colors */
+  --status-success: #16a34a;
+  --status-error: #dc2626;
+  --status-warning: #d97706;
+  --status-info: #2563eb;
+  --status-pending: #888;
+
+  /* Component-specific */
+  --header-bg: #ffffff;
+  --header-border: #e0e0e8;
+  --panel-bg: #fff;
+  --panel-border: #d0d0d8;
+  --btn-bg: #f0f0f4;
+  --btn-border: #d0d0d8;
+  --btn-text: #333;
+  --btn-hover-bg: #e0e0e8;
+  --btn-primary-bg: #2563eb;
+  --btn-primary-text: #fff;
+  --badge-bg: #f0f0f4;
+  --badge-border: #d0d0d8;
+  --scrollbar-thumb: #ccc;
+  --scrollbar-track: transparent;
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.08);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.1);
+  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.12);
+}
+
+/* ═══════════════════════════════════════════════════════════
+   Global base styles using theme variables
+   ═══════════════════════════════════════════════════════════ */
+body {
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  transition: background-color 0.3s, color 0.3s;
+}
+
+::selection {
+  background: var(--accent-blue-dim);
+  color: var(--text-primary);
+}
+
+/* Scrollbar theming */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--scrollbar-thumb);
+  border-radius: 4px;
+}
+::-webkit-scrollbar-track {
+  background: var(--scrollbar-track);
+}

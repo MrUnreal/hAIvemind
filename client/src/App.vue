@@ -8,6 +8,9 @@
         </span>
       </div>
       <div class="header-meta">
+        <button class="theme-toggle-btn" @click="toggleTheme" :title="isDark ? 'Switch to light theme' : 'Switch to dark theme'">
+          {{ isDark ? '☀️' : '🌙' }}
+        </button>
         <span :class="['status-dot', connected ? 'green' : 'red']"></span>
         <span>{{ connected ? 'Connected' : 'Disconnected' }}</span>
         <span v-if="costSummary" class="cost-badge">
@@ -227,7 +230,9 @@ import {
   loadProjectIntelligence,
   resetProjectIntelligence,
 } from './composables/useProjectSettings.js';
+import { useTheme } from './composables/useTheme.js';
 
+const { isDark, toggleTheme } = useTheme();
 const { connected, connectionLost, on, send, subscribeProject } = useWebSocket();
 const showPrompt = ref(false);
 const sideTab = ref('agent');
@@ -755,8 +760,8 @@ onUnmounted(() => cleanupShortcuts());
   align-items: center;
   justify-content: space-between;
   padding: 12px 24px;
-  background: #111118;
-  border-bottom: 1px solid #1a1a2e;
+  background: var(--header-bg);
+  border-bottom: 1px solid var(--header-border);
   flex-shrink: 0;
   position: relative;
 }
@@ -767,7 +772,7 @@ onUnmounted(() => cleanupShortcuts());
   left: 0;
   right: 0;
   height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(245, 197, 66, 0.3), transparent);
+  background: linear-gradient(90deg, transparent, var(--accent-gold-dim), transparent);
 }
 
 .header-left {
@@ -793,17 +798,17 @@ onUnmounted(() => cleanupShortcuts());
 .project-badge {
   font-size: 13px;
   font-weight: 500;
-  color: #999;
-  background: #14141e;
-  border: 1px solid #22223a;
+  color: var(--text-secondary);
+  background: var(--badge-bg);
+  border: 1px solid var(--badge-border);
   padding: 4px 14px;
   border-radius: 8px;
   cursor: pointer;
   transition: border-color 0.2s, color 0.2s, transform 0.15s;
 }
 .project-badge:hover {
-  border-color: #f5c54266;
-  color: #e0e0e0;
+  border-color: var(--accent-gold-dim);
+  color: var(--text-primary);
   transform: translateY(-1px);
 }
 
@@ -812,7 +817,23 @@ onUnmounted(() => cleanupShortcuts());
   align-items: center;
   gap: 10px;
   font-size: 13px;
-  color: #888;
+  color: var(--text-muted);
+}
+
+.theme-toggle-btn {
+  background: var(--btn-bg);
+  border: 1px solid var(--btn-border);
+  border-radius: 999px;
+  padding: 4px 8px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background 0.2s, border-color 0.2s, transform 0.15s;
+  line-height: 1;
+}
+.theme-toggle-btn:hover {
+  background: var(--btn-hover-bg);
+  border-color: var(--accent-gold);
+  transform: translateY(-1px);
 }
 
 .status-dot {
@@ -824,28 +845,28 @@ onUnmounted(() => cleanupShortcuts());
 .status-dot.red { background: #f44336; }
 
 .cost-badge {
-  background: #1a1a0e;
-  border: 1px solid #33331a;
+  background: var(--badge-bg);
+  border: 1px solid var(--badge-border);
   padding: 2px 10px;
   border-radius: 12px;
   font-size: 12px;
-  color: #f5c542;
+  color: var(--accent-gold);
   font-weight: 500;
 }
 
 .replay-btn {
-  background: #1a1a2e;
-  border: 1px solid #333;
+  background: var(--btn-bg);
+  border: 1px solid var(--btn-border);
   padding: 4px 10px;
   border-radius: 999px;
   font-size: 12px;
-  color: #ccc;
+  color: var(--btn-text);
   cursor: pointer;
 }
 .replay-btn.active {
-  background: #f5c542;
-  border-color: #f5c542;
-  color: #111;
+  background: var(--accent-gold);
+  border-color: var(--accent-gold);
+  color: var(--bg-primary);
 }
 
 .workspace {
@@ -867,14 +888,14 @@ onUnmounted(() => cleanupShortcuts());
 
 .replay-panel {
   flex: 0 0 260px;
-  border-top: 1px solid #222;
+  border-top: 1px solid var(--border-subtle);
 }
 
 .side-panel {
   display: flex;
   flex-direction: column;
-  border-left: 1px solid #1a1a2e;
-  background: #0f0f16;
+  border-left: 1px solid var(--header-border);
+  background: var(--bg-primary);
   transition: width 0.25s ease;
   width: 480px;
   flex-shrink: 0;
@@ -886,7 +907,7 @@ onUnmounted(() => cleanupShortcuts());
 .side-tabs {
   display: flex;
   align-items: stretch;
-  border-bottom: 1px solid #222;
+  border-bottom: 1px solid var(--border-subtle);
   flex-shrink: 0;
 }
 
@@ -894,7 +915,7 @@ onUnmounted(() => cleanupShortcuts());
   flex: 1;
   background: none;
   border: none;
-  color: #555;
+  color: var(--text-tertiary);
   font-size: 11px;
   font-weight: 600;
   padding: 10px 6px;
@@ -906,11 +927,11 @@ onUnmounted(() => cleanupShortcuts());
   letter-spacing: 0.01em;
 }
 .tab-btn.active {
-  color: #f5c542;
-  border-bottom-color: #f5c542;
+  color: var(--accent-gold);
+  border-bottom-color: var(--accent-gold);
 }
 .tab-btn:hover:not(.active) {
-  color: #999;
+  color: var(--text-secondary);
 }
 
 .side-panel.collapsed .tab-btn {
@@ -920,14 +941,14 @@ onUnmounted(() => cleanupShortcuts());
 .tab-collapse {
   background: none;
   border: none;
-  color: #555;
+  color: var(--text-tertiary);
   font-size: 12px;
   padding: 10px 12px;
   cursor: pointer;
   flex-shrink: 0;
 }
 .tab-collapse:hover {
-  color: #e0e0e0;
+  color: var(--text-primary);
 }
 
 .side-content {
@@ -956,7 +977,7 @@ onUnmounted(() => cleanupShortcuts());
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(13, 13, 20, 0.94);
+  background: var(--bg-overlay);
   backdrop-filter: blur(4px);
 }
 
@@ -968,15 +989,15 @@ onUnmounted(() => cleanupShortcuts());
 }
 
 .status-banner {
-  background: #0d0d14;
-  border: 1px solid #1a1a2e;
-  color: #ddd;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-primary);
+  color: var(--text-primary);
   padding: 8px 16px;
   border-radius: 999px;
   display: flex;
   align-items: center;
   gap: 8px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
+  box-shadow: var(--shadow-lg);
 }
 
 .status-banner.reconnecting-banner {
@@ -1001,13 +1022,13 @@ onUnmounted(() => cleanupShortcuts());
 }
 
 .error-card {
-  background: #0d0d14;
-  border: 1px solid #1a1a2e;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-primary);
   border-radius: 16px;
   padding: 24px 28px;
   max-width: 520px;
   width: calc(100% - 48px);
-  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.8);
+  box-shadow: var(--shadow-lg);
 }
 
 .error-header {
@@ -1025,7 +1046,7 @@ onUnmounted(() => cleanupShortcuts());
 .error-message {
   margin: 0;
   font-size: 14px;
-  color: #ccc;
+  color: var(--text-secondary);
 }
 
 .error-actions {
@@ -1043,13 +1064,13 @@ onUnmounted(() => cleanupShortcuts());
   cursor: pointer;
   border: 1px solid transparent;
   background: transparent;
-  color: #e0e0e0;
+  color: var(--text-primary);
 }
 
 .error-btn.primary {
-  background: #f44336;
-  border-color: #f44336;
-  color: #0d0d14;
+  background: var(--status-error);
+  border-color: var(--status-error);
+  color: var(--bg-primary);
 }
 
 .error-btn.primary:hover {
@@ -1058,12 +1079,12 @@ onUnmounted(() => cleanupShortcuts());
 }
 
 .error-btn.secondary {
-  border-color: #1a1a2e;
-  background: #111118;
+  border-color: var(--border-primary);
+  background: var(--header-bg);
 }
 
 .error-btn.secondary:hover {
-  border-color: #f5c542;
+  border-color: var(--accent-gold);
 }
 
 .status-dot.pulse {
@@ -1106,11 +1127,11 @@ onUnmounted(() => cleanupShortcuts());
   display: flex;
   justify-content: space-between;
   align-items: center;
-  background: #1a1a2e;
-  border: 1px solid #f5c542;
+  background: var(--bg-card);
+  border: 1px solid var(--accent-gold);
   border-radius: 8px;
   padding: 10px 16px;
-  color: #e0e0e0;
+  color: var(--text-primary);
 }
 .interrupted-info {
   display: flex;

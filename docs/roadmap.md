@@ -244,3 +244,21 @@ Currently single-user, no auth. Fine for local dev, but blocks team usage or hos
 | **8.6 — Webhook UI Panel** | ✅ | WebhookPanel.vue: add/remove/test webhooks, delivery stats, event picker, toggle enable/disable |
 | **8.7 — Session Scheduling** | ✅ | Cron-like scheduling, priority queue (high/normal/low), one-shot & recurring, scheduler service + REST API + SchedulerPanel.vue |
 | **8.8 — Performance Benchmarks** | ✅ | Duration/cost trend charts, regression detection, model tier comparison, summary stats, BenchmarkPanel.vue |
+
+---
+
+## Phase 9: Developer Experience & Platform Maturity
+
+> Polish the developer experience, improve testability, and prepare for multi-user deployment.
+
+| Feature | Status | Notes |
+|---------|--------|-------|
+| **9.0 — Dark/Light Theme System** | ✅ | CSS custom properties for theming, theme toggle in header, persist preference, auto-detect OS theme |
+| **9.1 — Onboarding Wizard** | ❌ | First-run setup wizard: configure backend, create first project, run sample session, guided tour |
+| **9.2 — Notification Center** | ❌ | Persistent notification inbox: session completions, regression alerts, webhook failures, schedule triggers |
+| **9.3 — Live Session Dashboard** | ❌ | Real-time overview of all running sessions across projects, resource usage, agent activity heatmap |
+| **9.4 — API Key Management** | ❌ | Secure storage for API keys (Ollama, OpenAI, etc.), per-backend configuration, key rotation |
+| **9.5 — Session Templates** | ❌ | Save reusable session prompts with preset configs, project-scoped and global templates, quick-launch |
+| **9.6 — Audit Log** | ❌ | Immutable log of all state changes: session starts/stops, config changes, webhook deliveries, schedule executions |
+| **9.7 — E2E Test Overhaul** | ❌ | Convert client integration tests from source reading to actual browser-rendered component tests with Playwright |
+| **9.8 — Multi-User Auth** | ❌ | Optional auth middleware (Bearer/OAuth), user identity on sessions, project-level access control |
