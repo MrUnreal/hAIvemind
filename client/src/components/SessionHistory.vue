@@ -61,6 +61,7 @@
         <option value="completed">✅ Completed</option>
         <option value="failed">❌ Failed</option>
         <option value="running">⏳ Running</option>
+        <option value="cancelled">🚫 Cancelled</option>
       </select>
       <select v-model="filterTag" class="filter-select" v-if="allTags.length > 0">
         <option value="">All tags</option>
@@ -181,6 +182,16 @@
             />
             <button class="tag-save" @click.stop="addTag(session.id)">✓</button>
           </span>
+        </div>
+
+        <!-- Cancel button for stuck/active sessions -->
+        <div class="session-actions" v-if="session.status === 'planning' || session.status === 'running'">
+          <button
+            class="cancel-session-btn"
+            @click.stop="onCancelSession(session.id)"
+          >
+            🚫 Cancel Session
+          </button>
         </div>
 
         <!-- Phase 5.2: Rollback button + Phase 6.4: View Diff + Phase 7.7: Export -->
@@ -319,6 +330,7 @@ function statusLabel(status) {
     failed: '❌ Failed',
     running: '⏳ Running',
     planning: '🔄 Planning',
+    cancelled: '🚫 Cancelled',
   };
   return labels[status] || status;
 }
@@ -383,6 +395,28 @@ async function onRollback(sessionId) {
     alert(`Rollback error: ${err.message}`);
   } finally {
     rollingBack.value = null;
+  }
+}
+
+async function onCancelSession(sessionId) {
+  if (!activeProject.value) return;
+  if (!confirm('Cancel this session? It will be marked as cancelled and cannot be resumed.')) return;
+  try {
+    const res = await fetch(`/api/projects/${activeProject.value.slug}/sessions/${sessionId}/cancel`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ reason: 'Cancelled by user from UI' })
+    });
+    const data = await res.json();
+    if (res.ok) {
+      // Refresh session list
+      const { fetchSessions } = await import('../composables/useProjects.js');
+      await fetchSessions(activeProject.value.slug);
+    } else {
+      alert(`Cancel failed: ${data.error}`);
+    }
+  } catch (err) {
+    alert(`Cancel error: ${err.message}`);
   }
 }
 
@@ -644,6 +678,7 @@ async function bulkExport(format) {
 .pill-failed { background: #3a1a1a; color: #f56a6a; }
 .pill-running { background: #1a2a3a; color: #4a9eff; }
 .pill-planning { background: #2a2a1a; color: #c5c56a; }
+.pill-cancelled { background: #2a1a1a; color: #999; }
 
 .session-time {
   font-size: 12px;
@@ -727,6 +762,20 @@ async function bulkExport(format) {
 .rollback-btn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+.cancel-session-btn {
+  font-size: 11px;
+  padding: 3px 10px;
+  border-radius: 6px;
+  border: 1px solid #ff6b6b;
+  background: transparent;
+  color: #ff6b6b;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.cancel-session-btn:hover {
+  background: rgba(255, 107, 107, 0.15);
 }
 
 .diff-btn {

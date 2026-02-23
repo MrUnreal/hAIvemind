@@ -463,6 +463,51 @@ router.post('/interrupted-sessions/:id/resume', async (req, res) => {
 });
 
 // ═══════════════════════════════════════════════════════════
+//  Session Delete & Cancel
+// ═══════════════════════════════════════════════════════════
+
+/** Delete a single session */
+router.delete('/projects/:slug/sessions/:sessionId', (req, res) => {
+  const { slug, sessionId } = req.params;
+  const ok = refs.workspace.deleteSession(slug, sessionId);
+  if (!ok) return res.status(404).json({ error: 'Session not found' });
+  res.json({ deleted: sessionId });
+});
+
+/** Cancel a running or stuck session */
+router.post('/projects/:slug/sessions/:sessionId/cancel', (req, res) => {
+  const { slug, sessionId } = req.params;
+  const session = refs.workspace.getSession(slug, sessionId);
+  if (!session) return res.status(404).json({ error: 'Session not found' });
+
+  const cancellable = ['planning', 'running', 'pending'];
+  if (!cancellable.includes(session.status)) {
+    return res.status(400).json({
+      error: `Cannot cancel session in '${session.status}' state`,
+      hint: `Only ${cancellable.join(', ')} sessions can be cancelled`
+    });
+  }
+
+  const updated = refs.workspace.updateSession(slug, sessionId, {
+    status: 'cancelled',
+    cancelledAt: Date.now(),
+    cancelReason: req.body?.reason || 'Cancelled by user'
+  });
+
+  if (!updated) return res.status(500).json({ error: 'Failed to update session' });
+
+  // Release workspace lock so new sessions can start
+  for (const [dir, entry] of workDirLocks.entries()) {
+    if (entry.sessionId === sessionId) {
+      workDirLocks.delete(dir);
+      break;
+    }
+  }
+
+  res.json({ cancelled: sessionId, previousStatus: session.status });
+});
+
+// ═══════════════════════════════════════════════════════════
 //  Phase 8.1: Bulk Session Actions
 // ═══════════════════════════════════════════════════════════
 

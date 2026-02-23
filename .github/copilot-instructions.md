@@ -39,7 +39,7 @@ Before every `git commit`, run through this list. **Do not commit until all appl
 - **Scannable.** A developer should get the value prop in 10 seconds of scrolling.
 - **No emoji dumps.** Max 1 emoji per table row or heading. No emoji-per-feature lists.
 - **Badges over words.** If something can be a shield.io badge, make it one.
-- **Stats are concrete.** "1557 tests" not "comprehensive test suite". "31K lines" not "large codebase".
+- **Stats are concrete.** "1567 tests" not "comprehensive test suite". "31K lines" not "large codebase".
 - **Collapsible details for deep info.** Use `<details>` for module maps, file listings, etc.
 
 ### Code Style
@@ -156,7 +156,7 @@ git tag -l "haivemind/*" | ForEach-Object { git tag -d $_ } | Out-Null; git push
 | Swarm | `server/swarm/` (4 runners) |
 | Shared state | `server/state.js` |
 | Client entry | `client/src/App.vue` |
-| Tests | `tests/` (69 files, 1557 tests, Playwright) |
+| Tests | `tests/` (69 files, 1567 tests, Playwright) |
 | Roadmap | `docs/roadmap.md` |
 | Architecture | `docs/architecture.md` |
 | Definition of Done | `docs/definition-of-done.md` |

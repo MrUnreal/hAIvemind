@@ -274,3 +274,122 @@ test.describe('Bulk Sessions — Client Integration', () => {
     expect(src).toContain('.bulk-checkbox');
   });
 });
+
+// ── Session Cancel & Single Delete Tests ──
+
+test.describe('Session Cancel & Delete — REST API', () => {
+  const SLUG = `cancel-test-${Date.now()}`;
+  let projDir;
+
+  test.beforeAll(async () => {
+    // Create project via API so the running server knows about it
+    const createRes = await fetch(`${API}/api/projects`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: SLUG }),
+    });
+    const proj = await createRes.json();
+    projDir = proj.dir;
+
+    // Write session files directly to the sessions dir
+    const sessionsDir = path.join(projDir, '.haivemind', 'sessions');
+    mkdirSync(sessionsDir, { recursive: true });
+    writeFileSync(path.join(sessionsDir, 'plan-sess-1.json'), JSON.stringify({
+      id: 'plan-sess-1', status: 'planning', prompt: 'test', createdAt: Date.now()
+    }));
+    writeFileSync(path.join(sessionsDir, 'done-sess-1.json'), JSON.stringify({
+      id: 'done-sess-1', status: 'completed', prompt: 'done', createdAt: Date.now()
+    }));
+    writeFileSync(path.join(sessionsDir, 'run-sess-1.json'), JSON.stringify({
+      id: 'run-sess-1', status: 'running', prompt: 'running', createdAt: Date.now()
+    }));
+  });
+
+  test.afterAll(async () => {
+    if (projDir && existsSync(projDir)) rmSync(projDir, { recursive: true, force: true });
+  });
+
+  test('cancel planning session succeeds', async () => {
+    const res = await fetch(`${API}/api/projects/${SLUG}/sessions/plan-sess-1/cancel`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ reason: 'Test cancel' }),
+    });
+    expect(res.status).toBe(200);
+    const data = await res.json();
+    expect(data.cancelled).toBe('plan-sess-1');
+    expect(data.previousStatus).toBe('planning');
+  });
+
+  test('cancel completed session returns 400', async () => {
+    const res = await fetch(`${API}/api/projects/${SLUG}/sessions/done-sess-1/cancel`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+    });
+    expect(res.status).toBe(400);
+    const data = await res.json();
+    expect(data.error).toContain('completed');
+  });
+
+  test('cancel nonexistent session returns 404', async () => {
+    const res = await fetch(`${API}/api/projects/${SLUG}/sessions/no-such-id/cancel`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+    });
+    expect(res.status).toBe(404);
+  });
+
+  test('cancel running session succeeds', async () => {
+    const res = await fetch(`${API}/api/projects/${SLUG}/sessions/run-sess-1/cancel`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+    });
+    expect(res.status).toBe(200);
+    const data = await res.json();
+    expect(data.previousStatus).toBe('running');
+  });
+
+  test('DELETE single session succeeds', async () => {
+    const res = await fetch(`${API}/api/projects/${SLUG}/sessions/done-sess-1`, {
+      method: 'DELETE',
+    });
+    expect(res.status).toBe(200);
+    const data = await res.json();
+    expect(data.deleted).toBe('done-sess-1');
+  });
+
+  test('DELETE nonexistent session returns 404', async () => {
+    const res = await fetch(`${API}/api/projects/${SLUG}/sessions/no-such-id`, {
+      method: 'DELETE',
+    });
+    expect(res.status).toBe(404);
+  });
+});
+
+// ── Session Cancel & Delete — Source Code Checks ──
+
+test.describe('Session Cancel & Delete — UI Integration', () => {
+  test('sessions.js has cancel endpoint', () => {
+    const src = readFileSync(path.join(ROOT, 'server', 'routes', 'sessions.js'), 'utf-8');
+    expect(src).toContain('/cancel');
+    expect(src).toContain('cancelled');
+    expect(src).toContain('cancelReason');
+  });
+
+  test('sessions.js has single delete endpoint', () => {
+    const src = readFileSync(path.join(ROOT, 'server', 'routes', 'sessions.js'), 'utf-8');
+    expect(src).toContain("router.delete('/projects/:slug/sessions/:sessionId'");
+  });
+
+  test('SessionHistory.vue has cancel button for active sessions', () => {
+    const src = readFileSync(path.join(ROOT, 'client', 'src', 'components', 'SessionHistory.vue'), 'utf-8');
+    expect(src).toContain('cancel-session-btn');
+    expect(src).toContain('onCancelSession');
+    expect(src).toContain('pill-cancelled');
+  });
+
+  test('SessionHistory.vue has cancelled status label', () => {
+    const src = readFileSync(path.join(ROOT, 'client', 'src', 'components', 'SessionHistory.vue'), 'utf-8');
+    expect(src).toContain("cancelled: '🚫 Cancelled'");
+  });
+});
