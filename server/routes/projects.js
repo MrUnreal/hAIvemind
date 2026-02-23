@@ -59,6 +59,10 @@ import {
   checkRate, getStatus as getRateStatus, clearBucket, clearAll as clearAllBuckets,
   listKeys as listRateKeys, getDefaults as getRateDefaults,
 } from '../services/rateLimiter.js';
+import {
+  createSnapshot, listSnapshots, getSnapshot, restoreSnapshot,
+  deleteSnapshot, updateSnapshot, diffSnapshots, clearSnapshots, getSnapshotStats,
+} from '../services/workspaceSnapshots.js';
 
 const router = Router();
 
@@ -1107,6 +1111,96 @@ router.get('/rate/keys', (req, res) => {
 /** Get default rate limits */
 router.get('/rate/defaults', (req, res) => {
   res.json(getRateDefaults());
+});
+
+// ─── Workspace Snapshots ───────────────────────────────────────
+
+/** List snapshots */
+router.get('/projects/:slug/snapshots', (req, res) => {
+  if (!refs.workspace.getProject(req.params.slug)) {
+    return res.status(404).json({ error: 'Project not found' });
+  }
+  const opts = {};
+  if (req.query.limit) opts.limit = parseInt(req.query.limit, 10);
+  if (req.query.auto !== undefined) opts.auto = req.query.auto === 'true';
+  res.json(listSnapshots(req.params.slug, opts));
+});
+
+/** Create snapshot */
+router.post('/projects/:slug/snapshots', (req, res) => {
+  if (!refs.workspace.getProject(req.params.slug)) {
+    return res.status(404).json({ error: 'Project not found' });
+  }
+  res.json(createSnapshot(req.params.slug, req.body));
+});
+
+/** Get snapshot stats */
+router.get('/projects/:slug/snapshots/stats', (req, res) => {
+  if (!refs.workspace.getProject(req.params.slug)) {
+    return res.status(404).json({ error: 'Project not found' });
+  }
+  res.json(getSnapshotStats(req.params.slug));
+});
+
+/** Diff two snapshots */
+router.get('/projects/:slug/snapshots/diff', (req, res) => {
+  if (!refs.workspace.getProject(req.params.slug)) {
+    return res.status(404).json({ error: 'Project not found' });
+  }
+  const { snap1, snap2 } = req.query;
+  if (!snap1 || !snap2) return res.status(400).json({ error: 'snap1 and snap2 required' });
+  const result = diffSnapshots(req.params.slug, snap1, snap2);
+  if (!result) return res.status(404).json({ error: 'Snapshot not found' });
+  res.json(result);
+});
+
+/** Get single snapshot */
+router.get('/projects/:slug/snapshots/:snapId', (req, res) => {
+  if (!refs.workspace.getProject(req.params.slug)) {
+    return res.status(404).json({ error: 'Project not found' });
+  }
+  const snap = getSnapshot(req.params.slug, req.params.snapId);
+  if (!snap) return res.status(404).json({ error: 'Snapshot not found' });
+  res.json(snap);
+});
+
+/** Update snapshot */
+router.put('/projects/:slug/snapshots/:snapId', (req, res) => {
+  if (!refs.workspace.getProject(req.params.slug)) {
+    return res.status(404).json({ error: 'Project not found' });
+  }
+  const snap = updateSnapshot(req.params.slug, req.params.snapId, req.body);
+  if (!snap) return res.status(404).json({ error: 'Snapshot not found' });
+  res.json(snap);
+});
+
+/** Restore snapshot */
+router.post('/projects/:slug/snapshots/:snapId/restore', (req, res) => {
+  if (!refs.workspace.getProject(req.params.slug)) {
+    return res.status(404).json({ error: 'Project not found' });
+  }
+  const result = restoreSnapshot(req.params.slug, req.params.snapId);
+  if (!result) return res.status(404).json({ error: 'Snapshot not found' });
+  res.json(result);
+});
+
+/** Delete snapshot */
+router.delete('/projects/:slug/snapshots/:snapId', (req, res) => {
+  if (!refs.workspace.getProject(req.params.slug)) {
+    return res.status(404).json({ error: 'Project not found' });
+  }
+  const ok = deleteSnapshot(req.params.slug, req.params.snapId);
+  if (!ok) return res.status(404).json({ error: 'Snapshot not found' });
+  res.json({ ok: true });
+});
+
+/** Clear all snapshots */
+router.delete('/projects/:slug/snapshots', (req, res) => {
+  if (!refs.workspace.getProject(req.params.slug)) {
+    return res.status(404).json({ error: 'Project not found' });
+  }
+  clearSnapshots(req.params.slug);
+  res.json({ ok: true });
 });
 
 export default router;
