@@ -1397,4 +1397,70 @@ router.get('/projects/:slug/sessions/:sessionId/replay/types', (req, res) => {
   res.json(types);
 });
 
+// ═══════════════════════════════════════════════════════════
+//  Phase 11.2: Project Templates
+// ═══════════════════════════════════════════════════════════
+
+import { listProjectTemplates, getProjectTemplate, createProjectTemplate, deleteProjectTemplate, applyProjectTemplate, listTemplateCategories, listTemplateTags } from '../services/projectTemplates.js';
+
+/** List project templates */
+router.get('/project-templates', (req, res) => {
+  const opts = {};
+  if (req.query.category) opts.category = req.query.category;
+  if (req.query.tag) opts.tag = req.query.tag;
+  res.json(listProjectTemplates(opts));
+});
+
+/** Get a single project template */
+router.get('/project-templates/:id', (req, res) => {
+  const t = getProjectTemplate(req.params.id);
+  if (!t) return res.status(404).json({ error: 'Template not found' });
+  res.json(t);
+});
+
+/** Create a custom project template */
+router.post('/project-templates', (req, res) => {
+  try {
+    const t = createProjectTemplate(req.body);
+    res.status(201).json(t);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+/** Delete a custom project template */
+router.delete('/project-templates/:id', (req, res) => {
+  try {
+    const removed = deleteProjectTemplate(req.params.id);
+    if (!removed) return res.status(404).json({ error: 'Template not found' });
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+/** Apply a project template to a project */
+router.post('/projects/:slug/apply-template', (req, res) => {
+  const project = refs.workspace.getProject(req.params.slug);
+  if (!project) return res.status(404).json({ error: 'Project not found' });
+  const { templateId } = req.body;
+  if (!templateId) return res.status(400).json({ error: 'templateId required' });
+  try {
+    const result = applyProjectTemplate(req.params.slug, templateId);
+    res.json(result);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+/** List template categories */
+router.get('/project-template-categories', (_req, res) => {
+  res.json(listTemplateCategories());
+});
+
+/** List template tags */
+router.get('/project-template-tags', (_req, res) => {
+  res.json(listTemplateTags());
+});
+
 export default router;
