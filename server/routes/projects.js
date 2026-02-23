@@ -84,6 +84,12 @@ import {
 import {
   search, listSavedSearches, saveSearch, deleteSavedSearch, SEARCH_TYPES,
 } from '../services/globalSearch.js';
+import {
+  listTasks, getTask, createTask, updateTask, deleteTask,
+  addDependency, removeDependency, listDependencies,
+  getSchedule, getCriticalPath, getDependencyStats,
+  PRIORITY_LEVELS, TASK_STATUSES, EDGE_TYPES,
+} from '../services/taskDependencies.js';
 
 const router = Router();
 
@@ -1878,6 +1884,116 @@ router.delete('/projects/:slug/saved-searches/:searchId', (req, res) => {
 /** List searchable types */
 router.get('/search-types', (_req, res) => {
   res.json(SEARCH_TYPES);
+});
+
+// ─── Phase 12.0: Task Dependencies & Priority ───────────────────────────
+
+/** List tasks (optional ?status=&priority= filters) */
+router.get('/projects/:slug/tasks', (req, res) => {
+  const project = refs.workspace.getProject(req.params.slug);
+  if (!project) return res.status(404).json({ error: 'Not found' });
+  res.json(listTasks(req.params.slug, {
+    status: req.query.status,
+    priority: req.query.priority,
+  }));
+});
+
+/** Get a single task */
+router.get('/projects/:slug/tasks/:taskId', (req, res) => {
+  const project = refs.workspace.getProject(req.params.slug);
+  if (!project) return res.status(404).json({ error: 'Not found' });
+  const task = getTask(req.params.slug, req.params.taskId);
+  if (!task) return res.status(404).json({ error: 'Task not found' });
+  res.json(task);
+});
+
+/** Create a task */
+router.post('/projects/:slug/tasks', (req, res) => {
+  const project = refs.workspace.getProject(req.params.slug);
+  if (!project) return res.status(404).json({ error: 'Not found' });
+  try {
+    const task = createTask(req.params.slug, req.body);
+    res.status(201).json(task);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+/** Update a task */
+router.patch('/projects/:slug/tasks/:taskId', (req, res) => {
+  const project = refs.workspace.getProject(req.params.slug);
+  if (!project) return res.status(404).json({ error: 'Not found' });
+  const task = updateTask(req.params.slug, req.params.taskId, req.body);
+  if (!task) return res.status(404).json({ error: 'Task not found' });
+  res.json(task);
+});
+
+/** Delete a task */
+router.delete('/projects/:slug/tasks/:taskId', (req, res) => {
+  const project = refs.workspace.getProject(req.params.slug);
+  if (!project) return res.status(404).json({ error: 'Not found' });
+  const ok = deleteTask(req.params.slug, req.params.taskId);
+  if (!ok) return res.status(404).json({ error: 'Task not found' });
+  res.json({ ok: true });
+});
+
+/** List dependency edges */
+router.get('/projects/:slug/dependencies', (req, res) => {
+  const project = refs.workspace.getProject(req.params.slug);
+  if (!project) return res.status(404).json({ error: 'Not found' });
+  res.json(listDependencies(req.params.slug));
+});
+
+/** Add a dependency edge */
+router.post('/projects/:slug/dependencies', (req, res) => {
+  const project = refs.workspace.getProject(req.params.slug);
+  if (!project) return res.status(404).json({ error: 'Not found' });
+  try {
+    const dep = addDependency(req.params.slug, req.body);
+    res.status(201).json(dep);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+/** Remove a dependency edge */
+router.delete('/projects/:slug/dependencies/:depId', (req, res) => {
+  const project = refs.workspace.getProject(req.params.slug);
+  if (!project) return res.status(404).json({ error: 'Not found' });
+  const ok = removeDependency(req.params.slug, req.params.depId);
+  if (!ok) return res.status(404).json({ error: 'Dependency not found' });
+  res.json({ ok: true });
+});
+
+/** Get priority-based schedule */
+router.get('/projects/:slug/schedule', (req, res) => {
+  const project = refs.workspace.getProject(req.params.slug);
+  if (!project) return res.status(404).json({ error: 'Not found' });
+  res.json(getSchedule(req.params.slug));
+});
+
+/** Get critical path */
+router.get('/projects/:slug/critical-path', (req, res) => {
+  const project = refs.workspace.getProject(req.params.slug);
+  if (!project) return res.status(404).json({ error: 'Not found' });
+  res.json(getCriticalPath(req.params.slug));
+});
+
+/** Get dependency graph stats */
+router.get('/projects/:slug/dependency-stats', (req, res) => {
+  const project = refs.workspace.getProject(req.params.slug);
+  if (!project) return res.status(404).json({ error: 'Not found' });
+  res.json(getDependencyStats(req.params.slug));
+});
+
+/** List priority levels */
+router.get('/priority-levels', (_req, res) => {
+  res.json(PRIORITY_LEVELS);
+});
+
+/** List task statuses */
+router.get('/task-statuses', (_req, res) => {
+  res.json(TASK_STATUSES);
 });
 
 export default router;
