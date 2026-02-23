@@ -68,6 +68,9 @@ import {
   recordBackendCheck, getBackendHealth, getHealthScore, getThresholds, setThresholds,
   checkThresholds, getDashboard, _reset as resetHealth,
 } from '../services/healthDashboard.js';
+import {
+  exportProject, importProject, validateArchive, previewArchive,
+} from '../services/projectExport.js';
 
 const router = Router();
 
@@ -1579,6 +1582,47 @@ router.post('/projects/:slug/presence/:userId/heartbeat', (req, res) => {
 /** List valid roles */
 router.get('/collaboration/roles', (_req, res) => {
   res.json(getRoles());
+});
+
+// ─── Phase 11.4: Export/Import ────────────────────────────────────────
+
+/** Export a project as a portable archive */
+router.get('/projects/:slug/export', (req, res) => {
+  const project = refs.workspace.getProject(req.params.slug);
+  if (!project) return res.status(404).json({ error: 'Not found' });
+  const opts = {
+    includeSessions: req.query.sessions !== 'false',
+    includeMemory: req.query.memory !== 'false',
+    includeSettings: req.query.settings !== 'false',
+  };
+  const archive = exportProject(req.params.slug, opts);
+  if (!archive) return res.status(404).json({ error: 'Export failed' });
+  res.json(archive);
+});
+
+/** Preview an archive before importing */
+router.post('/projects/import/preview', (req, res) => {
+  const archive = req.body;
+  const preview = previewArchive(archive);
+  res.json(preview);
+});
+
+/** Validate an archive */
+router.post('/projects/import/validate', (req, res) => {
+  const archive = req.body;
+  const result = validateArchive(archive);
+  res.json(result);
+});
+
+/** Import a project from an archive */
+router.post('/projects/import', (req, res) => {
+  const { archive, options } = req.body;
+  if (!archive) return res.status(400).json({ error: 'Missing archive' });
+  const validation = validateArchive(archive);
+  if (!validation.valid) return res.status(400).json({ error: 'Invalid archive', errors: validation.errors });
+  const result = importProject(archive, options || {});
+  if (!result.ok) return res.status(409).json(result);
+  res.status(201).json(result);
 });
 
 export default router;

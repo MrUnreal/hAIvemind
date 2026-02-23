@@ -293,7 +293,7 @@ Currently single-user, no auth. Fine for local dev, but blocks team usage or hos
 | **11.1 — Session Replay** | ✅ | Step-by-step replay of past sessions with timeline scrubbing, type filtering, task agent retrieval, chronological step indexing |
 | **11.2 — Project Templates** | ✅ | 6 built-in archetypes (API, CLI, library, web-app, fullstack, monorepo) with conventions, settings, starter prompts; custom template CRUD; apply to project |
 | **11.3 — Collaboration** | ✅ | Multi-user project sharing, role-based access (viewer/editor/admin), activity feed, presence indicators |
-| **11.4 — Export/Import** | ❌ | Full project export (settings, sessions, memory, templates) as portable archive, import into new instances |
+| **11.4 — Export/Import** | ✅ | Full project export (settings, sessions, memory, templates) as portable archive, import into new instances |
 | **11.5 — CLI Enhancements** | ❌ | Interactive CLI wizard, `haivemind init` for new projects, `haivemind watch` for file-change triggers, shell completions |
 | **11.6 — Notification Channels** | ❌ | Slack/Discord/email notification integrations, configurable per-project, digest vs real-time modes |
 | **11.7 — Cost Budgets** | ❌ | Per-project cost budgets with hard/soft limits, daily/weekly/monthly caps, budget alerts, spend forecasting |
