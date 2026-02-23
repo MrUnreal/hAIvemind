@@ -162,3 +162,42 @@ test.describe('Template Gallery — UI Integration', () => {
     await expect(page.locator('.template-gallery').first()).toBeVisible({ timeout: 10000 });
   });
 });
+
+test.describe('Template Session Start — Project Template Fallback', () => {
+  test('project templates listing includes starterPrompts', async () => {
+    const res = await fetch(`${API}/api/project-templates`);
+    const data = await res.json();
+    const apiServer = data.find(t => t.id === 'api-server');
+    expect(apiServer).toBeDefined();
+    expect(Array.isArray(apiServer.starterPrompts)).toBe(true);
+    expect(apiServer.starterPrompts.length).toBeGreaterThan(0);
+  });
+
+  test('handlers.js imports getProjectTemplate for fallback', () => {
+    const src = readFileSync(path.join(ROOT, 'server', 'ws', 'handlers.js'), 'utf8');
+    expect(src).toContain("import { getProjectTemplate }");
+    expect(src).toContain("getProjectTemplate(templateId)");
+  });
+
+  test('handlers.js falls back to project template when file template missing', () => {
+    const src = readFileSync(path.join(ROOT, 'server', 'ws', 'handlers.js'), 'utf8');
+    // Should try file first, then fall back
+    expect(src).toContain('fs.readFile(templatePath');
+    expect(src).toContain('getProjectTemplate(templateId)');
+    // Should convert starterPrompts to tasks
+    expect(src).toContain('starterPrompts');
+    expect(src).toContain('phase-');
+  });
+
+  test('TemplateForm.vue shows starterPrompts as Build Phases', () => {
+    const src = readFileSync(path.join(ROOT, 'client', 'src', 'components', 'TemplateForm.vue'), 'utf8');
+    expect(src).toContain('starterPrompts');
+    expect(src).toContain('Build Phases');
+  });
+
+  test('TemplateGallery.vue displays stack as joined string', () => {
+    const src = readFileSync(path.join(ROOT, 'client', 'src', 'components', 'TemplateGallery.vue'), 'utf8');
+    expect(src).toContain("tpl.stack.join");
+    expect(src).toContain("' · '");
+  });
+});

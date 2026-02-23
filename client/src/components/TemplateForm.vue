@@ -17,12 +17,26 @@
       </div>
     </div>
 
-    <div class="task-preview">
-      <div class="task-preview-title">Tasks ({{ template.tasks?.length || 0 }})</div>
+    <!-- File-based templates: show tasks -->
+    <div v-if="template.tasks?.length" class="task-preview">
+      <div class="task-preview-title">Tasks ({{ template.tasks.length }})</div>
       <div v-for="t in template.tasks" :key="t.id" class="task-item">
         <span class="task-dot">●</span>
         <span>{{ t.label }}</span>
       </div>
+    </div>
+
+    <!-- Project templates: show starter prompts as build phases -->
+    <div v-else-if="template.starterPrompts?.length" class="task-preview">
+      <div class="task-preview-title">Build Phases ({{ template.starterPrompts.length }})</div>
+      <div v-for="(p, i) in template.starterPrompts" :key="i" class="task-item">
+        <span class="task-dot">{{ i + 1 }}</span>
+        <span>{{ p }}</span>
+      </div>
+    </div>
+
+    <div v-else class="task-preview">
+      <div class="task-preview-title">No predefined tasks</div>
     </div>
   </div>
 </template>
@@ -128,7 +142,9 @@ watch(values, (v) => emit('update:variables', { ...v }), { deep: true });
 }
 
 .task-dot {
-  font-size: 8px;
+  font-size: 10px;
   color: #f5c542;
+  min-width: 12px;
+  text-align: center;
 }
 </style>

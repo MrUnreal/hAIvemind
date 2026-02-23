@@ -174,6 +174,7 @@ export function listProjectTemplates(opts = {}) {
     description: t.description,
     category: t.category,
     stack: t.stack,
+    starterPrompts: t.starterPrompts || [],
     tags: t.tags,
     builtin: BUILTIN_TEMPLATES.some(b => b.id === t.id),
   }));

@@ -8,6 +8,7 @@ import { MSG, makeMsg } from '../../shared/protocol.js';
 import { sessions, activeContexts, refs } from '../state.js';
 import { broadcast } from './broadcast.js';
 import { startSession, handleChatMessage } from '../services/sessions.js';
+import { getProjectTemplate } from '../services/projectTemplates.js';
 import { plan } from '../orchestrator.js';
 import log from '../logger.js';
 
@@ -37,10 +38,36 @@ export async function handleClientMessage(msg, ws) {
       try {
         const templatesDir = resolve(process.cwd(), 'templates');
         const templatePath = join(templatesDir, `${templateId}.json`);
-        const raw = await fs.readFile(templatePath, 'utf8');
-        const template = JSON.parse(raw);
 
-        if (!Array.isArray(template.tasks)) {
+        let template;
+        let isProjectTemplate = false;
+
+        // Try file-based template first (templates/*.json)
+        try {
+          const raw = await fs.readFile(templatePath, 'utf8');
+          template = JSON.parse(raw);
+        } catch {
+          // Fall back to project template (built-in scaffolding types)
+          const projTmpl = getProjectTemplate(templateId);
+          if (projTmpl) {
+            isProjectTemplate = true;
+            // Convert starterPrompts into task plan
+            template = {
+              name: projTmpl.name,
+              description: projTmpl.description,
+              tasks: (projTmpl.starterPrompts || []).map((desc, i) => ({
+                id: `phase-${i + 1}`,
+                label: `Phase ${i + 1}`,
+                description: desc,
+                dependencies: i > 0 ? [`phase-${i}`] : [],
+              })),
+            };
+          } else {
+            throw new Error(`Template "${templateId}" not found`);
+          }
+        }
+
+        if (!isProjectTemplate && !Array.isArray(template.tasks)) {
           ws.send(makeMsg(MSG.SESSION_ERROR, { error: `Template "${templateId}" is invalid (missing tasks array)` }));
           return;
         }

@@ -16,7 +16,7 @@
       >
         <div class="template-name">{{ tpl.name }}</div>
         <div class="template-desc">{{ tpl.description }}</div>
-        <span class="template-stack">{{ tpl.stack }}</span>
+        <span class="template-stack">{{ Array.isArray(tpl.stack) ? tpl.stack.join(' · ') : tpl.stack }}</span>
       </div>
     </div>
   </div>
