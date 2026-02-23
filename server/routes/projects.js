@@ -118,6 +118,12 @@ import {
   getDueSchedules, getScheduleStats as getSchedStats,
   SCHEDULE_STATUSES, REPEAT_MODES,
 } from '../services/scheduledTasks.js';
+import {
+  createPipeline, listPipelines, getPipeline, startPipeline,
+  advancePipeline, approveStep, cancelPipeline, deletePipeline,
+  getPipelineStats,
+  STEP_TYPES, STEP_STATUSES, PIPELINE_STATUSES,
+} from '../services/customPipelines.js';
 
 const router = Router();
 
@@ -2469,5 +2475,94 @@ router.get('/schedule-statuses', (_req, res) => {
 router.get('/repeat-modes', (_req, res) => {
   res.json(REPEAT_MODES);
 });
+
+// ─── Phase 12.6 — Custom Pipelines ───────────────────────────────────────
+
+/** Create a pipeline */
+router.post('/projects/:slug/pipelines', (req, res) => {
+  const project = refs.workspace.getProject(req.params.slug);
+  if (!project) return res.status(404).json({ error: 'Not found' });
+  try {
+    const pipe = createPipeline(req.params.slug, req.body);
+    res.status(201).json(pipe);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+/** List pipelines */
+router.get('/projects/:slug/pipelines', (req, res) => {
+  const project = refs.workspace.getProject(req.params.slug);
+  if (!project) return res.status(404).json({ error: 'Not found' });
+  res.json(listPipelines(req.params.slug, req.query));
+});
+
+/** Get a single pipeline */
+router.get('/projects/:slug/pipelines/:pipeId', (req, res) => {
+  const project = refs.workspace.getProject(req.params.slug);
+  if (!project) return res.status(404).json({ error: 'Not found' });
+  const pipe = getPipeline(req.params.slug, req.params.pipeId);
+  if (!pipe) return res.status(404).json({ error: 'Pipeline not found' });
+  res.json(pipe);
+});
+
+/** Start a pipeline */
+router.post('/projects/:slug/pipelines/:pipeId/start', (req, res) => {
+  const project = refs.workspace.getProject(req.params.slug);
+  if (!project) return res.status(404).json({ error: 'Not found' });
+  const pipe = startPipeline(req.params.slug, req.params.pipeId);
+  if (!pipe) return res.status(404).json({ error: 'Pipeline not found' });
+  res.json(pipe);
+});
+
+/** Advance pipeline (complete current step) */
+router.post('/projects/:slug/pipelines/:pipeId/advance', (req, res) => {
+  const project = refs.workspace.getProject(req.params.slug);
+  if (!project) return res.status(404).json({ error: 'Not found' });
+  const pipe = advancePipeline(req.params.slug, req.params.pipeId, req.body);
+  if (!pipe) return res.status(404).json({ error: 'Pipeline not found' });
+  res.json(pipe);
+});
+
+/** Approve a step */
+router.post('/projects/:slug/pipelines/:pipeId/approve/:stepId', (req, res) => {
+  const project = refs.workspace.getProject(req.params.slug);
+  if (!project) return res.status(404).json({ error: 'Not found' });
+  const result = approveStep(req.params.slug, req.params.pipeId, req.params.stepId);
+  if (!result) return res.status(404).json({ error: 'Pipeline not found' });
+  if (result.error) return res.status(400).json(result);
+  res.json(result);
+});
+
+/** Cancel a pipeline */
+router.post('/projects/:slug/pipelines/:pipeId/cancel', (req, res) => {
+  const project = refs.workspace.getProject(req.params.slug);
+  if (!project) return res.status(404).json({ error: 'Not found' });
+  const pipe = cancelPipeline(req.params.slug, req.params.pipeId);
+  if (!pipe) return res.status(404).json({ error: 'Pipeline not found' });
+  res.json(pipe);
+});
+
+/** Delete a pipeline */
+router.delete('/projects/:slug/pipelines/:pipeId', (req, res) => {
+  const project = refs.workspace.getProject(req.params.slug);
+  if (!project) return res.status(404).json({ error: 'Not found' });
+  const removed = deletePipeline(req.params.slug, req.params.pipeId);
+  if (!removed) return res.status(404).json({ error: 'Pipeline not found' });
+  res.json(removed);
+});
+
+/** Pipeline stats */
+router.get('/projects/:slug/pipeline-stats', (req, res) => {
+  const project = refs.workspace.getProject(req.params.slug);
+  if (!project) return res.status(404).json({ error: 'Not found' });
+  res.json(getPipelineStats(req.params.slug));
+});
+
+/** Pipeline step types */
+router.get('/step-types', (_req, res) => { res.json(STEP_TYPES); });
+
+/** Pipeline statuses */
+router.get('/pipeline-statuses', (_req, res) => { res.json(PIPELINE_STATUSES); });
 
 export default router;
