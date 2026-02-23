@@ -50,6 +50,14 @@ export default class TaskRunner {
     /** Dynamic concurrency tracking */
     this._peakConcurrency = 0;
 
+    // Validate plan structure
+    if (!plan || !Array.isArray(plan.tasks)) {
+      throw new Error('Invalid plan: missing or non-array "tasks" property');
+    }
+    if (plan.tasks.length === 0) {
+      throw new Error('Invalid plan: empty tasks array — nothing to execute');
+    }
+
     // Initialize task states
     for (const task of plan.tasks) {
       this.taskStates.set(task.id, {
@@ -142,13 +150,18 @@ export default class TaskRunner {
   }
 
   /**
-   * Clean up timers (called on session end or externally).
+   * Clean up timers and pending resolvers (called on session end or externally).
    */
   cleanup() {
     if (this._stallCheckTimer) {
       clearInterval(this._stallCheckTimer);
       this._stallCheckTimer = null;
     }
+    // Drain any pending gate resolvers to prevent memory leaks
+    for (const [taskId, resolve] of this._gateResolvers) {
+      resolve({ approved: false, feedback: 'Session ended' });
+    }
+    this._gateResolvers.clear();
     if (this._peakConcurrency > 0) {
       console.log(`[taskRunner] Peak concurrency reached: ${this._peakConcurrency}`);
     }
@@ -781,7 +794,9 @@ Output ONLY valid JSON (no markdown):
         this.broadcast(makeMsg(MSG.DAG_REWRITE, rewrite));
 
         // Trigger re-scheduling so the unblocked task can start
-        this._scheduleEligible();
+        this._scheduleEligible().catch(err => {
+          console.error(`[taskRunner] Re-scheduling after stall rewrite failed: ${err.message}`);
+        });
       }
     }
   }

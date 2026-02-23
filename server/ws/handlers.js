@@ -75,8 +75,7 @@ export async function handleClientMessage(msg, ws) {
     }
 
     await startSession(prompt, projectSlug, predefinedPlan);
-  }
-  if (msg.type === MSG.SELFDEV_START) {
+  } else if (msg.type === MSG.SELFDEV_START) {
     const { featureName, prompt, usePlanner } = msg.payload || {};
     if (!prompt) {
       ws.send(makeMsg(MSG.SESSION_ERROR, { error: 'No prompt provided' }));
@@ -149,14 +148,12 @@ export async function handleClientMessage(msg, ws) {
       return;
     }
     broadcast(makeMsg(MSG.SELFDEV_DIFF, { featureName, projectSlug }));
-  }
-  if (msg.type === MSG.CHAT_MESSAGE) {
+  } else if (msg.type === MSG.CHAT_MESSAGE) {
     const { message, projectSlug } = msg.payload || {};
     if (message && projectSlug) {
       await handleChatMessage(message, projectSlug);
     }
-  }
-  if (msg.type === MSG.RECONNECT_SYNC) {
+  } else if (msg.type === MSG.RECONNECT_SYNC) {
     const { projectSlug } = msg.payload || {};
     const ctx = activeContexts.get(projectSlug);
     if (ctx) {
@@ -168,29 +165,26 @@ export async function handleClientMessage(msg, ws) {
         sessionStatus: session?.status,
       }));
     }
-  }
-  if (msg.type === MSG.GATE_RESPONSE) {
+  } else if (msg.type === MSG.GATE_RESPONSE) {
     const { taskId, approved, feedback } = msg.payload || {};
     for (const [, ctx] of activeContexts) {
       if (ctx.taskRunner) {
         ctx.taskRunner.resolveGate(taskId, approved, feedback);
       }
     }
-  }
-
-  // Phase 6.7: WebSocket channel subscriptions
-  if (msg.type === MSG.WS_SUBSCRIBE) {
+  } else if (msg.type === MSG.WS_SUBSCRIBE) {
     const { projectSlug } = msg.payload || {};
     if (projectSlug && typeof projectSlug === 'string') {
       ws.subscribedProjects.add(projectSlug);
       log.info(`[ws] Client subscribed to project: ${projectSlug} (${ws.subscribedProjects.size} subscriptions)`);
     }
-  }
-  if (msg.type === MSG.WS_UNSUBSCRIBE) {
+  } else if (msg.type === MSG.WS_UNSUBSCRIBE) {
     const { projectSlug } = msg.payload || {};
     if (projectSlug) {
       ws.subscribedProjects.delete(projectSlug);
       log.info(`[ws] Client unsubscribed from project: ${projectSlug} (${ws.subscribedProjects.size} subscriptions)`);
     }
+  } else {
+    log.debug(`[ws] Unknown message type: ${msg.type}`);
   }
 }

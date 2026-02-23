@@ -392,6 +392,7 @@ export default class AgentManager {
       timeoutId = setTimeout(() => {
         if (settled) return;
         settled = true;
+        if (streamTimer) { clearTimeout(streamTimer); flushStream(); }
         const minutes = config.agentTimeoutMs / 60000;
         const timeoutMessage = `Agent timed out after ${minutes} minutes`;
         agent.finishedAt = Date.now();
@@ -401,7 +402,7 @@ export default class AgentManager {
         child.removeAllListeners('close');
         child.removeAllListeners('error');
         try { child.kill('SIGTERM'); } catch { /* already exited */ }
-        setTimeout(() => { try { child.kill('SIGKILL'); } catch { /* already exited */ } }, config.sigkillGracePeriodMs);
+        setTimeout(() => { try { child.kill('SIGKILL'); } catch { /* already exited */ } }, config.sigkillGracePeriodMs).unref();
         console.warn(`[agent:${agent.id.slice(0, 8)}] ${timeoutMessage}`);
         this.broadcast(makeMsg(MSG.AGENT_STATUS, {
           agentId: agent.id, taskId: task.id, taskLabel: task.label,
