@@ -149,7 +149,7 @@ git tag -l "haivemind/*" | ForEach-Object { git tag -d $_ } | Out-Null; git push
 | What | Where |
 |------|-------|
 | Server entry | `server/index.js` (141 lines, thin wiring) |
-| Routes | `server/routes/` (7 modules) |
+| Routes | `server/routes/` (22 modules — 7 top-level + 15 project domain) |
 | Services | `server/services/` (4 modules) |
 | WebSocket | `server/ws/` (3 modules) |
 | Shared state | `server/state.js` |

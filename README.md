@@ -118,9 +118,9 @@ graph TB
     UI["DAG · Chat · Settings · Diff Viewer"]
   end
 
-  subgraph Server["Server (Express · 14 modules)"]
+  subgraph Server["Server (Express · 29 modules)"]
     direction LR
-    R["Routes (7)"]
+    R["Routes (22)"]
     S["Services (4)"]
     WS["WebSocket (3)"]
   end
@@ -143,7 +143,8 @@ graph TB
 
 | Layer | Modules |
 |-------|---------|
-| **Routes** | `health` · `projects` · `sessions` · `templates` · `backends` · `plugins` · `autopilot` |
+| **Routes** | `health` · `sessions` · `backends` · `plugins` · `autopilot` · `projects` (re-exporter → 15 domain modules below) |
+| **Project Routes** | `projectCore` · `webhooks` · `scheduling` · `notifications` · `security` · `templates` · `auditCollab` · `analytics` · `memory` · `resources` · `codeReview` · `events` · `sessionOps` · `taskManagement` · `agentConfig` |
 | **Services** | `sessions` · `analysis` · `recovery` · `shutdown` |
 | **WebSocket** | `setup` · `broadcast` · `handlers` |
 | **State** | `state.js` — shared refs bag for cross-module access |
