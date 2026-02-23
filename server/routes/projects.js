@@ -1342,4 +1342,59 @@ router.get('/health/thresholds/check', (req, res) => {
   res.json(checkThresholds());
 });
 
+// ═══════════════════════════════════════════════════════════
+//  Phase 11.1: Session Replay
+// ═══════════════════════════════════════════════════════════
+
+import { getReplay, getReplaySlice, getReplayStep, getTaskAgents, getReplayStepTypes } from '../services/sessionReplay.js';
+
+/** Get full session replay */
+router.get('/projects/:slug/sessions/:sessionId/replay', (req, res) => {
+  const project = refs.workspace.getProject(req.params.slug);
+  if (!project) return res.status(404).json({ error: 'Project not found' });
+  const replay = getReplay(req.params.slug, req.params.sessionId);
+  if (!replay) return res.status(404).json({ error: 'Session not found' });
+  res.json(replay);
+});
+
+/** Get replay step slice (for timeline scrubbing) */
+router.get('/projects/:slug/sessions/:sessionId/replay/slice', (req, res) => {
+  const project = refs.workspace.getProject(req.params.slug);
+  if (!project) return res.status(404).json({ error: 'Project not found' });
+  const opts = {};
+  if (req.query.from) opts.from = parseInt(req.query.from, 10);
+  if (req.query.to) opts.to = parseInt(req.query.to, 10);
+  if (req.query.type) opts.type = req.query.type;
+  const result = getReplaySlice(req.params.slug, req.params.sessionId, opts);
+  if (!result) return res.status(404).json({ error: 'Session not found' });
+  res.json(result);
+});
+
+/** Get a single replay step by index */
+router.get('/projects/:slug/sessions/:sessionId/replay/step/:index', (req, res) => {
+  const project = refs.workspace.getProject(req.params.slug);
+  if (!project) return res.status(404).json({ error: 'Project not found' });
+  const step = getReplayStep(req.params.slug, req.params.sessionId, parseInt(req.params.index, 10));
+  if (!step) return res.status(404).json({ error: 'Session not found' });
+  res.json(step);
+});
+
+/** Get agent outputs for a specific task in replay */
+router.get('/projects/:slug/sessions/:sessionId/replay/task/:taskId/agents', (req, res) => {
+  const project = refs.workspace.getProject(req.params.slug);
+  if (!project) return res.status(404).json({ error: 'Project not found' });
+  const agents = getTaskAgents(req.params.slug, req.params.sessionId, req.params.taskId);
+  if (!agents) return res.status(404).json({ error: 'Session not found' });
+  res.json(agents);
+});
+
+/** Get available step types in a session replay */
+router.get('/projects/:slug/sessions/:sessionId/replay/types', (req, res) => {
+  const project = refs.workspace.getProject(req.params.slug);
+  if (!project) return res.status(404).json({ error: 'Project not found' });
+  const types = getReplayStepTypes(req.params.slug, req.params.sessionId);
+  if (!types) return res.status(404).json({ error: 'Session not found' });
+  res.json(types);
+});
+
 export default router;

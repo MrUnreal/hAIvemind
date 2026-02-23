@@ -290,7 +290,7 @@ Currently single-user, no auth. Fine for local dev, but blocks team usage or hos
 | Feature | Status | Notes |
 |---------|--------|-------|
 | **11.0 — Webhook System** | ✅ | Enhanced webhooks with HMAC-SHA256 signatures, exponential backoff with jitter, delivery history/stats, test ping, webhook update, supported events listing |
-| **11.1 — Session Replay** | ❌ | Step-by-step replay of past sessions with timeline scrubbing, view agent decisions and outputs at each step |
+| **11.1 — Session Replay** | ✅ | Step-by-step replay of past sessions with timeline scrubbing, type filtering, task agent retrieval, chronological step indexing |
 | **11.2 — Project Templates** | ❌ | Predefined project archetypes (API server, CLI tool, library) with starter prompts, conventions, and recommended settings |
 | **11.3 — Collaboration** | ❌ | Multi-user project sharing, role-based access (viewer/editor/admin), activity feed, presence indicators |
 | **11.4 — Export/Import** | ❌ | Full project export (settings, sessions, memory, templates) as portable archive, import into new instances |
