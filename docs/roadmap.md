@@ -316,3 +316,19 @@ Currently single-user, no auth. Fine for local dev, but blocks team usage or hos
 | **12.6 — Custom Pipelines** | ✅ | User-defined multi-stage pipelines with conditional steps, parallel branches, approval gates, pipeline templates |
 | **12.7 — Agent Profiles** | ✅ | Named agent configurations (model, temperature, system prompt, tools), profile switching, per-task profile assignment |
 | **12.8 — Dashboard Widgets** | ✅ | Composable dashboard with draggable widgets: cost graph, task throughput, error rate, active sessions, model usage breakdown |
+
+---
+
+## Phase 13 — Collaboration & Multi-User
+
+| Sub-phase | Status | Details |
+|-----------|--------|---------|
+| **13.0 — User Accounts** | ❌ | User registration, authentication tokens, session-bound user identity, user list/CRUD |
+| **13.1 — Role-Based Access** | ❌ | Permission system (admin/editor/viewer), project-level access control, role assignment |
+| **13.2 — Shared Workspaces** | ❌ | Multi-user workspace sharing, invite system, workspace membership management |
+| **13.3 — Presence & Cursors** | ❌ | Real-time user presence indicators, activity broadcasting, who's-editing-what tracking |
+| **13.4 — Comment Threads** | ❌ | Threaded comments on sessions/tasks/code, reply chains, resolution status, @mentions |
+| **13.5 — Audit Trail** | ❌ | Full audit log of all user actions, filterable by user/action/resource, export support |
+| **13.6 — Notifications** | ❌ | In-app notification system, notification preferences, read/unread state, WebSocket push |
+| **13.7 — Team Analytics** | ❌ | Per-user contribution stats, team velocity metrics, collaboration patterns, leaderboards |
+| **13.8 — API Keys** | ❌ | API key management for programmatic access, key scopes, rate limiting per key, usage tracking |
