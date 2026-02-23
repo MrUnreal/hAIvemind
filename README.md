@@ -14,11 +14,11 @@
   <img src="https://img.shields.io/badge/Vue%203-Flow%20DAG-4FC08D?logo=vue.js" alt="Vue 3">
   <img src="https://img.shields.io/badge/Copilot%20CLI-Agent%20Backend-0078D4?logo=github" alt="Copilot CLI">
   <img src="https://img.shields.io/badge/Cost-Free_Tier_Default-brightgreen" alt="Free">
-  <img src="https://img.shields.io/badge/Tests-1748_passing-blue" alt="1748 Tests">
+  <img src="https://img.shields.io/badge/Tests-1534_passing-blue" alt="1534 Tests">
   <img src="https://img.shields.io/badge/Self--Evolving-🧬-blueviolet" alt="Self-Evolving">
 </p>
 
-> **Every line of this codebase was written by hAIvemind itself.** The platform decomposes its own feature requests, spawns agents to implement them, verifies the results, and merges passing changes. 11K+ lines, 509 tests, zero manual code.
+> **Every line of this codebase was written by hAIvemind itself.** The platform decomposes its own feature requests, spawns agents to implement them, verifies the results, and merges passing changes. 23K+ lines, 509 tests, zero manual code.
 
 ---
 
@@ -118,10 +118,10 @@ graph TB
     UI["DAG · Chat · Settings · Diff Viewer"]
   end
 
-  subgraph Server["Server (Express · 29 modules)"]
+  subgraph Server["Server (Express · 73 modules)"]
     direction LR
     R["Routes (22)"]
-    S["Services (4)"]
+    S["Services (38)"]
     WS["WebSocket (3)"]
   end
 
@@ -145,7 +145,7 @@ graph TB
 |-------|---------|
 | **Routes** | `health` · `sessions` · `backends` · `plugins` · `autopilot` · `projects` (re-exporter → 15 domain modules below) |
 | **Project Routes** | `projectCore` · `webhooks` · `scheduling` · `notifications` · `security` · `templates` · `auditCollab` · `analytics` · `memory` · `resources` · `codeReview` · `events` · `sessionOps` · `taskManagement` · `agentConfig` |
-| **Services** | `sessions` · `analysis` · `recovery` · `shutdown` |
+| **Services** | `sessions` · `analysis` · `recovery` · `shutdown` + 34 domain services (auth, webhooks, scheduler, monitoring, etc.) |
 | **WebSocket** | `setup` · `broadcast` · `handlers` |
 | **State** | `state.js` — shared refs bag for cross-module access |
 | **Entry** | `index.js` — 141 lines of thin wiring |
@@ -181,7 +181,7 @@ npm test                                        # 466 Playwright tests
 
 ## Status
 
-All 12 phases shipped. 69 test files. 1748 tests. ~23K lines. 100% self-built.
+All 12 phases shipped. 69 test files. 1534 tests. ~23K lines. 100% self-built.
 
 | Phase | What |
 |-------|------|
