@@ -206,6 +206,17 @@ When modifying an existing project (file tree provided below), reference specifi
       try {
         // Try to extract JSON from the output (model may wrap it in markdown fences)
         const plan = parseJsonFromOutput(output);
+        // Validate plan structure
+        if (!plan || !Array.isArray(plan.tasks)) {
+          return reject(new Error('Orchestrator output missing "tasks" array'));
+        }
+        for (const t of plan.tasks) {
+          if (!t.id || !t.label) {
+            return reject(new Error(`Task missing id or label: ${JSON.stringify(t).slice(0, 200)}`));
+          }
+          if (!t.description) t.description = t.label;
+          if (!Array.isArray(t.dependencies)) t.dependencies = [];
+        }
         console.log(`[orchestrator] Decomposed into ${plan.tasks.length} tasks`);
         resolve(plan);
       } catch (err) {

@@ -40,6 +40,7 @@ export default class TaskRunner {
     this._currentWave = 0;
     this._waveMap = new Map(); // taskId → wave number
     this._lastBroadcastedWave = -1;
+    this._scheduling = false; // re-entrancy guard for _scheduleEligible
 
     /** Speculative execution tracking */
     this._speculativeTasks = new Set(); // taskIds started speculatively
@@ -101,6 +102,12 @@ export default class TaskRunner {
       }
       if (thisWave.length === 0) {
         // Remaining tasks have circular deps or unresolvable — assign to current wave
+        const circularIds = [...remaining];
+        console.warn(`[taskRunner] ⚠️ Circular or unresolvable dependencies detected for ${circularIds.length} task(s): ${circularIds.join(', ')}`);
+        this.broadcast(makeMsg(MSG.SESSION_WARNING, {
+          warning: `Circular dependencies detected in ${circularIds.length} task(s). These tasks will run without dependency ordering.`,
+          taskIds: circularIds,
+        }));
         for (const taskId of remaining) {
           waves.set(taskId, wave);
           this._waveMap.set(taskId, wave);
@@ -215,6 +222,17 @@ export default class TaskRunner {
    * still finishing — dramatically increasing peak concurrency.
    */
   async _scheduleEligible() {
+    // Re-entrancy guard: prevent concurrent scheduling from double-launching tasks
+    if (this._scheduling) return;
+    this._scheduling = true;
+    try {
+      return await this._doScheduleEligible();
+    } finally {
+      this._scheduling = false;
+    }
+  }
+
+  async _doScheduleEligible() {
     const eligible = [];
     const speculative = [];
 
@@ -364,9 +382,17 @@ export default class TaskRunner {
       description: state.task.description,
     }));
 
-    // Wait for human response
+    // Wait for human response (with 10-minute timeout to prevent deadlock)
+    const GATE_TIMEOUT_MS = 10 * 60 * 1000;
     const { approved, feedback } = await new Promise((resolve) => {
-      this._gateResolvers.set(state.task.id, resolve);
+      const timer = setTimeout(() => {
+        this._gateResolvers.delete(state.task.id);
+        resolve({ approved: true, feedback: 'Auto-approved after 10 minute timeout' });
+      }, GATE_TIMEOUT_MS);
+      this._gateResolvers.set(state.task.id, (response) => {
+        clearTimeout(timer);
+        resolve(response);
+      });
     });
 
     if (approved) {

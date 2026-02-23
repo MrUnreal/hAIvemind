@@ -64,7 +64,7 @@
 </template>
 
 <script setup>
-import { ref, watch, computed } from 'vue';
+import { ref, watch, computed, onUnmounted } from 'vue';
 import { sessionStatus } from '../composables/useSession.js';
 import TemplateGallery from './TemplateGallery.vue';
 import TemplateForm from './TemplateForm.vue';
@@ -80,11 +80,21 @@ const prompt = ref('');
 const planning = ref(false);
 const selectedTemplate = ref(null);
 const templateVars = ref({});
+let planningTimeout = null;
 
 const canSubmit = computed(() => prompt.value.trim() || selectedTemplate.value);
 
 watch(sessionStatus, (status) => {
   planning.value = status === 'planning';
+  if (status !== 'planning') clearTimeout(planningTimeout);
+});
+
+// Reset stuck planning state if WS disconnects
+watch(() => props.connected, (connected) => {
+  if (!connected && planning.value) {
+    planning.value = false;
+    clearTimeout(planningTimeout);
+  }
 });
 
 function onTemplateSelect(tpl) {
@@ -95,6 +105,11 @@ function onTemplateSelect(tpl) {
 function submit() {
   if (!canSubmit.value || planning.value || !props.connected) return;
   planning.value = true;
+  clearTimeout(planningTimeout);
+  // Safety timeout: reset planning if server never responds (30s)
+  planningTimeout = setTimeout(() => {
+    if (planning.value) planning.value = false;
+  }, 30000);
   const payload = { prompt: prompt.value.trim() };
   if (selectedTemplate.value) {
     payload.templateId = selectedTemplate.value.id;
@@ -102,6 +117,8 @@ function submit() {
   }
   emit('submit', payload);
 }
+
+onUnmounted(() => clearTimeout(planningTimeout));
 </script>
 
 <style scoped>
