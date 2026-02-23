@@ -44,6 +44,8 @@ import { createWss } from './ws/setup.js';
 import { recoverInterruptedSessions, recoverFromCheckpoints } from './services/recovery.js';
 import { gracefulShutdown } from './services/shutdown.js';
 import { pruneCompletedSessions } from './services/sessions.js';
+import { cleanupExpiredTokens } from './services/auth.js';
+import { pruneStale as pruneRateBuckets } from './services/rateLimiter.js';
 import { broadcast } from './ws/broadcast.js';
 
 // ── Paths ──
@@ -137,6 +139,8 @@ server.listen(config.port, () => {
 
 // ── Intervals ──
 refs.pruneIntervalId = setInterval(pruneCompletedSessions, 5 * 60 * 1000);
+refs.tokenCleanupId = setInterval(cleanupExpiredTokens, 60 * 60 * 1000); // hourly
+refs.rateBucketPruneId = setInterval(pruneRateBuckets, 10 * 60 * 1000); // every 10 min
 const checkpointTimer = startCheckpointTimer(sessions, workspace, 30000);
 refs.checkpointTimer = checkpointTimer;
 

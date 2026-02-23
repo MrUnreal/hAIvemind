@@ -164,7 +164,7 @@ export async function startSession(userPrompt, projectSlug, predefinedPlan) {
             workspaceAnalysis = result;
             log.info('[session] Parallel pipeline: analysis completed after decomposition started');
           }
-        }).catch(() => {});
+        }).catch(err => log.debug(`[session] Background analysis failed: ${err.message}`));
       }
 
       return decomposePromise;
@@ -264,7 +264,7 @@ export async function startSession(userPrompt, projectSlug, predefinedPlan) {
       status: 'completed',
       costSummary: costSummaryData,
       taskCount: plan.tasks.length,
-    }).catch(() => {});
+    }).catch(err => log.debug(`[webhook] session:complete fire failed: ${err.message}`));
 
     workspace.finalizeSession(projectSlug, sessionId, {
       status: 'completed',
@@ -279,7 +279,7 @@ export async function startSession(userPrompt, projectSlug, predefinedPlan) {
 
     // Phase 6.7: Delete checkpoint — session is done
     const proj = workspace.getProject(projectSlug);
-    if (proj) deleteCheckpoint(sessionId, proj.dir).catch(() => {});
+    if (proj) deleteCheckpoint(sessionId, proj.dir).catch(err => log.debug(`[checkpoint] cleanup failed: ${err.message}`));
 
     // Phase 2: Post-session analysis
     try {
@@ -317,14 +317,14 @@ export async function startSession(userPrompt, projectSlug, predefinedPlan) {
       prompt: session?.prompt,
       status: 'failed',
       error: err.message,
-    }).catch(() => {});
+    }).catch(err => log.debug(`[webhook] session:failed fire failed: ${err.message}`));
 
     workspace.finalizeSession(projectSlug, sessionId, { status: 'failed', timeline, snapshot });
     releaseLock(workDir, sessionId);
 
     // Phase 6.7: Delete checkpoint — session failed
     const projFailed = workspace.getProject(projectSlug);
-    if (projFailed) deleteCheckpoint(sessionId, projFailed.dir).catch(() => {});
+    if (projFailed) deleteCheckpoint(sessionId, projFailed.dir).catch(err => log.debug(`[checkpoint] cleanup failed: ${err.message}`));
   }
 }
 

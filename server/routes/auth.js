@@ -44,6 +44,9 @@ router.get('/auth/status', (_req, res) => {
 // ─── Register ────────────────────────────────────────────────────────
 router.post('/auth/register', (req, res) => {
   try {
+    if (!req.body?.username || !req.body?.password) {
+      return res.status(400).json({ error: 'username and password are required' });
+    }
     const { username, password, role } = req.body;
     const user = registerUser(username, password, role);
     res.status(201).json(user);
@@ -55,6 +58,9 @@ router.post('/auth/register', (req, res) => {
 // ─── Login ───────────────────────────────────────────────────────────
 router.post('/auth/login', (req, res) => {
   try {
+    if (!req.body?.username || !req.body?.password) {
+      return res.status(400).json({ error: 'username and password are required' });
+    }
     const { username, password } = req.body;
     const result = authenticateUser(username, password);
     res.json(result);

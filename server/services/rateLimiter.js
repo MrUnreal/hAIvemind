@@ -214,6 +214,23 @@ export function listKeys() {
 }
 
 /**
+ * Remove buckets with no recent hits (stale for > 10 minutes).
+ * Called periodically to prevent unbounded Map growth.
+ */
+export function pruneStale() {
+  const cutoff = Date.now() - 10 * 60 * 1000;
+  let pruned = 0;
+  for (const [key, bucket] of buckets) {
+    const latest = bucket.hits.length ? Math.max(...bucket.hits) : 0;
+    if (latest < cutoff && bucket.cooldownUntil < Date.now()) {
+      buckets.delete(key);
+      pruned++;
+    }
+  }
+  return pruned;
+}
+
+/**
  * Get the default limits.
  */
 export function getDefaults() {
