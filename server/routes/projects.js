@@ -124,6 +124,11 @@ import {
   getPipelineStats,
   STEP_TYPES, STEP_STATUSES, PIPELINE_STATUSES,
 } from '../services/customPipelines.js';
+import {
+  createProfile, listProfiles, getProfile, updateProfile,
+  deleteProfile, cloneProfile, getDefaultProfile, getProfileStats,
+  PROFILE_ROLES, MODEL_TIERS,
+} from '../services/agentProfiles.js';
 
 const router = Router();
 
@@ -2564,5 +2569,84 @@ router.get('/step-types', (_req, res) => { res.json(STEP_TYPES); });
 
 /** Pipeline statuses */
 router.get('/pipeline-statuses', (_req, res) => { res.json(PIPELINE_STATUSES); });
+
+// ─── Phase 12.7 — Agent Profiles ─────────────────────────────────────────
+
+/** Create an agent profile */
+router.post('/projects/:slug/agent-profiles', (req, res) => {
+  const project = refs.workspace.getProject(req.params.slug);
+  if (!project) return res.status(404).json({ error: 'Not found' });
+  try {
+    const prof = createProfile(req.params.slug, req.body);
+    res.status(201).json(prof);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+/** List agent profiles */
+router.get('/projects/:slug/agent-profiles', (req, res) => {
+  const project = refs.workspace.getProject(req.params.slug);
+  if (!project) return res.status(404).json({ error: 'Not found' });
+  res.json(listProfiles(req.params.slug, req.query));
+});
+
+/** Get default profile for a role (before :profId to avoid matching "default") */
+router.get('/projects/:slug/agent-profiles/default/:role', (req, res) => {
+  const project = refs.workspace.getProject(req.params.slug);
+  if (!project) return res.status(404).json({ error: 'Not found' });
+  const prof = getDefaultProfile(req.params.slug, req.params.role);
+  if (!prof) return res.status(404).json({ error: 'No default profile for this role' });
+  res.json(prof);
+});
+
+/** Get a single agent profile */
+router.get('/projects/:slug/agent-profiles/:profId', (req, res) => {
+  const project = refs.workspace.getProject(req.params.slug);
+  if (!project) return res.status(404).json({ error: 'Not found' });
+  const prof = getProfile(req.params.slug, req.params.profId);
+  if (!prof) return res.status(404).json({ error: 'Profile not found' });
+  res.json(prof);
+});
+
+/** Update an agent profile */
+router.patch('/projects/:slug/agent-profiles/:profId', (req, res) => {
+  const project = refs.workspace.getProject(req.params.slug);
+  if (!project) return res.status(404).json({ error: 'Not found' });
+  const prof = updateProfile(req.params.slug, req.params.profId, req.body);
+  if (!prof) return res.status(404).json({ error: 'Profile not found' });
+  res.json(prof);
+});
+
+/** Delete an agent profile */
+router.delete('/projects/:slug/agent-profiles/:profId', (req, res) => {
+  const project = refs.workspace.getProject(req.params.slug);
+  if (!project) return res.status(404).json({ error: 'Not found' });
+  const removed = deleteProfile(req.params.slug, req.params.profId);
+  if (!removed) return res.status(404).json({ error: 'Profile not found' });
+  res.json(removed);
+});
+
+/** Clone an agent profile */
+router.post('/projects/:slug/agent-profiles/:profId/clone', (req, res) => {
+  const project = refs.workspace.getProject(req.params.slug);
+  if (!project) return res.status(404).json({ error: 'Not found' });
+  const cloned = cloneProfile(req.params.slug, req.params.profId, req.body.name);
+  if (!cloned) return res.status(404).json({ error: 'Profile not found' });
+  res.status(201).json(cloned);
+});
+
+/** Agent profile stats */
+router.get('/projects/:slug/agent-profile-stats', (req, res) => {
+  const project = refs.workspace.getProject(req.params.slug);
+  if (!project) return res.status(404).json({ error: 'Not found' });
+  res.json(getProfileStats(req.params.slug));
+});
+
+/** Available profile roles */
+router.get('/profile-roles', (_req, res) => { res.json(PROFILE_ROLES); });
+
+/** Available model tiers */
+router.get('/model-tiers', (_req, res) => { res.json(MODEL_TIERS); });
 
 export default router;
