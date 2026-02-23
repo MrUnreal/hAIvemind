@@ -101,6 +101,11 @@ import {
   detectBottlenecks, getTrend, getPerformanceSummary, clearMetrics,
   METRIC_TYPES,
 } from '../services/performanceProfiling.js';
+import {
+  estimateComplexity, decompose, listDecompositions, getDecomposition,
+  deleteDecomposition, mergeSubtasks, getDecompositionStats,
+  COMPLEXITY_LEVELS, EXECUTION_MODES,
+} from '../services/smartDecomposition.js';
 
 const router = Router();
 
@@ -2198,6 +2203,74 @@ router.delete('/projects/:slug/metrics', (req, res) => {
 /** List metric types */
 router.get('/metric-types', (_req, res) => {
   res.json(METRIC_TYPES);
+});
+
+// ─── Phase 12.3: Smart Decomposition ────────────────────────────────────
+
+/** Estimate complexity of a task description */
+router.post('/estimate-complexity', (req, res) => {
+  if (!req.body.description) return res.status(400).json({ error: 'description is required' });
+  res.json(estimateComplexity(req.body.description));
+});
+
+/** Decompose a task into sub-tasks */
+router.post('/projects/:slug/decompositions', (req, res) => {
+  const project = refs.workspace.getProject(req.params.slug);
+  if (!project) return res.status(404).json({ error: 'Not found' });
+  try {
+    const dec = decompose(req.params.slug, req.body);
+    res.status(201).json(dec);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+/** List all decompositions */
+router.get('/projects/:slug/decompositions', (req, res) => {
+  const project = refs.workspace.getProject(req.params.slug);
+  if (!project) return res.status(404).json({ error: 'Not found' });
+  res.json(listDecompositions(req.params.slug));
+});
+
+/** Get a decomposition */
+router.get('/projects/:slug/decompositions/:decId', (req, res) => {
+  const project = refs.workspace.getProject(req.params.slug);
+  if (!project) return res.status(404).json({ error: 'Not found' });
+  const dec = getDecomposition(req.params.slug, req.params.decId);
+  if (!dec) return res.status(404).json({ error: 'Decomposition not found' });
+  res.json(dec);
+});
+
+/** Delete a decomposition */
+router.delete('/projects/:slug/decompositions/:decId', (req, res) => {
+  const project = refs.workspace.getProject(req.params.slug);
+  if (!project) return res.status(404).json({ error: 'Not found' });
+  const ok = deleteDecomposition(req.params.slug, req.params.decId);
+  if (!ok) return res.status(404).json({ error: 'Decomposition not found' });
+  res.json({ ok: true });
+});
+
+/** Merge two sub-tasks */
+router.post('/projects/:slug/decompositions/:decId/merge', (req, res) => {
+  const project = refs.workspace.getProject(req.params.slug);
+  if (!project) return res.status(404).json({ error: 'Not found' });
+  const { subtask1Id, subtask2Id, mergedName } = req.body;
+  if (!subtask1Id || !subtask2Id) return res.status(400).json({ error: 'subtask1Id and subtask2Id required' });
+  const result = mergeSubtasks(req.params.slug, req.params.decId, subtask1Id, subtask2Id, mergedName);
+  if (!result) return res.status(404).json({ error: 'Decomposition or subtask not found' });
+  res.json(result);
+});
+
+/** Get decomposition stats */
+router.get('/projects/:slug/decomposition-stats', (req, res) => {
+  const project = refs.workspace.getProject(req.params.slug);
+  if (!project) return res.status(404).json({ error: 'Not found' });
+  res.json(getDecompositionStats(req.params.slug));
+});
+
+/** List complexity levels */
+router.get('/complexity-levels', (_req, res) => {
+  res.json(COMPLEXITY_LEVELS);
 });
 
 export default router;
