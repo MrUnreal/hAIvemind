@@ -129,6 +129,11 @@ import {
   deleteProfile, cloneProfile, getDefaultProfile, getProfileStats,
   PROFILE_ROLES, MODEL_TIERS,
 } from '../services/agentProfiles.js';
+import {
+  createWidget, listWidgets, getWidget, updateWidget, deleteWidget,
+  getLayout, updateLayout, getWidgetData, getDashboardStats,
+  WIDGET_TYPES, WIDGET_SIZES,
+} from '../services/dashboardWidgets.js';
 
 const router = Router();
 
@@ -2648,5 +2653,89 @@ router.get('/profile-roles', (_req, res) => { res.json(PROFILE_ROLES); });
 
 /** Available model tiers */
 router.get('/model-tiers', (_req, res) => { res.json(MODEL_TIERS); });
+
+// ── Phase 12.8 — Dashboard Widgets ──────────────────────────────────────
+
+/** Create widget */
+router.post('/projects/:slug/dashboard/widgets', (req, res) => {
+  const project = refs.workspace.getProject(req.params.slug);
+  if (!project) return res.status(404).json({ error: 'Not found' });
+  try {
+    const w = createWidget(req.params.slug, req.body);
+    res.status(201).json(w);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+/** List widgets */
+router.get('/projects/:slug/dashboard/widgets', (req, res) => {
+  const project = refs.workspace.getProject(req.params.slug);
+  if (!project) return res.status(404).json({ error: 'Not found' });
+  res.json(listWidgets(req.params.slug));
+});
+
+/** Get single widget */
+router.get('/projects/:slug/dashboard/widgets/:wid', (req, res) => {
+  const project = refs.workspace.getProject(req.params.slug);
+  if (!project) return res.status(404).json({ error: 'Not found' });
+  const w = getWidget(req.params.slug, req.params.wid);
+  if (!w) return res.status(404).json({ error: 'Widget not found' });
+  res.json(w);
+});
+
+/** Update widget */
+router.patch('/projects/:slug/dashboard/widgets/:wid', (req, res) => {
+  const project = refs.workspace.getProject(req.params.slug);
+  if (!project) return res.status(404).json({ error: 'Not found' });
+  const w = updateWidget(req.params.slug, req.params.wid, req.body);
+  if (!w) return res.status(404).json({ error: 'Widget not found' });
+  res.json(w);
+});
+
+/** Delete widget */
+router.delete('/projects/:slug/dashboard/widgets/:wid', (req, res) => {
+  const project = refs.workspace.getProject(req.params.slug);
+  if (!project) return res.status(404).json({ error: 'Not found' });
+  const w = deleteWidget(req.params.slug, req.params.wid);
+  if (!w) return res.status(404).json({ error: 'Widget not found' });
+  res.json(w);
+});
+
+/** Get dashboard layout */
+router.get('/projects/:slug/dashboard/layout', (req, res) => {
+  const project = refs.workspace.getProject(req.params.slug);
+  if (!project) return res.status(404).json({ error: 'Not found' });
+  res.json(getLayout(req.params.slug));
+});
+
+/** Update dashboard layout */
+router.patch('/projects/:slug/dashboard/layout', (req, res) => {
+  const project = refs.workspace.getProject(req.params.slug);
+  if (!project) return res.status(404).json({ error: 'Not found' });
+  res.json(updateLayout(req.params.slug, req.body));
+});
+
+/** Get widget data */
+router.get('/projects/:slug/dashboard/widgets/:wid/data', (req, res) => {
+  const project = refs.workspace.getProject(req.params.slug);
+  if (!project) return res.status(404).json({ error: 'Not found' });
+  const data = getWidgetData(req.params.slug, req.params.wid);
+  if (!data) return res.status(404).json({ error: 'Widget not found' });
+  res.json(data);
+});
+
+/** Dashboard stats */
+router.get('/projects/:slug/dashboard/stats', (req, res) => {
+  const project = refs.workspace.getProject(req.params.slug);
+  if (!project) return res.status(404).json({ error: 'Not found' });
+  res.json(getDashboardStats(req.params.slug));
+});
+
+/** Available widget types */
+router.get('/widget-types', (_req, res) => { res.json(WIDGET_TYPES); });
+
+/** Available widget sizes */
+router.get('/widget-sizes', (_req, res) => { res.json(WIDGET_SIZES); });
 
 export default router;

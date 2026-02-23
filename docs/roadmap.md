@@ -315,4 +315,4 @@ Currently single-user, no auth. Fine for local dev, but blocks team usage or hos
 | **12.5 — Scheduled Tasks** | ✅ | Cron-style task scheduling, recurring sessions, timezone-aware scheduling, schedule CRUD, next-run preview |
 | **12.6 — Custom Pipelines** | ✅ | User-defined multi-stage pipelines with conditional steps, parallel branches, approval gates, pipeline templates |
 | **12.7 — Agent Profiles** | ✅ | Named agent configurations (model, temperature, system prompt, tools), profile switching, per-task profile assignment |
-| **12.8 — Dashboard Widgets** | ❌ | Composable dashboard with draggable widgets: cost graph, task throughput, error rate, active sessions, model usage breakdown |
+| **12.8 — Dashboard Widgets** | ✅ | Composable dashboard with draggable widgets: cost graph, task throughput, error rate, active sessions, model usage breakdown |
