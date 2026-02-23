@@ -201,7 +201,7 @@ Currently single-user, no auth. Fine for local dev, but blocks team usage or hos
 |---------|--------|-------|
 | **6.0 — CI Pipeline** | ✅ | GitHub Actions, Playwright webServer auto-start, `npm test`/`npm run test:ci` scripts |
 | **6.1 — Structured Logging** | ✅ | `server/logger.js` (levels/timestamps/JSON), `.env.example`, config env overrides (`HAIVEMIND_*`) |
-| **6.2 — Template Gallery** | ✅ | TemplateGallery.vue dropdown, variable forms, `POST /api/templates`, stack badges |
+| **6.2 — Template Gallery** | ✅ | TemplateGallery.vue dropdown, variable forms, `/api/project-templates`, stack badges |
 | **6.3 — Agent Streaming** | ✅ | Throttled AGENT_STREAM (150ms batches), progressive terminal rendering, search/filter, raw/summary toggle |
 | **6.4 — Diff Viewer** | ✅ | DiffViewer.vue with per-file unified diffs, WorkspaceOverview.vue, rollback preview |
 | **6.5 — Plugin/Backend UI** | ✅ | SettingsPanel plugins tab + backends tab, swarm toggle, runner cards |

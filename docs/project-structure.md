@@ -16,22 +16,33 @@ hAIvemind/
 | File | Lines | Description |
 |------|-------|-------------|
 | **index.js** | ~155 | Express HTTP + WebSocket server. Thin wiring only — mounts routes, error handlers, crash guards. |
-| **orchestrator.js** | ~260 | Calls the T3 model for three operations: `decompose()` (prompt → task plan), `verify()` (codebase review → issues + fix tasks), `analyzeFailure()` (failed output → structured report). Parses JSON from model output. |
-| **taskRunner.js** | ~750 | DAG executor with swarm parallelism. Dynamic concurrency scaling (8→20 based on eligible tasks), speculative execution for soft deps, wave detection & progress broadcasting, task splitting at runtime, retry/escalation. |
-| **agentManager.js** | ~240 | Spawns `copilot` CLI as child processes. Manages agent lifecycle (running → success/failed), streams stdout/stderr, builds escalation reasons, tracks cost. Provides session snapshots for persistence. |
-| **config.js** | ~100 | All model definitions (13 models across 4 tiers), tier defaults, escalation chain, orchestrator tier, concurrency limits, port config. |
-| **workspace.js** | — | Creates per-project directories under `.haivemind-workspace/`, manages session JSON files, handles project linking. |
+| **orchestrator.js** | ~260 | Calls the T3 model for decompose(), verify(), analyzeFailure(). Parses JSON from model output. |
+| **taskRunner.js** | ~750 | DAG executor with swarm parallelism. Dynamic concurrency scaling, speculative execution, wave detection, task splitting, retry/escalation. |
+| **agentManager.js** | ~240 | Spawns `copilot` CLI as child processes. Manages agent lifecycle, streams output, tracks cost & escalation. |
+| **config.js** | ~100 | Model definitions (13 models × 4 tiers), escalation chain, concurrency limits, port config. |
+| **workspace.js** | — | Per-project directories under `.haivemind-workspace/`, session JSON, project linking. |
+| **state.js** | — | Shared state singleton (`refs`) — cross-module references without globals. |
 | **mock.js** | — | Mock agent spawner for demo mode. Simulates delays and random success/failure. |
+| **autopilot.js** | — | Autonomous multi-cycle build loop with goal checking. |
+| **logger.js** | — | Structured logger with level filtering and format modes (pretty/json). |
+| **outputSummarizer.js** | — | Truncates/summarizes large agent outputs to stay within token limits. |
+| **pluginManager.js** | — | Plugin discovery, loading, lifecycle management. |
+| **processTimeout.js** | — | Agent process timeout + stall detection with configurable thresholds. |
+| **selfDev.js** | — | Self-development mode — hAIvemind developing its own codebase. |
+| **sessionCheckpoint.js** | — | Checkpoint/resume for interrupted sessions (SIGTERM persistence). |
+| **snapshot.js** | — | Git-based workspace snapshots (pre/post-session tags, rollback). |
+| **workspaceAnalyzer.js** | — | Static analysis of workspace files (package.json, tsconfig, etc.). |
 
 ### Route Modules (22 files)
 
 | File | Description |
 |------|-------------|
 | **health.js** | Health check, version info |
-| **sessions.js** | Session CRUD, start, stop, replay |
+| **sessions.js** | Session CRUD, start, stop, replay, interrupted session management |
 | **backends.js** | Backend switching (Copilot/Ollama/Swarm) |
 | **plugins.js** | Plugin management REST API |
 | **autopilot.js** | Autopilot mode endpoints |
+| **auth.js** | Authentication middleware and token management |
 | **projects.js** | Thin re-exporter → mounts 15 domain routers below |
 | **projectCore.js** | Project CRUD, skills, reflections, settings, cost-history, export/import |
 | **webhooks.js** | Webhook CRUD, delivery history, test, verify |
@@ -48,6 +59,80 @@ hAIvemind/
 | **sessionOps.js** | Session replay, session comparison |
 | **taskManagement.js** | Task deps, retry/recovery, decomposition, pipelines |
 | **agentConfig.js** | Cost budgets, global search, agent profiles, dashboard widgets |
+
+### Services (38 files)
+
+<details>
+<summary>Full service module listing</summary>
+
+| File | Description |
+|------|-------------|
+| **sessions.js** | Session lifecycle, cost aggregation, session queries |
+| **agentMemory.js** | Per-agent memory store for context recall across sessions |
+| **agentProfiles.js** | Agent profile management and specialization |
+| **analysis.js** | Code analysis and workspace intelligence |
+| **analytics.js** | Session analytics and metrics aggregation |
+| **apiKeys.js** | API key creation, validation, scoping |
+| **auditLog.js** | Append-only audit trail for all actions |
+| **auth.js** | Authentication and authorization service |
+| **benchmarks.js** | Performance benchmark computation |
+| **collaboration.js** | Multi-user presence and lock management |
+| **costBudgets.js** | Spend tracking, alerts, budget enforcement |
+| **customPipelines.js** | User-defined multi-step build pipelines |
+| **dashboardWidgets.js** | Configurable dashboard widget store |
+| **diffReview.js** | Diff review service — hunk-level review, bulk review, revert |
+| **eventBus.js** | In-process event pub/sub |
+| **globalSearch.js** | Cross-project full-text search |
+| **healthDashboard.js** | System health aggregation (CPU, memory, disk) |
+| **notificationChannels.js** | Multi-channel notification delivery |
+| **notifications.js** | Notification CRUD per project |
+| **performanceProfiling.js** | Operation timing, percentiles, profiling |
+| **projectExport.js** | Project export/import as archive |
+| **projectTemplates.js** | Built-in + custom project scaffolding templates |
+| **promptSuggestions.js** | AI-assisted prompt suggestions based on project state |
+| **rateLimiter.js** | Per-project/global rate limiting |
+| **recovery.js** | Failure recovery strategies |
+| **resourceMonitor.js** | Resource usage monitoring (memory, CPU per agent) |
+| **retryPolicy.js** | Configurable retry policies with backoff strategies |
+| **retryRecovery.js** | Retry record tracking and recovery logic |
+| **scheduledTasks.js** | Cron-like scheduled task execution |
+| **scheduler.js** | Priority queue and schedule management |
+| **sessionComparison.js** | Side-by-side session comparison |
+| **sessionReplay.js** | Session event replay with timeline |
+| **sessionTemplates.js** | Per-project reusable session prompt presets |
+| **shutdown.js** | Graceful shutdown coordination |
+| **smartDecomposition.js** | Advanced task decomposition with merge/split |
+| **taskDependencies.js** | Task dependency graph operations |
+| **webhooks.js** | Webhook delivery, retry, signature verification |
+| **workspaceSnapshots.js** | Git-based workspace snapshots and diffs |
+
+</details>
+
+### WebSocket (`ws/` — 3 files)
+
+| File | Description |
+|------|-------------|
+| **setup.js** | WebSocket server initialization and upgrade handling |
+| **handlers.js** | Message type routing and per-client state |
+| **broadcast.js** | Broadcasting utilities for multi-client push |
+
+### Backends (`backends/` — 4 files)
+
+| File | Description |
+|------|-------------|
+| **base.js** | Abstract backend interface |
+| **copilot.js** | GitHub Copilot CLI backend |
+| **ollama.js** | Ollama local model backend |
+| **index.js** | Backend registry and switching |
+
+### Swarm (`swarm/` — 4 files)
+
+| File | Description |
+|------|-------------|
+| **index.js** | Swarm coordinator — scales across multiple runners |
+| **localRunner.js** | Local process runner |
+| **dockerRunner.js** | Docker container runner |
+| **sshRunner.js** | Remote SSH runner |
 
 ## Client
 

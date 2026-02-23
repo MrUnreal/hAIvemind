@@ -14,7 +14,7 @@ Added `server/logger.js` (levels, timestamps, colored/JSON modes), `.env.example
 **Commit:** `8d09c5d` — 24 tests
 
 ## 6.2 — Template Gallery & Builder UI (S) ✅
-`TemplateGallery.vue` dropdown in PromptInput, template preview with variable forms and stack badges, `POST /api/templates` endpoint for creating templates from the UI.
+`TemplateGallery.vue` dropdown in PromptInput, template preview with variable forms and stack badges, `/api/project-templates` endpoint for browsing and creating templates from the UI.
 **Commit:** `0dfffac` — 16 tests
 
 ## 6.3 — Real-Time Agent Output Streaming (M) ✅

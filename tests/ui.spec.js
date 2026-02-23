@@ -590,15 +590,15 @@ test.describe('REST API', () => {
   });
 
   test('templates API returns valid templates', async ({ request }) => {
-    const res = await request.get('http://localhost:3000/api/templates');
+    const res = await request.get('http://localhost:3000/api/project-templates');
     expect(res.ok()).toBeTruthy();
     const templates = await res.json();
     expect(templates.length).toBeGreaterThan(0);
     for (const t of templates) {
       expect(t).toHaveProperty('id');
       expect(t).toHaveProperty('name');
-      expect(t).toHaveProperty('tasks');
-      expect(Array.isArray(t.tasks)).toBeTruthy();
+      expect(t).toHaveProperty('category');
+      expect(typeof t.category).toBe('string');
     }
   });
 

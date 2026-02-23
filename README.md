@@ -18,7 +18,7 @@
   <img src="https://img.shields.io/badge/Self--Evolving-🧬-blueviolet" alt="Self-Evolving">
 </p>
 
-> **Every line of this codebase was written by hAIvemind itself.** The platform decomposes its own feature requests, spawns agents to implement them, verifies the results, and merges passing changes. 23K+ lines, 509 tests, zero manual code.
+> **Every line of this codebase was written by hAIvemind itself.** The platform decomposes its own feature requests, spawns agents to implement them, verifies the results, and merges passing changes. 31K+ lines, 1557 tests, zero manual code.
 
 ---
 
@@ -148,7 +148,7 @@ graph TB
 | **Services** | `sessions` · `analysis` · `recovery` · `shutdown` + 34 domain services (auth, webhooks, scheduler, monitoring, etc.) |
 | **WebSocket** | `setup` · `broadcast` · `handlers` |
 | **State** | `state.js` — shared refs bag for cross-module access |
-| **Entry** | `index.js` — 141 lines of thin wiring |
+| **Entry** | `index.js` — 142 lines of thin wiring |
 
 </details>
 
@@ -181,7 +181,7 @@ npm test                                        # 466 Playwright tests
 
 ## Status
 
-All 12 phases shipped. 69 test files. 1534 tests. ~23K lines. 100% self-built.
+All 12 phases shipped. 69 test files. 1557 tests. ~31K lines. 100% self-built.
 
 | Phase | What |
 |-------|------|
