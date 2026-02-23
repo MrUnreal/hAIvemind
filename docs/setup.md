@@ -30,10 +30,14 @@ export COPILOT_CMD=/path/to/your/copilot
 ```bash
 git clone git@github.com:MrUnreal/hAIvemind.git
 cd hAIvemind
-npm install
+npm install          # installs server + client dependencies
 ```
 
-This installs both server and client dependencies.
+Copy the example environment file:
+
+```bash
+cp .env.example .env
+```
 
 ## Running
 
@@ -62,17 +66,41 @@ All configuration lives in [`server/config.js`](../server/config.js):
 | Setting | Default | Description |
 |---------|---------|-------------|
 | `port` | `3000` | Server port |
-| `maxConcurrency` | `3` | Max parallel agents at once |
+| `maxConcurrency` | `10` | Max parallel agents at once |
+| `swarmMaxConcurrency` | `30` | Dynamic ceiling for swarm scaling |
 | `maxRetriesTotal` | `5` | Max retries per task before blocking |
 | `orchestratorTier` | `T3` | Model tier used for decomposition/verification |
 | `workDir` | `.haivemind-workspace` | Root directory for project workspaces |
 
 ### Environment Variables
 
+All variables have sensible defaults. Override via `.env` or environment:
+
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `COPILOT_CMD` | `copilot` | Path to the Copilot CLI binary |
+| `PORT` | `3000` | Server port |
 | `DEMO` | — | Set to `1` for mock agent mode |
+| `COPILOT_CMD` | `copilot` | Path to the Copilot CLI binary |
+| `HAIVEMIND_MAX_CONCURRENCY` | `10` | Max parallel agents per session |
+| `HAIVEMIND_SWARM_MAX_CONCURRENCY` | `30` | Swarm dynamic ceiling |
+| `HAIVEMIND_MAX_RETRIES` | `5` | Max total retries across agents |
+| `HAIVEMIND_MAX_CROSS_AGENT_LOOPS` | `3` | Max verify-fix loops |
+| `HAIVEMIND_AGENT_TIMEOUT_MS` | `300000` | Agent process timeout (5min) |
+| `HAIVEMIND_ORCHESTRATOR_TIMEOUT_MS` | `300000` | Orchestrator call timeout |
+| `HAIVEMIND_STALL_THRESHOLD_MS` | `90000` | Agent stall detection (90s) |
+| `HAIVEMIND_STALL_CHECK_INTERVAL_MS` | `30000` | Stall check interval (30s) |
+| `HAIVEMIND_SESSION_RETENTION_MS` | `1800000` | Completed session TTL (30min) |
+| `HAIVEMIND_MAX_AGENT_OUTPUT_BYTES` | `102400` | Max output buffer per agent |
+| `HAIVEMIND_SIGKILL_GRACE_MS` | `5000` | SIGKILL grace period after SIGTERM |
+| `HAIVEMIND_INTERRUPT_KILL_DELAY_MS` | `3000` | Interrupt → force-kill delay |
+| `HAIVEMIND_SHUTDOWN_FORCE_EXIT_MS` | `10000` | Shutdown force-exit timeout |
+| `HAIVEMIND_ANALYSIS_RACE_TIMEOUT_MS` | `3000` | Workspace analysis race timeout |
+| `HAIVEMIND_DEFAULT_BACKEND` | `copilot` | Agent backend (`copilot` or `ollama`) |
+| `HAIVEMIND_SWARM_ENABLED` | `false` | Enable multi-workspace swarm |
+| `HAIVEMIND_PLUGINS_DIR` | `plugins` | Plugin directory |
+| `HAIVEMIND_PLUGINS_AUTOLOAD` | `true` | Auto-load plugins on startup |
+| `LOG_LEVEL` | `info` | Log level (`error`/`warn`/`info`/`debug`) |
+| `LOG_FORMAT` | `pretty` | Log format (`pretty`/`json`) |
 
 ## Usage
 

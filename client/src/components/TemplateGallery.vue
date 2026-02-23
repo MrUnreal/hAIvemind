@@ -32,7 +32,7 @@ const selected = ref(null);
 
 onMounted(async () => {
   try {
-    const res = await fetch('/api/templates');
+    const res = await fetch('/api/project-templates');
     if (res.ok) templates.value = await res.json();
   } catch { /* ignore */ }
 });

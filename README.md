@@ -14,7 +14,7 @@
   <img src="https://img.shields.io/badge/Vue%203-Flow%20DAG-4FC08D?logo=vue.js" alt="Vue 3">
   <img src="https://img.shields.io/badge/Copilot%20CLI-Agent%20Backend-0078D4?logo=github" alt="Copilot CLI">
   <img src="https://img.shields.io/badge/Cost-Free_Tier_Default-brightgreen" alt="Free">
-  <img src="https://img.shields.io/badge/Tests-1534_passing-blue" alt="1534 Tests">
+  <img src="https://img.shields.io/badge/Tests-1557_passing-blue" alt="1557 Tests">
   <img src="https://img.shields.io/badge/Self--Evolving-🧬-blueviolet" alt="Self-Evolving">
 </p>
 

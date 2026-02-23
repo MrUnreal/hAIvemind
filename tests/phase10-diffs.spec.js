@@ -26,8 +26,10 @@ test.beforeAll(async () => {
 });
 
 test.afterAll(async () => {
-  if (existsSync(TEST_DIR)) {
-    rmSync(TEST_DIR, { recursive: true, force: true });
+  // Only clean our own project dir — never the whole workspace
+  const projDir = `${TEST_DIR}/diff-proj`;
+  if (existsSync(projDir)) {
+    rmSync(projDir, { recursive: true, force: true });
   }
 });
 

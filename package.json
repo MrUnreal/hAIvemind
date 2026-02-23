@@ -23,7 +23,8 @@
     "test:ci": "npx playwright test --ignore-snapshots --forbid-only --reporter=list",
     "docker:build": "docker build -t haivemind:latest .",
     "docker:up": "docker compose up -d",
-    "docker:down": "docker compose down"
+    "docker:down": "docker compose down",
+    "postinstall": "cd client && npm install"
   },
   "dependencies": {
     "express": "^5.1.0",

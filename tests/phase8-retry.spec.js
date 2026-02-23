@@ -221,8 +221,19 @@ test.describe('Smart Retry — validateRetrySettings()', () => {
 // ── REST API Tests ──
 
 test.describe('Smart Retry — REST API', () => {
-  test('GET retry-policy returns defaults for any project', async () => {
-    const res = await fetch(`${API}/api/projects/nonexistent/retry-policy`);
+  const RETRY_SLUG = `retry-api-${Date.now()}`;
+
+  test.beforeAll(async () => {
+    // Create project so retry-policy endpoint returns 200
+    await fetch(`${API}/api/projects`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: RETRY_SLUG }),
+    });
+  });
+
+  test('GET retry-policy returns defaults for project', async () => {
+    const res = await fetch(`${API}/api/projects/${RETRY_SLUG}/retry-policy`);
     expect(res.status).toBe(200);
     const data = await res.json();
     expect(data).toHaveProperty('maxRetries');
@@ -267,8 +278,8 @@ test.describe('Smart Retry — Integration', () => {
     expect(src).toContain('export function validateRetrySettings');
   });
 
-  test('projects.js imports retryPolicy', () => {
-    const src = readFileSync(path.join(ROOT, 'server', 'routes', 'projects.js'), 'utf-8');
+  test('scheduling.js contains retryPolicy routes', () => {
+    const src = readFileSync(path.join(ROOT, 'server', 'routes', 'scheduling.js'), 'utf-8');
     expect(src).toContain('retryPolicy');
     expect(src).toContain('retry-policy');
   });

@@ -148,8 +148,8 @@ test.describe('API routes (post-decomposition)', () => {
     expect(json.name).toBe('copilot');
   });
 
-  test('GET /api/templates returns array', async ({ request }) => {
-    const res = await request.get(`${BASE}/api/templates`);
+  test('GET /api/project-templates returns array', async ({ request }) => {
+    const res = await request.get(`${BASE}/api/project-templates`);
     expect(res.ok()).toBe(true);
     const json = await res.json();
     expect(Array.isArray(json)).toBe(true);

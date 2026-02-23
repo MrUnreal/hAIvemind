@@ -26,8 +26,9 @@ test.beforeAll(async () => {
 });
 
 test.afterAll(async () => {
-  if (existsSync(TEST_DIR)) {
-    rmSync(TEST_DIR, { recursive: true, force: true });
+  const projDir = `${TEST_DIR}/snap-proj`;
+  if (existsSync(projDir)) {
+    rmSync(projDir, { recursive: true, force: true });
   }
 });
 

@@ -25,9 +25,7 @@ test.beforeAll(async () => {
 });
 
 test.afterAll(async () => {
-  if (existsSync(TEST_DIR)) {
-    rmSync(TEST_DIR, { recursive: true, force: true });
-  }
+  // No project created — nothing to clean
 });
 
 // ═══════════════════════════════════════════════════════════════════
