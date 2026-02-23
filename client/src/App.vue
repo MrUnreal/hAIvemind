@@ -130,37 +130,41 @@
       <div class="side-panel" :class="{ collapsed: sidePanelCollapsed }">
         <div class="side-tabs">
           <!-- Session group -->
-          <button
-            v-for="tab in tabGroups.session"
-            :key="tab.id"
-            :class="['tab-btn', { active: sideTab === tab.id }]"
-            :title="tab.label"
-            @click="sideTab = tab.id; sidePanelCollapsed = false"
-          >
-            {{ tab.icon }}
-          </button>
-          <span class="tab-sep"></span>
+          <div class="tab-group tab-group--session">
+            <button
+              v-for="tab in tabGroups.session"
+              :key="tab.id"
+              :class="['tab-btn', { active: sideTab === tab.id }]"
+              :title="tab.label"
+              @click="sideTab = tab.id; sidePanelCollapsed = false"
+            >
+              {{ tab.icon }}
+            </button>
+          </div>
           <!-- Config group -->
-          <button
-            v-for="tab in tabGroups.config"
-            :key="tab.id"
-            :class="['tab-btn', { active: sideTab === tab.id }]"
-            :title="tab.label"
-            @click="sideTab = tab.id; sidePanelCollapsed = false"
-          >
-            {{ tab.icon }}
-          </button>
-          <span class="tab-sep"></span>
+          <div class="tab-group tab-group--config">
+            <button
+              v-for="tab in tabGroups.config"
+              :key="tab.id"
+              :class="['tab-btn', { active: sideTab === tab.id }]"
+              :title="tab.label"
+              @click="sideTab = tab.id; sidePanelCollapsed = false"
+            >
+              {{ tab.icon }}
+            </button>
+          </div>
           <!-- Monitor group -->
-          <button
-            v-for="tab in tabGroups.monitor"
-            :key="tab.id"
-            :class="['tab-btn', { active: sideTab === tab.id }]"
-            :title="tab.label"
-            @click="sideTab = tab.id; sidePanelCollapsed = false"
-          >
-            {{ tab.icon }}
-          </button>
+          <div class="tab-group tab-group--monitor">
+            <button
+              v-for="tab in tabGroups.monitor"
+              :key="tab.id"
+              :class="['tab-btn', { active: sideTab === tab.id }]"
+              :title="tab.label"
+              @click="sideTab = tab.id; sidePanelCollapsed = false"
+            >
+              {{ tab.icon }}
+            </button>
+          </div>
           <button
             class="tab-collapse"
             @click="sidePanelCollapsed = !sidePanelCollapsed"
@@ -168,7 +172,7 @@
             {{ sidePanelCollapsed ? '◀' : '▶' }}
           </button>
         </div>
-        <div v-if="sideTab && !sidePanelCollapsed" class="side-tab-label">
+        <div v-if="sideTab && !sidePanelCollapsed" :class="['side-tab-label', `label--${currentTabGroup}`]">
           {{ currentTabLabel }}
         </div>
         <div v-show="!sidePanelCollapsed" class="side-content">
@@ -348,6 +352,13 @@ const tabGroups = {
 };
 const allTabs = [...tabGroups.session, ...tabGroups.config, ...tabGroups.monitor];
 const currentTabLabel = computed(() => allTabs.find(t => t.id === sideTab.value)?.label ?? '');
+const currentTabGroup = computed(() => {
+  const id = sideTab.value;
+  if (tabGroups.session.some(t => t.id === id)) return 'session';
+  if (tabGroups.config.some(t => t.id === id)) return 'config';
+  if (tabGroups.monitor.some(t => t.id === id)) return 'monitor';
+  return '';
+});
 const replayMode = ref(false);
 const showNotifications = ref(false);
 const notifBadge = ref(0);
@@ -1073,40 +1084,91 @@ onUnmounted(() => cleanupShortcuts());
 
 .side-tabs {
   display: flex;
-  align-items: center;
-  border-bottom: 1px solid var(--border-subtle);
+  align-items: stretch;
+  border-bottom: 2px solid var(--border-subtle);
   flex-shrink: 0;
+  padding: 0;
+  gap: 0;
+}
+
+/* Tab groups — flex row with subtle color coding */
+.tab-group {
+  display: flex;
+  align-items: stretch;
+  gap: 0;
   padding: 0 2px;
-  gap: 1px;
+}
+.tab-group + .tab-group {
+  border-left: 2px solid var(--border-subtle);
 }
 
 .tab-btn {
   background: none;
-  border: none;
+  border: 2px solid transparent;
+  border-bottom: none;
   color: var(--text-tertiary);
   font-size: 15px;
-  padding: 8px 7px;
+  padding: 6px 7px 8px;
   cursor: pointer;
-  transition: color 0.15s, background 0.15s;
-  border-radius: 6px;
+  transition: color 0.15s, background 0.15s, border-color 0.15s;
+  border-radius: 8px 8px 0 0;
   line-height: 1;
   position: relative;
+  margin-bottom: -2px;
 }
+
+/* Active tab — open-bottom border */
 .tab-btn.active {
+  border-color: var(--accent-gold);
+  background: var(--bg-secondary, #1a1a2e);
   color: var(--accent-gold);
-  background: rgba(245, 197, 66, 0.08);
+  z-index: 1;
 }
+
 .tab-btn:hover:not(.active) {
   color: var(--text-secondary);
   background: rgba(255, 255, 255, 0.04);
+  border-color: rgba(255, 255, 255, 0.08);
 }
 
-.tab-sep {
-  width: 1px;
-  height: 18px;
-  background: var(--border-subtle);
-  margin: 0 3px;
-  flex-shrink: 0;
+/* Group color tints */
+.tab-group--session .tab-btn {
+  color: #6ea8d9;
+}
+.tab-group--session .tab-btn.active {
+  border-color: #6ea8d9;
+  color: #8ac4f0;
+  background: rgba(110, 168, 217, 0.08);
+}
+.tab-group--session .tab-btn:hover:not(.active) {
+  color: #8ac4f0;
+  border-color: rgba(110, 168, 217, 0.2);
+}
+
+.tab-group--config .tab-btn {
+  color: #d4a843;
+}
+.tab-group--config .tab-btn.active {
+  border-color: #d4a843;
+  color: #f0c254;
+  background: rgba(212, 168, 67, 0.08);
+}
+.tab-group--config .tab-btn:hover:not(.active) {
+  color: #f0c254;
+  border-color: rgba(212, 168, 67, 0.2);
+}
+
+.tab-group--monitor .tab-btn {
+  color: #5abf7b;
+}
+.tab-group--monitor .tab-btn.active {
+  border-color: #5abf7b;
+  color: #72de96;
+  background: rgba(90, 191, 123, 0.08);
+}
+.tab-group--monitor .tab-btn:hover:not(.active) {
+  color: #72de96;
+  border-color: rgba(90, 191, 123, 0.2);
 }
 
 .side-tab-label {
@@ -1119,12 +1181,12 @@ onUnmounted(() => cleanupShortcuts());
   border-bottom: 1px solid var(--border-subtle);
   background: rgba(245, 197, 66, 0.03);
 }
+/* Match label color to active group */
+.side-tab-label.label--session { color: #8ac4f0; background: rgba(110, 168, 217, 0.03); }
+.side-tab-label.label--config  { color: #f0c254; background: rgba(212, 168, 67, 0.03); }
+.side-tab-label.label--monitor { color: #72de96; background: rgba(90, 191, 123, 0.03); }
 
-.side-panel.collapsed .tab-btn {
-  display: none;
-}
-
-.side-panel.collapsed .tab-sep {
+.side-panel.collapsed .tab-group {
   display: none;
 }
 
