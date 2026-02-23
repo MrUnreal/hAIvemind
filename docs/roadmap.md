@@ -280,3 +280,21 @@ Currently single-user, no auth. Fine for local dev, but blocks team usage or hos
 | **10.6 — Rate Limiting** | ✅ | Per-user and per-project rate limits, configurable thresholds, cooldown periods, admin override |
 | **10.7 — Workspace Snapshots** | ✅ | Full workspace backup/restore, snapshot before risky operations, diff between snapshots, named checkpoints |
 | **10.8 — Health Dashboard** | ✅ | Production health page: uptime, error rates, latency percentiles, backend availability, alert thresholds |
+
+---
+
+### Phase 11 — Developer Experience & Integration
+
+> Improve the day-to-day developer workflow, add external integrations, and polish the platform for broader adoption.
+
+| Feature | Status | Notes |
+|---------|--------|-------|
+| **11.0 — Webhook System** | ✅ | Enhanced webhooks with HMAC-SHA256 signatures, exponential backoff with jitter, delivery history/stats, test ping, webhook update, supported events listing |
+| **11.1 — Session Replay** | ❌ | Step-by-step replay of past sessions with timeline scrubbing, view agent decisions and outputs at each step |
+| **11.2 — Project Templates** | ❌ | Predefined project archetypes (API server, CLI tool, library) with starter prompts, conventions, and recommended settings |
+| **11.3 — Collaboration** | ❌ | Multi-user project sharing, role-based access (viewer/editor/admin), activity feed, presence indicators |
+| **11.4 — Export/Import** | ❌ | Full project export (settings, sessions, memory, templates) as portable archive, import into new instances |
+| **11.5 — CLI Enhancements** | ❌ | Interactive CLI wizard, `haivemind init` for new projects, `haivemind watch` for file-change triggers, shell completions |
+| **11.6 — Notification Channels** | ❌ | Slack/Discord/email notification integrations, configurable per-project, digest vs real-time modes |
+| **11.7 — Cost Budgets** | ❌ | Per-project cost budgets with hard/soft limits, daily/weekly/monthly caps, budget alerts, spend forecasting |
+| **11.8 — Search & Filter** | ❌ | Global search across sessions, memory, diffs, and audit logs; advanced filters, saved searches, full-text indexing |
