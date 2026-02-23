@@ -241,8 +241,12 @@ router.get('/projects/:slug/sessions/:sessionId/diff', (req, res) => {
 router.post('/projects/:slug/sessions', async (req, res) => {
   const { prompt, templateId } = req.body;
   if (!prompt && !templateId) return res.status(400).json({ error: 'No prompt provided' });
-  startSession(prompt || `Build from template: ${templateId}`, req.params.slug);
-  res.json({ status: 'started', project: req.params.slug });
+  try {
+    const sessionId = startSession(prompt || `Build from template: ${templateId}`, req.params.slug);
+    res.json({ status: 'started', project: req.params.slug, sessionId });
+  } catch (err) {
+    res.status(500).json({ error: err?.message || 'Failed to start session' });
+  }
 });
 
 // ═══════════════════════════════════════════════════════════

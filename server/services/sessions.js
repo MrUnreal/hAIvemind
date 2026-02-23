@@ -47,6 +47,8 @@ export function pruneCompletedSessions() {
     const isExpired = now - completedAt > config.sessionRetentionMs;
     if (isFinished && isExpired) {
       sessions.delete(sessionId);
+      activeContexts.delete(sessionId);
+      workDirLocks.delete(session.projectSlug || session.workDir);
       for (const [taskId, mappedSessionId] of taskToSession.entries()) {
         if (mappedSessionId === sessionId) {
           taskToSession.delete(taskId);

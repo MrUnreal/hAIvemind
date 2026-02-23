@@ -15,6 +15,7 @@ import express from 'express';
 import { createServer } from 'node:http';
 import { join, dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { existsSync } from 'node:fs';
 import config from './config.js';
 import { makeMsg } from '../shared/protocol.js';
 import WorkspaceManager from './workspace.js';
@@ -92,17 +93,23 @@ app.use('/api', pluginsRouter);
 app.use('/api', autopilotRouter);
 app.use('/api', authRouter);
 
-// ── Serve built client in production ──
-const clientDist = join(__dirname, '..', 'client', 'dist');
-import('node:fs').then(({ existsSync }) => {
-  if (existsSync(clientDist)) {
-    app.use(express.static(clientDist));
-    app.get(/^(?!\/api|\/ws).*/, (_req, res) => {
-      res.sendFile(join(clientDist, 'index.html'));
-    });
-    log.info('[server] Serving built client from client/dist/');
+// ── Global Express error handler (must be after all routes) ──
+app.use((err, _req, res, _next) => {
+  log.error(`[server] Unhandled route error: ${err?.message || err}`);
+  if (!res.headersSent) {
+    res.status(500).json({ error: 'Internal server error' });
   }
 });
+
+// ── Serve built client in production ──
+const clientDist = join(__dirname, '..', 'client', 'dist');
+if (existsSync(clientDist)) {
+  app.use(express.static(clientDist));
+  app.get(/^(?!\/api|\/ws).*/, (_req, res) => {
+    res.sendFile(join(clientDist, 'index.html'));
+  });
+  log.info('[server] Serving built client from client/dist/');
+}
 
 // ── Start ──
 server.listen(config.port, () => {
@@ -140,3 +147,12 @@ recoverFromCheckpoints();
 // ── Graceful shutdown ──
 process.on('SIGTERM', gracefulShutdown);
 process.on('SIGINT', gracefulShutdown);
+
+// ── Crash-safety handlers ──
+process.on('unhandledRejection', (err) => {
+  log.error(`[server] Unhandled rejection: ${err?.message || err}`);
+});
+process.on('uncaughtException', (err) => {
+  log.error(`[server] Uncaught exception: ${err?.message || err}`);
+  gracefulShutdown();
+});

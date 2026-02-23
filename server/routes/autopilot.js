@@ -42,10 +42,17 @@ router.post('/projects/:slug/autopilot', async (req, res) => {
       runSession: (prompt) => {
         return new Promise((resolve) => {
           const sessionId = startSession(prompt, slug);
+          if (!sessionId) {
+            return resolve({ exitCode: 1, sessionId: null, costSummary: {} });
+          }
+          let elapsed = 0;
+          const MAX_WAIT_MS = 10 * 60 * 1000; // 10 minute safety cap
           const check = setInterval(() => {
-            if (abortController.aborted) {
+            elapsed += 1000;
+            if (abortController.aborted || elapsed >= MAX_WAIT_MS) {
               clearInterval(check);
-              resolve({ exitCode: 1, sessionId, costSummary: {} });
+              resolve({ exitCode: 1, sessionId, costSummary: {}, timedOut: elapsed >= MAX_WAIT_MS });
+              return;
             }
             const s = sessions.get(sessionId);
             if (s && (s.status === 'completed' || s.status === 'failed')) {
