@@ -310,6 +310,10 @@ function buildSummary(techStack, dependencies, conventions, fileTree) {
     parts.push(`${dependencies.runtime.length} runtime + ${dependencies.dev.length} dev dependencies`);
   }
 
+  if (parts.length === 0) {
+    return 'Empty workspace — no source files detected yet.';
+  }
+
   return parts.join('. ') + '.';
 }
 
