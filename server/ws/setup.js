@@ -35,6 +35,11 @@ export function createWss(server) {
 
     ws.isAlive = true;
 
+    ws.on('error', (err) => {
+      log.warn(`[ws] Client error: ${err?.message || err}`);
+      clients.delete(ws);
+    });
+
     ws.on('pong', () => {
       ws.isAlive = true;
     });

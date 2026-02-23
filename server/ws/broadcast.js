@@ -66,18 +66,25 @@ export function broadcast(msg) {
   }
 
   for (const ws of clients) {
-    if (ws.readyState !== ws.OPEN) continue;
+    if (ws.readyState !== ws.OPEN) {
+      if (ws.readyState > ws.OPEN) clients.delete(ws); // CLOSING or CLOSED
+      continue;
+    }
     // If client has subscriptions and message has a project scope, filter
     if (resolvedSlug && ws.subscribedProjects?.size > 0 && !ws.subscribedProjects.has(resolvedSlug)) {
       continue;
     }
-    ws.send(msg);
+    try { ws.send(msg); } catch { clients.delete(ws); }
   }
 }
 
 /** Broadcast to all connected clients regardless of subscription (for global events). */
 export function broadcastGlobal(msg) {
   for (const ws of clients) {
-    if (ws.readyState === ws.OPEN) ws.send(msg);
+    if (ws.readyState !== ws.OPEN) {
+      if (ws.readyState > ws.OPEN) clients.delete(ws);
+      continue;
+    }
+    try { ws.send(msg); } catch { clients.delete(ws); }
   }
 }
