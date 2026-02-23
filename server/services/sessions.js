@@ -142,10 +142,10 @@ export async function startSession(userPrompt, projectSlug, predefinedPlan) {
         }
       })();
 
-      // Race: try to get analysis within 3s, then decompose with whatever we have
+      // Race: try to get analysis within configured timeout, then decompose with whatever we have
       const analysisOrTimeout = await Promise.race([
         analysisPromise,
-        new Promise(resolve => setTimeout(() => resolve(null), 3000)),
+        new Promise(resolve => setTimeout(() => resolve(null), config.analysisRaceTimeoutMs)),
       ]);
 
       // If analysis came back fast, use it immediately

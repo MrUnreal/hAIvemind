@@ -401,7 +401,7 @@ export default class AgentManager {
         child.removeAllListeners('close');
         child.removeAllListeners('error');
         try { child.kill('SIGTERM'); } catch { /* already exited */ }
-        setTimeout(() => { try { child.kill('SIGKILL'); } catch { /* already exited */ } }, 5000);
+        setTimeout(() => { try { child.kill('SIGKILL'); } catch { /* already exited */ } }, config.sigkillGracePeriodMs);
         console.warn(`[agent:${agent.id.slice(0, 8)}] ${timeoutMessage}`);
         this.broadcast(makeMsg(MSG.AGENT_STATUS, {
           agentId: agent.id, taskId: task.id, taskLabel: task.label,
@@ -528,7 +528,7 @@ export default class AgentManager {
             }
           } catch { /* already exited */ }
 
-          // Force SIGKILL after 3 seconds
+          // Force SIGKILL after configured delay
           const forceKill = setTimeout(() => {
             try {
               if (pid && process.platform !== 'win32') {
@@ -538,7 +538,7 @@ export default class AgentManager {
               }
             } catch { /* already exited */ }
             resolve();
-          }, 3000);
+          }, config.interruptForceKillDelayMs);
           forceKill.unref();
 
           // Resolve early if process exits on its own
@@ -548,7 +548,7 @@ export default class AgentManager {
           });
 
           // Safety timeout
-          setTimeout(() => resolve(), 5000).unref();
+          setTimeout(() => resolve(), config.sigkillGracePeriodMs).unref();
         }));
 
         agent.status = 'interrupted';

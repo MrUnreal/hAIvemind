@@ -7,6 +7,7 @@ import { join } from 'node:path';
 import { MSG, makeMsg } from '../../shared/protocol.js';
 import { sessions, activeContexts, refs } from '../state.js';
 import { broadcastGlobal } from '../ws/broadcast.js';
+import config from '../config.js';
 import { releaseLock } from './sessions.js';
 import { cleanupWebhooks } from './webhooks.js';
 import log from '../logger.js';
@@ -106,9 +107,9 @@ export async function gracefulShutdown() {
     });
   }
 
-  // Force exit after 10 seconds if graceful close hangs
+  // Force exit after configured timeout if graceful close hangs
   setTimeout(() => {
-    log.error('  ⚠️  Forced exit after timeout');
+    log.error('  \u26a0\ufe0f  Forced exit after timeout');
     process.exit(1);
-  }, 10000).unref();
+  }, config.shutdownForceExitMs).unref();
 }

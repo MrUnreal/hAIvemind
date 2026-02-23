@@ -120,6 +120,12 @@ const config = {
   stallThresholdMs: envInt('HAIVEMIND_STALL_THRESHOLD_MS', 90000),
   stallCheckIntervalMs: envInt('HAIVEMIND_STALL_CHECK_INTERVAL_MS', 30000),
 
+  // Process lifecycle timeouts
+  sigkillGracePeriodMs: envInt('HAIVEMIND_SIGKILL_GRACE_MS', 5000),
+  interruptForceKillDelayMs: envInt('HAIVEMIND_INTERRUPT_KILL_DELAY_MS', 3000),
+  shutdownForceExitMs: envInt('HAIVEMIND_SHUTDOWN_FORCE_EXIT_MS', 10000),
+  analysisRaceTimeoutMs: envInt('HAIVEMIND_ANALYSIS_RACE_TIMEOUT_MS', 3000),
+
   // Pluggable Agent Backends
   defaultBackend: env('HAIVEMIND_DEFAULT_BACKEND', 'copilot'),
   backends: {
