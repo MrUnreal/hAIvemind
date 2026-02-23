@@ -159,16 +159,20 @@ export default class WorkspaceManager {
       costSummary: null,
     };
 
+    const sessionsDir2 = join(projectDir, '.haivemind', 'sessions');
+    this._ensureDir(sessionsDir2);
     writeFileSync(
-      join(sessionsDir, `${sessionId}.json`),
+      join(sessionsDir2, `${sessionId}.json`),
       JSON.stringify(session, null, 2),
     );
 
     // Update project metadata
-    const meta = this._readProjectMeta(slug);
-    meta.sessionCount++;
-    meta.updatedAt = Date.now();
-    this._writeProjectMeta(slug, meta);
+    try {
+      const meta = this._readProjectMeta(slug);
+      meta.sessionCount++;
+      meta.updatedAt = Date.now();
+      this._writeProjectMeta(slug, meta);
+    } catch { /* project dir may have been deleted by parallel cleanup */ }
 
     console.log(`[workspace] Session ${sessionId.slice(0, 8)} started in project "${slug}"`);
 
@@ -198,15 +202,19 @@ export default class WorkspaceManager {
     session.timeline = summary.timeline || [];
     session.snapshot = summary.snapshot || null; // Phase 5.2: Pre-session snapshot metadata
 
-    writeFileSync(sessionFile, JSON.stringify(session, null, 2));
+    try {
+      writeFileSync(sessionFile, JSON.stringify(session, null, 2));
+    } catch { /* session dir may have been deleted by parallel cleanup */ return; }
 
     // Update project totals
-    const meta = this._readProjectMeta(slug);
-    if (summary.costSummary?.totalPremiumRequests) {
-      meta.totalCost = (meta.totalCost || 0) + summary.costSummary.totalPremiumRequests;
-    }
-    meta.updatedAt = Date.now();
-    this._writeProjectMeta(slug, meta);
+    try {
+      const meta = this._readProjectMeta(slug);
+      if (summary.costSummary?.totalPremiumRequests) {
+        meta.totalCost = (meta.totalCost || 0) + summary.costSummary.totalPremiumRequests;
+      }
+      meta.updatedAt = Date.now();
+      this._writeProjectMeta(slug, meta);
+    } catch { /* project dir may have been deleted by parallel cleanup */ }
   }
 
   /**
@@ -488,7 +496,9 @@ export default class WorkspaceManager {
    */
   updateProjectSettings(slug, patch) {
     const dir = this._getProjectDir(slug);
-    const settingsPath = join(dir, '.haivemind', 'settings.json');
+    const metaDir = join(dir, '.haivemind');
+    this._ensureDir(metaDir);
+    const settingsPath = join(metaDir, 'settings.json');
     const existing = this.getProjectSettings(slug);
     const updated = { ...existing, ...patch, updatedAt: Date.now() };
     writeFileSync(settingsPath, JSON.stringify(updated, null, 2));
@@ -648,7 +658,9 @@ export default class WorkspaceManager {
 
   _writeProjectMeta(slug, meta) {
     const dir = this._getProjectDir(slug);
-    const metaPath = join(dir, '.haivemind', 'project.json');
+    const metaDir = join(dir, '.haivemind');
+    this._ensureDir(metaDir);
+    const metaPath = join(metaDir, 'project.json');
     writeFileSync(metaPath, JSON.stringify(meta, null, 2));
   }
 }
