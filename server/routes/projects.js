@@ -90,6 +90,12 @@ import {
   getSchedule, getCriticalPath, getDependencyStats,
   PRIORITY_LEVELS, TASK_STATUSES, EDGE_TYPES,
 } from '../services/taskDependencies.js';
+import {
+  listRetryPolicies, getRetryPolicy, createRetryPolicy, updateRetryPolicy, deleteRetryPolicy,
+  shouldRetry, calculateDelay, recordRetry, getRetryLog,
+  getCircuitBreaker, resetCircuitBreaker, listCircuitBreakers, getRetryStats,
+  RETRY_STRATEGIES, CIRCUIT_STATES,
+} from '../services/retryRecovery.js';
 
 const router = Router();
 
@@ -1994,6 +2000,115 @@ router.get('/priority-levels', (_req, res) => {
 /** List task statuses */
 router.get('/task-statuses', (_req, res) => {
   res.json(TASK_STATUSES);
+});
+
+// ─── Phase 12.1: Auto-Retry & Recovery ──────────────────────────────────
+
+/** List retry policies */
+router.get('/projects/:slug/retry-policies', (req, res) => {
+  const project = refs.workspace.getProject(req.params.slug);
+  if (!project) return res.status(404).json({ error: 'Not found' });
+  res.json(listRetryPolicies(req.params.slug));
+});
+
+/** Get a retry policy */
+router.get('/projects/:slug/retry-policies/:policyId', (req, res) => {
+  const project = refs.workspace.getProject(req.params.slug);
+  if (!project) return res.status(404).json({ error: 'Not found' });
+  const policy = getRetryPolicy(req.params.slug, req.params.policyId);
+  if (!policy) return res.status(404).json({ error: 'Policy not found' });
+  res.json(policy);
+});
+
+/** Create a retry policy */
+router.post('/projects/:slug/retry-policies', (req, res) => {
+  const project = refs.workspace.getProject(req.params.slug);
+  if (!project) return res.status(404).json({ error: 'Not found' });
+  try {
+    const policy = createRetryPolicy(req.params.slug, req.body);
+    res.status(201).json(policy);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+/** Update a retry policy */
+router.patch('/projects/:slug/retry-policies/:policyId', (req, res) => {
+  const project = refs.workspace.getProject(req.params.slug);
+  if (!project) return res.status(404).json({ error: 'Not found' });
+  const policy = updateRetryPolicy(req.params.slug, req.params.policyId, req.body);
+  if (!policy) return res.status(404).json({ error: 'Policy not found' });
+  res.json(policy);
+});
+
+/** Delete a retry policy */
+router.delete('/projects/:slug/retry-policies/:policyId', (req, res) => {
+  const project = refs.workspace.getProject(req.params.slug);
+  if (!project) return res.status(404).json({ error: 'Not found' });
+  const ok = deleteRetryPolicy(req.params.slug, req.params.policyId);
+  if (!ok) return res.status(404).json({ error: 'Policy not found' });
+  res.json({ ok: true });
+});
+
+/** Check if retry should be attempted */
+router.post('/projects/:slug/retry-check', (req, res) => {
+  const project = refs.workspace.getProject(req.params.slug);
+  if (!project) return res.status(404).json({ error: 'Not found' });
+  const { policyId, attempt, errorType } = req.body;
+  if (!policyId) return res.status(400).json({ error: 'policyId is required' });
+  res.json(shouldRetry(req.params.slug, policyId, attempt || 0, errorType));
+});
+
+/** Record a retry attempt */
+router.post('/projects/:slug/retry-log', (req, res) => {
+  const project = refs.workspace.getProject(req.params.slug);
+  if (!project) return res.status(404).json({ error: 'Not found' });
+  const record = recordRetry(req.params.slug, req.body);
+  res.status(201).json(record);
+});
+
+/** Get retry log */
+router.get('/projects/:slug/retry-log', (req, res) => {
+  const project = refs.workspace.getProject(req.params.slug);
+  if (!project) return res.status(404).json({ error: 'Not found' });
+  res.json(getRetryLog(req.params.slug, {
+    policyId: req.query.policyId,
+    taskId: req.query.taskId,
+    limit: req.query.limit ? parseInt(req.query.limit, 10) : undefined,
+  }));
+});
+
+/** Get circuit breaker state */
+router.get('/projects/:slug/circuit-breakers/:policyId', (req, res) => {
+  const project = refs.workspace.getProject(req.params.slug);
+  if (!project) return res.status(404).json({ error: 'Not found' });
+  res.json(getCircuitBreaker(req.params.slug, req.params.policyId));
+});
+
+/** Reset circuit breaker */
+router.post('/projects/:slug/circuit-breakers/:policyId/reset', (req, res) => {
+  const project = refs.workspace.getProject(req.params.slug);
+  if (!project) return res.status(404).json({ error: 'Not found' });
+  res.json(resetCircuitBreaker(req.params.slug, req.params.policyId));
+});
+
+/** List all circuit breakers */
+router.get('/projects/:slug/circuit-breakers', (req, res) => {
+  const project = refs.workspace.getProject(req.params.slug);
+  if (!project) return res.status(404).json({ error: 'Not found' });
+  res.json(listCircuitBreakers(req.params.slug));
+});
+
+/** Get retry stats */
+router.get('/projects/:slug/retry-stats', (req, res) => {
+  const project = refs.workspace.getProject(req.params.slug);
+  if (!project) return res.status(404).json({ error: 'Not found' });
+  res.json(getRetryStats(req.params.slug));
+});
+
+/** List retry strategies */
+router.get('/retry-strategies', (_req, res) => {
+  res.json(RETRY_STRATEGIES);
 });
 
 export default router;

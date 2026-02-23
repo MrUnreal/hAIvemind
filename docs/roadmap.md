@@ -308,7 +308,7 @@ Currently single-user, no auth. Fine for local dev, but blocks team usage or hos
 | Feature | Status | Notes |
 |---------|--------|-------|
 | **12.0 — Task Dependencies & Priority** | ✅ | Dependency graph for tasks with priority levels, blocking/non-blocking edges, critical path calculation, priority-based scheduling |
-| **12.1 — Auto-Retry & Recovery** | ❌ | Configurable retry policies per task/session, circuit breaker patterns, automatic fallback strategies, retry budgets |
+| **12.1 — Auto-Retry & Recovery** | ✅ | Configurable retry policies per task/session, circuit breaker patterns, automatic fallback strategies, retry budgets |
 | **12.2 — Performance Profiling** | ❌ | Per-task/session timing stats, bottleneck detection, historical performance trends, P50/P95/P99 latency tracking |
 | **12.3 — Smart Decomposition** | ❌ | ML-inspired task decomposition heuristics, complexity estimation, parallel-vs-sequential auto-detection, sub-task merging |
 | **12.4 — Session Comparison** | ❌ | Side-by-side session diff, outcome comparison, strategy effectiveness scoring, A/B-style analysis |
