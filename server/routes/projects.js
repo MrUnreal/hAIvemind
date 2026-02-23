@@ -54,6 +54,11 @@ import {
   getHistory as getEventHistory, clearHistory as clearEventHistory,
   getStats as getEventStats, listEvents, EVENTS, _reset as resetBus,
 } from '../services/eventBus.js';
+import {
+  getLimits as getRateLimits, setLimits as setRateLimits, resetLimits as resetRateLimits,
+  checkRate, getStatus as getRateStatus, clearBucket, clearAll as clearAllBuckets,
+  listKeys as listRateKeys, getDefaults as getRateDefaults,
+} from '../services/rateLimiter.js';
 
 const router = Router();
 
@@ -1042,6 +1047,66 @@ router.get('/events', (req, res) => {
 router.delete('/events/history', (req, res) => {
   clearEventHistory();
   res.json({ ok: true });
+});
+
+// ─── Rate Limiting ─────────────────────────────────────────────
+
+/** Get rate limits for a project */
+router.get('/projects/:slug/rate-limits', (req, res) => {
+  if (!refs.workspace.getProject(req.params.slug)) {
+    return res.status(404).json({ error: 'Project not found' });
+  }
+  res.json(getRateLimits(req.params.slug));
+});
+
+/** Set rate limits for a project */
+router.put('/projects/:slug/rate-limits', (req, res) => {
+  if (!refs.workspace.getProject(req.params.slug)) {
+    return res.status(404).json({ error: 'Project not found' });
+  }
+  res.json(setRateLimits(req.params.slug, req.body));
+});
+
+/** Reset rate limits to defaults */
+router.delete('/projects/:slug/rate-limits', (req, res) => {
+  if (!refs.workspace.getProject(req.params.slug)) {
+    return res.status(404).json({ error: 'Project not found' });
+  }
+  res.json(resetRateLimits(req.params.slug));
+});
+
+/** Check rate for a key */
+router.post('/rate/check', (req, res) => {
+  const { key, limits } = req.body;
+  if (!key) return res.status(400).json({ error: 'key is required' });
+  res.json(checkRate(key, limits || {}));
+});
+
+/** Get status for a key */
+router.get('/rate/status/:key', (req, res) => {
+  res.json(getRateStatus(req.params.key));
+});
+
+/** Clear a specific rate bucket */
+router.delete('/rate/buckets/:key', (req, res) => {
+  clearBucket(req.params.key);
+  res.json({ ok: true });
+});
+
+/** Clear all rate buckets */
+router.delete('/rate/buckets', (req, res) => {
+  clearAllBuckets();
+  res.json({ ok: true });
+});
+
+/** List tracked rate keys */
+router.get('/rate/keys', (req, res) => {
+  res.json({ keys: listRateKeys() });
+});
+
+/** Get default rate limits */
+router.get('/rate/defaults', (req, res) => {
+  res.json(getRateDefaults());
 });
 
 export default router;
