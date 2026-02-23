@@ -76,6 +76,11 @@ import {
   toggleChannel, sendNotification, getDigest, flushDigest, testChannel,
   CHANNEL_TYPES, DELIVERY_MODES, _reset as resetChannels,
 } from '../services/notificationChannels.js';
+import {
+  getBudget, setBudget, clearBudget, recordSpend, getSpendLog, clearSpendLog,
+  getCurrentSpend, getAlerts as getBudgetAlerts, clearAlerts as clearBudgetAlerts,
+  forecast, checkBudgetPermission, BUDGET_PERIODS,
+} from '../services/costBudgets.js';
 
 const router = Router();
 
@@ -1728,6 +1733,101 @@ router.post('/projects/:slug/channels/:channelId/digest/flush', (req, res) => {
 /** List channel types and delivery modes */
 router.get('/notification-meta', (_req, res) => {
   res.json({ types: CHANNEL_TYPES, modes: DELIVERY_MODES });
+});
+
+// ─── Phase 11.7: Cost Budgets ────────────────────────────────────────────
+
+/** Get project budget */
+router.get('/projects/:slug/budget', (req, res) => {
+  const project = refs.workspace.getProject(req.params.slug);
+  if (!project) return res.status(404).json({ error: 'Not found' });
+  res.json(getBudget(req.params.slug));
+});
+
+/** Set project budget */
+router.put('/projects/:slug/budget', (req, res) => {
+  const project = refs.workspace.getProject(req.params.slug);
+  if (!project) return res.status(404).json({ error: 'Not found' });
+  try {
+    const budget = setBudget(req.params.slug, req.body);
+    res.json(budget);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+/** Clear project budget */
+router.delete('/projects/:slug/budget', (req, res) => {
+  const project = refs.workspace.getProject(req.params.slug);
+  if (!project) return res.status(404).json({ error: 'Not found' });
+  res.json(clearBudget(req.params.slug));
+});
+
+/** Get current spend for active period */
+router.get('/projects/:slug/budget/spend', (req, res) => {
+  const project = refs.workspace.getProject(req.params.slug);
+  if (!project) return res.status(404).json({ error: 'Not found' });
+  res.json(getCurrentSpend(req.params.slug));
+});
+
+/** Record a spend entry */
+router.post('/projects/:slug/budget/spend', (req, res) => {
+  const project = refs.workspace.getProject(req.params.slug);
+  if (!project) return res.status(404).json({ error: 'Not found' });
+  const { amount } = req.body;
+  if (typeof amount !== 'number') return res.status(400).json({ error: 'amount must be a number' });
+  const entry = recordSpend(req.params.slug, req.body);
+  res.status(201).json(entry);
+});
+
+/** Get spend log */
+router.get('/projects/:slug/budget/log', (req, res) => {
+  const project = refs.workspace.getProject(req.params.slug);
+  if (!project) return res.status(404).json({ error: 'Not found' });
+  const opts = {};
+  if (req.query.since) opts.since = parseInt(req.query.since, 10);
+  if (req.query.limit) opts.limit = parseInt(req.query.limit, 10);
+  res.json(getSpendLog(req.params.slug, opts));
+});
+
+/** Clear spend log */
+router.delete('/projects/:slug/budget/log', (req, res) => {
+  const project = refs.workspace.getProject(req.params.slug);
+  if (!project) return res.status(404).json({ error: 'Not found' });
+  res.json(clearSpendLog(req.params.slug));
+});
+
+/** Get budget alerts */
+router.get('/projects/:slug/budget/alerts', (req, res) => {
+  const project = refs.workspace.getProject(req.params.slug);
+  if (!project) return res.status(404).json({ error: 'Not found' });
+  res.json(getBudgetAlerts(req.params.slug));
+});
+
+/** Clear budget alerts */
+router.delete('/projects/:slug/budget/alerts', (req, res) => {
+  const project = refs.workspace.getProject(req.params.slug);
+  if (!project) return res.status(404).json({ error: 'Not found' });
+  res.json(clearBudgetAlerts(req.params.slug));
+});
+
+/** Get spend forecast */
+router.get('/projects/:slug/budget/forecast', (req, res) => {
+  const project = refs.workspace.getProject(req.params.slug);
+  if (!project) return res.status(404).json({ error: 'Not found' });
+  res.json(forecast(req.params.slug));
+});
+
+/** Check budget permission (can a session start?) */
+router.get('/projects/:slug/budget/check', (req, res) => {
+  const project = refs.workspace.getProject(req.params.slug);
+  if (!project) return res.status(404).json({ error: 'Not found' });
+  res.json(checkBudgetPermission(req.params.slug));
+});
+
+/** List valid budget periods */
+router.get('/budget-periods', (_req, res) => {
+  res.json(BUDGET_PERIODS);
 });
 
 export default router;
