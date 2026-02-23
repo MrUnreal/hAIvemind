@@ -8,6 +8,8 @@ import { broadcast } from '../ws/broadcast.js';
 import {
   exportProject, importProject, validateArchive, previewArchive,
 } from '../services/projectExport.js';
+import { clearDeliveryHistory } from '../services/webhooks.js';
+import { clearPresence } from '../services/collaboration.js';
 
 const router = Router();
 
@@ -52,7 +54,11 @@ router.post('/projects/link', (req, res) => {
 /** Delete a project */
 router.delete('/projects/:slug', (req, res) => {
   try {
-    refs.workspace.deleteProject(req.params.slug);
+    const slug = req.params.slug;
+    refs.workspace.deleteProject(slug);
+    // Cleanup in-memory state for deleted project
+    clearDeliveryHistory(slug);
+    clearPresence(slug);
     res.json({ deleted: true });
   } catch (err) {
     res.status(404).json({ error: err.message });

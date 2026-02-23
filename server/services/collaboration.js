@@ -246,6 +246,14 @@ export function getRoles() {
 }
 
 /**
+ * Clear all presence data for a project (e.g., on deletion).
+ * @param {string} slug
+ */
+export function clearPresence(slug) {
+  presence.delete(slug);
+}
+
+/**
  * Reset all in-memory state (for tests).
  */
 export function _reset() {
