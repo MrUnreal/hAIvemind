@@ -129,95 +129,37 @@
       </div>
       <div class="side-panel" :class="{ collapsed: sidePanelCollapsed }">
         <div class="side-tabs">
+          <!-- Session group -->
           <button
-            :class="['tab-btn', { active: sideTab === 'agent' }]"
-            @click="sideTab = 'agent'; sidePanelCollapsed = false"
+            v-for="tab in tabGroups.session"
+            :key="tab.id"
+            :class="['tab-btn', { active: sideTab === tab.id }]"
+            :title="tab.label"
+            @click="sideTab = tab.id; sidePanelCollapsed = false"
           >
-            🤖 Agent
+            {{ tab.icon }}
           </button>
+          <span class="tab-sep"></span>
+          <!-- Config group -->
           <button
-            :class="['tab-btn', { active: sideTab === 'chat' }]"
-            @click="sideTab = 'chat'; sidePanelCollapsed = false"
+            v-for="tab in tabGroups.config"
+            :key="tab.id"
+            :class="['tab-btn', { active: sideTab === tab.id }]"
+            :title="tab.label"
+            @click="sideTab = tab.id; sidePanelCollapsed = false"
           >
-            💬 Chat
+            {{ tab.icon }}
           </button>
+          <span class="tab-sep"></span>
+          <!-- Monitor group -->
           <button
-            :class="['tab-btn', { active: sideTab === 'settings' }]"
-            @click="sideTab = 'settings'; sidePanelCollapsed = false"
+            v-for="tab in tabGroups.monitor"
+            :key="tab.id"
+            :class="['tab-btn', { active: sideTab === tab.id }]"
+            :title="tab.label"
+            @click="sideTab = tab.id; sidePanelCollapsed = false"
           >
-            ⚙️ Settings
-          </button>
-          <button
-            :class="['tab-btn', { active: sideTab === 'metrics' }]"
-            @click="sideTab = 'metrics'; sidePanelCollapsed = false"
-          >
-            📊 Metrics
-          </button>
-          <button
-            :class="['tab-btn', { active: sideTab === 'autopilot' }]"
-            @click="sideTab = 'autopilot'; sidePanelCollapsed = false"
-          >
-            🤖 Autopilot
-          </button>
-          <button
-            :class="['tab-btn', { active: sideTab === 'templates' }]"
-            @click="sideTab = 'templates'; sidePanelCollapsed = false"
-          >
-            📋 Templates
-          </button>
-          <button
-            :class="['tab-btn', { active: sideTab === 'keys' }]"
-            @click="sideTab = 'keys'; sidePanelCollapsed = false"
-          >
-            🔑 Keys
-          </button>
-          <button
-            :class="['tab-btn', { active: sideTab === 'audit' }]"
-            @click="sideTab = 'audit'; sidePanelCollapsed = false"
-          >
-            📜 Audit
-          </button>
-          <button
-            :class="['tab-btn', { active: sideTab === 'analytics' }]"
-            @click="sideTab = 'analytics'; sidePanelCollapsed = false"
-          >
-            📈 Stats
-          </button>
-          <button
-            :class="['tab-btn', { active: sideTab === 'resources' }]"
-            @click="sideTab = 'resources'; sidePanelCollapsed = false"
-          >
-            📊 Resources
-          </button>
-          <button
-            :class="['tab-btn', { active: sideTab === 'diffs' }]"
-            @click="sideTab = 'diffs'; sidePanelCollapsed = false"
-          >
-            📝 Diffs
-          </button>
-          <button
-            :class="['tab-btn', { active: sideTab === 'live' }]"
-            @click="sideTab = 'live'; sidePanelCollapsed = false"
-          >
-            📡 Live
-          </button>
-          <button
-            :class="['tab-btn', { active: sideTab === 'suggestions' }]"
-            @click="sideTab = 'suggestions'; sidePanelCollapsed = false"
-          >
-            💡 Hints
-          </button>
-          <button
-            :class="['tab-btn', { active: sideTab === 'memory' }]"
-            @click="sideTab = 'memory'; sidePanelCollapsed = false"
-          >
-            🧠 Memory
-          </button>
-          <button
-            :class="['tab-btn', { active: sideTab === 'auth' }]"
-            @click="sideTab = 'auth'; sidePanelCollapsed = false"
-          >
-            🔐 Auth
+            {{ tab.icon }}
           </button>
           <button
             class="tab-collapse"
@@ -225,6 +167,9 @@
           >
             {{ sidePanelCollapsed ? '◀' : '▶' }}
           </button>
+        </div>
+        <div v-if="sideTab && !sidePanelCollapsed" class="side-tab-label">
+          {{ currentTabLabel }}
         </div>
         <div v-show="!sidePanelCollapsed" class="side-content">
           <AgentDetail v-if="sideTab === 'agent'" />
@@ -376,6 +321,33 @@ const { connected, connectionLost, on, send, subscribeProject } = useWebSocket()
 const showPrompt = ref(false);
 const sideTab = ref('agent');
 const sidePanelCollapsed = ref(true);
+
+// Tab groups: icon-only buttons grouped by purpose
+const tabGroups = {
+  session: [
+    { id: 'agent', icon: '🤖', label: 'Agent Detail' },
+    { id: 'chat', icon: '💬', label: 'Chat' },
+    { id: 'diffs', icon: '📝', label: 'Diffs' },
+    { id: 'metrics', icon: '📊', label: 'Metrics' },
+    { id: 'autopilot', icon: '🚀', label: 'Autopilot' },
+  ],
+  config: [
+    { id: 'settings', icon: '⚙️', label: 'Settings' },
+    { id: 'templates', icon: '📋', label: 'Templates' },
+    { id: 'keys', icon: '🔑', label: 'Keys' },
+    { id: 'suggestions', icon: '💡', label: 'Hints' },
+    { id: 'memory', icon: '🧠', label: 'Memory' },
+  ],
+  monitor: [
+    { id: 'analytics', icon: '📈', label: 'Stats' },
+    { id: 'resources', icon: '🖥️', label: 'Resources' },
+    { id: 'live', icon: '📡', label: 'Live' },
+    { id: 'audit', icon: '📜', label: 'Audit' },
+    { id: 'auth', icon: '🔐', label: 'Auth' },
+  ],
+};
+const allTabs = [...tabGroups.session, ...tabGroups.config, ...tabGroups.monitor];
+const currentTabLabel = computed(() => allTabs.find(t => t.id === sideTab.value)?.label ?? '');
 const replayMode = ref(false);
 const showNotifications = ref(false);
 const notifBadge = ref(0);
@@ -1101,35 +1073,62 @@ onUnmounted(() => cleanupShortcuts());
 
 .side-tabs {
   display: flex;
-  align-items: stretch;
+  align-items: center;
   border-bottom: 1px solid var(--border-subtle);
   flex-shrink: 0;
+  padding: 0 2px;
+  gap: 1px;
 }
 
 .tab-btn {
-  flex: 1;
   background: none;
   border: none;
   color: var(--text-tertiary);
-  font-size: 11px;
-  font-weight: 600;
-  padding: 10px 6px;
+  font-size: 15px;
+  padding: 8px 7px;
   cursor: pointer;
-  transition: color 0.2s, border-bottom 0.2s;
-  border-bottom: 2px solid transparent;
-  white-space: nowrap;
-  overflow: hidden;
-  letter-spacing: 0.01em;
+  transition: color 0.15s, background 0.15s;
+  border-radius: 6px;
+  line-height: 1;
+  position: relative;
 }
 .tab-btn.active {
   color: var(--accent-gold);
-  border-bottom-color: var(--accent-gold);
+  background: rgba(245, 197, 66, 0.08);
 }
 .tab-btn:hover:not(.active) {
   color: var(--text-secondary);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.tab-sep {
+  width: 1px;
+  height: 18px;
+  background: var(--border-subtle);
+  margin: 0 3px;
+  flex-shrink: 0;
+}
+
+.side-tab-label {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--accent-gold);
+  padding: 4px 12px 3px;
+  border-bottom: 1px solid var(--border-subtle);
+  background: rgba(245, 197, 66, 0.03);
 }
 
 .side-panel.collapsed .tab-btn {
+  display: none;
+}
+
+.side-panel.collapsed .tab-sep {
+  display: none;
+}
+
+.side-panel.collapsed .side-tab-label {
   display: none;
 }
 
