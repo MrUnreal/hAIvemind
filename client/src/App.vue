@@ -1084,107 +1084,91 @@ onUnmounted(() => cleanupShortcuts());
 
 .side-tabs {
   display: flex;
-  align-items: stretch;
-  border-bottom: 2px solid var(--border-subtle);
+  align-items: end;
   flex-shrink: 0;
   padding: 0;
   gap: 0;
+  background: var(--bg-primary);
+  position: relative;
+}
+/* bottom line that runs behind all tabs */
+.side-tabs::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: var(--border-subtle);
+  z-index: 0;
 }
 
-/* Tab groups — flex row with subtle color coding */
+/* Tab groups — colored bottom accent bar per group */
 .tab-group {
   display: flex;
-  align-items: stretch;
+  align-items: end;
   gap: 0;
-  padding: 0 2px;
+  padding: 3px 4px 0;
+  position: relative;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  z-index: 1;
 }
-.tab-group + .tab-group {
-  border-left: 2px solid var(--border-subtle);
-}
+.tab-group--session { border-bottom-color: rgba(110, 168, 217, 0.3); }
+.tab-group--config  { border-bottom-color: rgba(212, 168, 67, 0.3); }
+.tab-group--monitor { border-bottom-color: rgba(90, 191, 123, 0.3); }
 
 .tab-btn {
   background: none;
-  border: 2px solid transparent;
+  border: 1px solid transparent;
   border-bottom: none;
   color: var(--text-tertiary);
   font-size: 15px;
-  padding: 6px 7px 8px;
+  padding: 5px 6px 6px;
   cursor: pointer;
-  transition: color 0.15s, background 0.15s, border-color 0.15s;
-  border-radius: 8px 8px 0 0;
+  transition: all 0.15s ease;
+  border-radius: 6px 6px 0 0;
   line-height: 1;
   position: relative;
-  margin-bottom: -2px;
-}
-
-/* Active tab — open-bottom border */
-.tab-btn.active {
-  border-color: var(--accent-gold);
-  background: var(--bg-secondary, #1a1a2e);
-  color: var(--accent-gold);
   z-index: 1;
+  margin-bottom: -2px;
+  opacity: 0.6;
 }
-
 .tab-btn:hover:not(.active) {
-  color: var(--text-secondary);
-  background: rgba(255, 255, 255, 0.04);
-  border-color: rgba(255, 255, 255, 0.08);
+  opacity: 1;
+  background: rgba(255, 255, 255, 0.05);
 }
 
-/* Group color tints */
-.tab-group--session .tab-btn {
-  color: #6ea8d9;
-}
-.tab-group--session .tab-btn.active {
-  border-color: #6ea8d9;
-  color: #8ac4f0;
-  background: rgba(110, 168, 217, 0.08);
-}
-.tab-group--session .tab-btn:hover:not(.active) {
-  color: #8ac4f0;
-  border-color: rgba(110, 168, 217, 0.2);
+/* Active tab — lifts above the bottom line */
+.tab-btn.active {
+  opacity: 1;
+  z-index: 2;
+  background: var(--bg-primary);
+  border-color: var(--border-subtle);
+  margin-bottom: -1px;
+  padding-bottom: 7px;
 }
 
-.tab-group--config .tab-btn {
-  color: #d4a843;
-}
-.tab-group--config .tab-btn.active {
-  border-color: #d4a843;
-  color: #f0c254;
-  background: rgba(212, 168, 67, 0.08);
-}
-.tab-group--config .tab-btn:hover:not(.active) {
-  color: #f0c254;
-  border-color: rgba(212, 168, 67, 0.2);
-}
-
-.tab-group--monitor .tab-btn {
-  color: #5abf7b;
-}
-.tab-group--monitor .tab-btn.active {
-  border-color: #5abf7b;
-  color: #72de96;
-  background: rgba(90, 191, 123, 0.08);
-}
-.tab-group--monitor .tab-btn:hover:not(.active) {
-  color: #72de96;
-  border-color: rgba(90, 191, 123, 0.2);
-}
+/* Group color tints on icons */
+.tab-group--session .tab-btn { color: #7bb8e8; }
+.tab-group--session .tab-btn.active { color: #a0d4ff; border-color: #5a9cc8; }
+.tab-group--config  .tab-btn { color: #d4a843; }
+.tab-group--config  .tab-btn.active { color: #f5c94a; border-color: #b8912e; }
+.tab-group--monitor .tab-btn { color: #5ec47e; }
+.tab-group--monitor .tab-btn.active { color: #80eca0; border-color: #3da85a; }
 
 .side-tab-label {
   font-size: 10px;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  color: var(--accent-gold);
+  color: var(--text-tertiary);
   padding: 4px 12px 3px;
   border-bottom: 1px solid var(--border-subtle);
-  background: rgba(245, 197, 66, 0.03);
 }
-/* Match label color to active group */
-.side-tab-label.label--session { color: #8ac4f0; background: rgba(110, 168, 217, 0.03); }
-.side-tab-label.label--config  { color: #f0c254; background: rgba(212, 168, 67, 0.03); }
-.side-tab-label.label--monitor { color: #72de96; background: rgba(90, 191, 123, 0.03); }
+.side-tab-label.label--session { color: #a0d4ff; }
+.side-tab-label.label--config  { color: #f5c94a; }
+.side-tab-label.label--monitor { color: #80eca0; }
 
 .side-panel.collapsed .tab-group {
   display: none;
