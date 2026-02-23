@@ -1,4 +1,6 @@
 import { test, expect } from '@playwright/test';
+import { readFileSync } from 'node:fs';
+import path from 'node:path';
 
 // ─── Helpers ─────────────────────────────────────────────────────────
 async function waitForConnection(page) {
@@ -536,6 +538,21 @@ test.describe('Session Replay', () => {
 
     // State distribution should be the same before and after replay
     expect(nodesAfter).toEqual(nodesBefore);
+  });
+
+  test('replay panel does not use height:100% (prevents covering DAG)', () => {
+    const src = readFileSync(path.resolve(import.meta.dirname, '..', 'client/src/components/SessionReplay.vue'), 'utf8');
+    // .session-replay must NOT have height: 100% — it caused the panel to fill
+    // the entire workspace, hiding all DAG nodes underneath
+    expect(src).not.toMatch(/\.session-replay\s*\{[^}]*height:\s*100%/);
+    expect(src).toContain('min-height: 0');
+  });
+
+  test('flow-area uses overflow:hidden to clip VueFlow canvas', () => {
+    const src = readFileSync(path.resolve(import.meta.dirname, '..', 'client/src/App.vue'), 'utf8');
+    // .flow-area must have overflow: hidden — prevents VueFlow's absolute
+    // canvas from extending into the replay panel and intercepting pointer events
+    expect(src).toMatch(/\.flow-area\s*\{[^}]*overflow:\s*hidden/);
   });
 });
 

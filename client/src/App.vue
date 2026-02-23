@@ -1073,11 +1073,16 @@ onUnmounted(() => cleanupShortcuts());
 }
 
 .flow-area {
-  flex: 1;
+  flex: 3;
+  overflow: hidden;
+  position: relative;
+  min-height: 200px;
 }
 
 .replay-panel {
-  flex: 0 0 260px;
+  flex: 2;
+  min-height: 180px;
+  max-height: 40vh;
   border-top: 1px solid var(--border-subtle);
 }
 

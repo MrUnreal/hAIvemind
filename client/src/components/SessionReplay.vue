@@ -191,7 +191,7 @@ function eventMessage(event) {
 .session-replay {
   display: flex;
   flex-direction: column;
-  height: 100%;
+  min-height: 0;
   background: #0d0d14;
   border-top: 1px solid #1a1a2e;
 }
