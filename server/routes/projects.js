@@ -81,6 +81,9 @@ import {
   getCurrentSpend, getAlerts as getBudgetAlerts, clearAlerts as clearBudgetAlerts,
   forecast, checkBudgetPermission, BUDGET_PERIODS,
 } from '../services/costBudgets.js';
+import {
+  search, listSavedSearches, saveSearch, deleteSavedSearch, SEARCH_TYPES,
+} from '../services/globalSearch.js';
 
 const router = Router();
 
@@ -1828,6 +1831,53 @@ router.get('/projects/:slug/budget/check', (req, res) => {
 /** List valid budget periods */
 router.get('/budget-periods', (_req, res) => {
   res.json(BUDGET_PERIODS);
+});
+
+// ─── Phase 11.8: Search & Filter ─────────────────────────────────────────
+
+/** Global search across project data */
+router.get('/projects/:slug/search', (req, res) => {
+  const project = refs.workspace.getProject(req.params.slug);
+  if (!project) return res.status(404).json({ error: 'Not found' });
+  const opts = {
+    q: req.query.q || '',
+    types: req.query.types ? req.query.types.split(',') : undefined,
+    since: req.query.since ? parseInt(req.query.since, 10) : undefined,
+    until: req.query.until ? parseInt(req.query.until, 10) : undefined,
+    limit: req.query.limit ? parseInt(req.query.limit, 10) : undefined,
+    offset: req.query.offset ? parseInt(req.query.offset, 10) : undefined,
+  };
+  res.json(search(req.params.slug, opts));
+});
+
+/** List saved searches */
+router.get('/projects/:slug/saved-searches', (req, res) => {
+  const project = refs.workspace.getProject(req.params.slug);
+  if (!project) return res.status(404).json({ error: 'Not found' });
+  res.json(listSavedSearches(req.params.slug));
+});
+
+/** Save a search */
+router.post('/projects/:slug/saved-searches', (req, res) => {
+  const project = refs.workspace.getProject(req.params.slug);
+  if (!project) return res.status(404).json({ error: 'Not found' });
+  if (!req.body.q && !req.body.name) return res.status(400).json({ error: 'Missing q or name' });
+  const saved = saveSearch(req.params.slug, req.body);
+  res.status(201).json(saved);
+});
+
+/** Delete a saved search */
+router.delete('/projects/:slug/saved-searches/:searchId', (req, res) => {
+  const project = refs.workspace.getProject(req.params.slug);
+  if (!project) return res.status(404).json({ error: 'Not found' });
+  const removed = deleteSavedSearch(req.params.slug, req.params.searchId);
+  if (!removed) return res.status(404).json({ error: 'Saved search not found' });
+  res.json({ ok: true });
+});
+
+/** List searchable types */
+router.get('/search-types', (_req, res) => {
+  res.json(SEARCH_TYPES);
 });
 
 export default router;

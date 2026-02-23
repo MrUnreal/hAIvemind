@@ -297,4 +297,4 @@ Currently single-user, no auth. Fine for local dev, but blocks team usage or hos
 | **11.5 — CLI Enhancements** | ✅ | Interactive CLI wizard, `haivemind init` for new projects, `haivemind watch` for file-change triggers, shell completions |
 | **11.6 — Notification Channels** | ✅ | Slack/Discord/email notification integrations, configurable per-project, digest vs real-time modes |
 | **11.7 — Cost Budgets** | ✅ | Per-project cost budgets with hard/soft limits, daily/weekly/monthly caps, budget alerts, spend forecasting |
-| **11.8 — Search & Filter** | ❌ | Global search across sessions, memory, diffs, and audit logs; advanced filters, saved searches, full-text indexing |
+| **11.8 — Search & Filter** | ✅ | Global search across sessions, memory, diffs, and audit logs; advanced filters, saved searches, full-text indexing |
