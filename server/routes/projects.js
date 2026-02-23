@@ -111,6 +111,13 @@ import {
   deleteComparison, scoreSession, getComparisonStats,
   COMPARISON_OUTCOMES, DIFF_CATEGORIES,
 } from '../services/sessionComparison.js';
+import {
+  createSchedule as createSchedTask, listSchedules as listSchedTasks,
+  getSchedule as getSchedTask, updateSchedule as updateSchedTask,
+  deleteSchedule as deleteSchedTask, pauseSchedule, resumeSchedule, triggerRun,
+  getDueSchedules, getScheduleStats as getSchedStats,
+  SCHEDULE_STATUSES, REPEAT_MODES,
+} from '../services/scheduledTasks.js';
 
 const router = Router();
 
@@ -2362,6 +2369,105 @@ router.get('/comparison-outcomes', (_req, res) => {
 /** Available diff categories */
 router.get('/diff-categories', (_req, res) => {
   res.json(DIFF_CATEGORIES);
+});
+
+// ─── Phase 12.5 — Scheduled Tasks ────────────────────────────────────────
+
+/** Create a scheduled task */
+router.post('/projects/:slug/scheduled-tasks', (req, res) => {
+  const project = refs.workspace.getProject(req.params.slug);
+  if (!project) return res.status(404).json({ error: 'Not found' });
+  try {
+    const sched = createSchedTask(req.params.slug, req.body);
+    res.status(201).json(sched);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+/** List scheduled tasks */
+router.get('/projects/:slug/scheduled-tasks', (req, res) => {
+  const project = refs.workspace.getProject(req.params.slug);
+  if (!project) return res.status(404).json({ error: 'Not found' });
+  res.json(listSchedTasks(req.params.slug, req.query));
+});
+
+/** Get a single scheduled task */
+router.get('/projects/:slug/scheduled-tasks/:schedId', (req, res) => {
+  const project = refs.workspace.getProject(req.params.slug);
+  if (!project) return res.status(404).json({ error: 'Not found' });
+  const sched = getSchedTask(req.params.slug, req.params.schedId);
+  if (!sched) return res.status(404).json({ error: 'Schedule not found' });
+  res.json(sched);
+});
+
+/** Update a scheduled task */
+router.patch('/projects/:slug/scheduled-tasks/:schedId', (req, res) => {
+  const project = refs.workspace.getProject(req.params.slug);
+  if (!project) return res.status(404).json({ error: 'Not found' });
+  const sched = updateSchedTask(req.params.slug, req.params.schedId, req.body);
+  if (!sched) return res.status(404).json({ error: 'Schedule not found' });
+  res.json(sched);
+});
+
+/** Delete a scheduled task */
+router.delete('/projects/:slug/scheduled-tasks/:schedId', (req, res) => {
+  const project = refs.workspace.getProject(req.params.slug);
+  if (!project) return res.status(404).json({ error: 'Not found' });
+  const removed = deleteSchedTask(req.params.slug, req.params.schedId);
+  if (!removed) return res.status(404).json({ error: 'Schedule not found' });
+  res.json(removed);
+});
+
+/** Pause a scheduled task */
+router.post('/projects/:slug/scheduled-tasks/:schedId/pause', (req, res) => {
+  const project = refs.workspace.getProject(req.params.slug);
+  if (!project) return res.status(404).json({ error: 'Not found' });
+  const sched = pauseSchedule(req.params.slug, req.params.schedId);
+  if (!sched) return res.status(404).json({ error: 'Schedule not found' });
+  res.json(sched);
+});
+
+/** Resume a scheduled task */
+router.post('/projects/:slug/scheduled-tasks/:schedId/resume', (req, res) => {
+  const project = refs.workspace.getProject(req.params.slug);
+  if (!project) return res.status(404).json({ error: 'Not found' });
+  const sched = resumeSchedule(req.params.slug, req.params.schedId);
+  if (!sched) return res.status(404).json({ error: 'Schedule not found' });
+  res.json(sched);
+});
+
+/** Trigger a run */
+router.post('/projects/:slug/scheduled-tasks/:schedId/trigger', (req, res) => {
+  const project = refs.workspace.getProject(req.params.slug);
+  if (!project) return res.status(404).json({ error: 'Not found' });
+  const result = triggerRun(req.params.slug, req.params.schedId);
+  if (!result) return res.status(404).json({ error: 'Schedule not found' });
+  res.json(result);
+});
+
+/** Get due scheduled tasks */
+router.get('/projects/:slug/scheduled-tasks-due', (req, res) => {
+  const project = refs.workspace.getProject(req.params.slug);
+  if (!project) return res.status(404).json({ error: 'Not found' });
+  res.json(getDueSchedules(req.params.slug));
+});
+
+/** Scheduled task stats */
+router.get('/projects/:slug/scheduled-task-stats', (req, res) => {
+  const project = refs.workspace.getProject(req.params.slug);
+  if (!project) return res.status(404).json({ error: 'Not found' });
+  res.json(getSchedStats(req.params.slug));
+});
+
+/** Available schedule statuses */
+router.get('/schedule-statuses', (_req, res) => {
+  res.json(SCHEDULE_STATUSES);
+});
+
+/** Available repeat modes */
+router.get('/repeat-modes', (_req, res) => {
+  res.json(REPEAT_MODES);
 });
 
 export default router;

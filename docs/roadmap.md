@@ -312,7 +312,7 @@ Currently single-user, no auth. Fine for local dev, but blocks team usage or hos
 | **12.2 — Performance Profiling** | ✅ | Per-task/session timing stats, bottleneck detection, historical performance trends, P50/P95/P99 latency tracking |
 | **12.3 — Smart Decomposition** | ✅ | ML-inspired task decomposition heuristics, complexity estimation, parallel-vs-sequential auto-detection, sub-task merging |
 | **12.4 — Session Comparison** | ✅ | Side-by-side session diff, outcome comparison, strategy effectiveness scoring, A/B-style analysis |
-| **12.5 — Scheduled Tasks** | ❌ | Cron-style task scheduling, recurring sessions, timezone-aware scheduling, schedule CRUD, next-run preview |
+| **12.5 — Scheduled Tasks** | ✅ | Cron-style task scheduling, recurring sessions, timezone-aware scheduling, schedule CRUD, next-run preview |
 | **12.6 — Custom Pipelines** | ❌ | User-defined multi-stage pipelines with conditional steps, parallel branches, approval gates, pipeline templates |
 | **12.7 — Agent Profiles** | ❌ | Named agent configurations (model, temperature, system prompt, tools), profile switching, per-task profile assignment |
 | **12.8 — Dashboard Widgets** | ❌ | Composable dashboard with draggable widgets: cost graph, task throughput, error rate, active sessions, model usage breakdown |
