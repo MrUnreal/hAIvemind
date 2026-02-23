@@ -3,7 +3,7 @@
  */
 
 import { WebSocketServer } from 'ws';
-import { parseMsg } from '../../shared/protocol.js';
+import { parseMsg, MSG, makeMsg } from '../../shared/protocol.js';
 import { clients, refs } from '../state.js';
 import { handleClientMessage } from './handlers.js';
 import log from '../logger.js';
@@ -52,7 +52,10 @@ export function createWss(server) {
     ws.on('message', (raw) => {
       const msg = parseMsg(raw.toString());
       if (!msg) return;
-      handleClientMessage(msg, ws);
+      handleClientMessage(msg, ws).catch(err => {
+        log.error(`[ws] Message handler error: ${err.message}`);
+        try { ws.send(makeMsg(MSG.SESSION_ERROR, { error: 'Internal server error' })); } catch { /* client disconnected */ }
+      });
     });
   });
 

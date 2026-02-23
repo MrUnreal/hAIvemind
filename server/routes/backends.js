@@ -47,7 +47,13 @@ router.put('/backends/:name', (req, res) => {
     return res.status(404).json({ error: `Backend "${name}" not found` });
   }
   if (!config.backends) config.backends = {};
-  config.backends[name] = { ...(config.backends[name] || {}), ...(req.body || {}) };
+  // Safe merge: only allow known backend config keys to prevent prototype pollution
+  const allowed = ['baseURL', 'apiKey', 'model', 'maxTokens', 'temperature', 'timeout', 'enabled'];
+  const sanitized = {};
+  for (const key of allowed) {
+    if (req.body && key in req.body) sanitized[key] = req.body[key];
+  }
+  config.backends[name] = { ...(config.backends[name] || {}), ...sanitized };
   res.json({ ok: true, name, config: config.backends[name] });
 });
 

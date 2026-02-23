@@ -5,7 +5,7 @@
 
 import { Router } from 'express';
 import { join } from 'node:path';
-import { existsSync, readFileSync } from 'node:fs';
+import { promises as fs } from 'node:fs';
 import { MSG, makeMsg } from '../../shared/protocol.js';
 import { sessions, autopilotRuns, refs } from '../state.js';
 import { broadcast } from '../ws/broadcast.js';
@@ -86,7 +86,7 @@ router.post('/projects/:slug/autopilot', async (req, res) => {
 });
 
 /** Get autopilot status */
-router.get('/projects/:slug/autopilot', (req, res) => {
+router.get('/projects/:slug/autopilot', async (req, res) => {
   const { slug } = req.params;
   const workspace = refs.workspace;
   const project = workspace.getProject(slug);
@@ -99,10 +99,9 @@ router.get('/projects/:slug/autopilot', (req, res) => {
   let history = [];
   try {
     const logPath = join(project.dir, '.haivemind', 'autopilot-log.json');
-    if (existsSync(logPath)) {
-      history = JSON.parse(readFileSync(logPath, 'utf8'));
-    }
-  } catch { /* ignore */ }
+    const raw = await fs.readFile(logPath, 'utf8');
+    history = JSON.parse(raw);
+  } catch { /* file may not exist */ }
 
   res.json({
     running: run.running,

@@ -10,6 +10,7 @@ import { broadcastGlobal } from '../ws/broadcast.js';
 import config from '../config.js';
 import { releaseLock } from './sessions.js';
 import { cleanupWebhooks } from './webhooks.js';
+import { cleanupScheduler } from './scheduler.js';
 import log from '../logger.js';
 
 export async function gracefulShutdown() {
@@ -85,6 +86,8 @@ export async function gracefulShutdown() {
   // 4. Clear intervals
   clearInterval(refs.pruneIntervalId);
   clearInterval(refs.heartbeatInterval);
+  clearInterval(refs.tokenCleanupId);
+  clearInterval(refs.rateBucketPruneId);
   if (refs.checkpointTimer) {
     clearInterval(refs.checkpointTimer.intervalId);
     await refs.checkpointTimer.flush().catch(err => log.debug('Checkpoint flush failed during shutdown', err.message));
@@ -97,6 +100,9 @@ export async function gracefulShutdown() {
 
   // 4.6 Cleanup webhook retry timers
   cleanupWebhooks();
+
+  // 4.7 Cleanup scheduler timers
+  cleanupScheduler();
 
   // 5. Close connections
   if (refs.wss) refs.wss.close();

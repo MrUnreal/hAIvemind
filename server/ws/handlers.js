@@ -151,7 +151,7 @@ export async function handleClientMessage(msg, ws) {
     broadcast(makeMsg(MSG.SELFDEV_DIFF, { featureName, projectSlug }));
   }
   if (msg.type === MSG.CHAT_MESSAGE) {
-    const { message, projectSlug } = msg.payload;
+    const { message, projectSlug } = msg.payload || {};
     if (message && projectSlug) {
       await handleChatMessage(message, projectSlug);
     }

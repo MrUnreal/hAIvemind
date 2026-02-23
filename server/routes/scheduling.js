@@ -21,6 +21,9 @@ const router = Router();
 
 /** Get retry policy for a project (merged with defaults) */
 router.get('/projects/:slug/retry-policy', (req, res) => {
+  if (!refs.workspace.getProject(req.params.slug)) {
+    return res.status(404).json({ error: 'Project not found' });
+  }
   const settings = refs.workspace.getProjectSettings(req.params.slug);
   res.json(buildRetryPolicy(settings));
 });
@@ -30,6 +33,9 @@ router.put('/projects/:slug/retry-policy', (req, res) => {
   const { valid, policy, errors } = validateRetrySettings(req.body);
   if (!valid) return res.status(400).json({ error: errors.join('; ') });
 
+  if (!refs.workspace.getProject(req.params.slug)) {
+    return res.status(404).json({ error: 'Project not found' });
+  }
   const settings = refs.workspace.getProjectSettings(req.params.slug);
   const merged = { ...settings, ...policy };
   refs.workspace.updateProjectSettings(req.params.slug, merged);
