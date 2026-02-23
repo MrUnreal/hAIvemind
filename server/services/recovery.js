@@ -43,7 +43,7 @@ export async function recoverFromCheckpoints() {
     if (orphaned.length > 0) {
       log.info(`[checkpoint] Found ${orphaned.length} crash-orphaned session(s) from checkpoints`);
       const interruptedDir = join(workspace.baseDir, '.haivemind', 'interrupted');
-      await fs.mkdir(interruptedDir, { recursive: true }).catch(() => {});
+      await fs.mkdir(interruptedDir, { recursive: true }).catch(err => log.warn('Failed to create interrupted dir', err.message));
       for (const cp of orphaned) {
         const filePath = join(interruptedDir, `${cp.sessionId}.json`);
         const interrupted = {
@@ -60,9 +60,9 @@ export async function recoverFromCheckpoints() {
           })),
           timeline: cp.timeline || [],
         };
-        await fs.writeFile(filePath, JSON.stringify(interrupted, null, 2)).catch(() => {});
+        await fs.writeFile(filePath, JSON.stringify(interrupted, null, 2)).catch(err => log.warn('Failed to write recovery file', err.message));
         const project = workspace.getProject(cp.projectSlug);
-        if (project) await deleteCheckpoint(cp.sessionId, project.dir).catch(() => {});
+        if (project) await deleteCheckpoint(cp.sessionId, project.dir).catch(err => log.debug('Checkpoint delete failed during recovery', err.message));
         log.info(`  ↳ Recovered ${cp.sessionId?.slice(0, 8)} (${cp.projectSlug}) from checkpoint`);
       }
     }

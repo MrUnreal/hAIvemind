@@ -441,7 +441,7 @@ router.post('/interrupted-sessions/:id/resume', async (req, res) => {
     const raw = await fs.readFile(filePath, 'utf-8');
     const data = JSON.parse(raw);
 
-    await fs.unlink(filePath).catch(() => {});
+    await fs.unlink(filePath).catch(err => log.debug('Failed to unlink interrupted session file', err.message));
 
     const incompleteTasks = data.incompleteTasks || [];
     if (incompleteTasks.length === 0) {

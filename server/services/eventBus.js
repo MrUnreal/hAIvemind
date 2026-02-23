@@ -110,7 +110,9 @@ export async function emit(event, data = {}) {
  * Emit without awaiting handlers (fire-and-forget).
  */
 export function emitSync(event, data = {}) {
-  emit(event, data).catch(() => {});
+  emit(event, data).catch(err => {
+    if (typeof console !== 'undefined') console.debug(`[eventBus] emitSync(${event}) listener error:`, err.message);
+  });
 }
 
 // ─── History + Stats ────────────────────────────────────────────────

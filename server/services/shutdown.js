@@ -21,7 +21,7 @@ export async function gracefulShutdown() {
 
   // 2. Persist all active (running) sessions to disk
   const interruptedDir = join(workspace.baseDir, '.haivemind', 'interrupted');
-  await fs.mkdir(interruptedDir, { recursive: true }).catch(() => {});
+  await fs.mkdir(interruptedDir, { recursive: true }).catch(err => log.warn('Failed to create interrupted dir', err.message));
 
   let savedCount = 0;
   for (const [sessionId, session] of sessions.entries()) {
@@ -87,12 +87,12 @@ export async function gracefulShutdown() {
   clearInterval(refs.heartbeatInterval);
   if (refs.checkpointTimer) {
     clearInterval(refs.checkpointTimer.intervalId);
-    await refs.checkpointTimer.flush().catch(() => {});
+    await refs.checkpointTimer.flush().catch(err => log.debug('Checkpoint flush failed during shutdown', err.message));
   }
 
   // 4.5 Notify plugins of shutdown
   if (refs.pluginManager) {
-    await refs.pluginManager.emit('onShutdown').catch(() => {});
+    await refs.pluginManager.emit('onShutdown').catch(err => log.debug('Plugin onShutdown emission failed', err.message));
   }
 
   // 4.6 Cleanup webhook retry timers
