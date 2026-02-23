@@ -279,4 +279,4 @@ Currently single-user, no auth. Fine for local dev, but blocks team usage or hos
 | **10.5 — Event Bus** | ✅ | Internal pub/sub event system: decouple services, enable plugin hooks, support async event processing |
 | **10.6 — Rate Limiting** | ✅ | Per-user and per-project rate limits, configurable thresholds, cooldown periods, admin override |
 | **10.7 — Workspace Snapshots** | ✅ | Full workspace backup/restore, snapshot before risky operations, diff between snapshots, named checkpoints |
-| **10.8 — Health Dashboard** | ❌ | Production health page: uptime, error rates, latency percentiles, backend availability, alert thresholds |
+| **10.8 — Health Dashboard** | ✅ | Production health page: uptime, error rates, latency percentiles, backend availability, alert thresholds |

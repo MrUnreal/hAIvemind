@@ -63,6 +63,11 @@ import {
   createSnapshot, listSnapshots, getSnapshot, restoreSnapshot,
   deleteSnapshot, updateSnapshot, diffSnapshots, clearSnapshots, getSnapshotStats,
 } from '../services/workspaceSnapshots.js';
+import {
+  getUptime, recordLatency, getLatencyStats, recordError, getErrorStats, clearErrors,
+  recordBackendCheck, getBackendHealth, getHealthScore, getThresholds, setThresholds,
+  checkThresholds, getDashboard, _reset as resetHealth,
+} from '../services/healthDashboard.js';
 
 const router = Router();
 
@@ -1201,6 +1206,93 @@ router.delete('/projects/:slug/snapshots', (req, res) => {
   }
   clearSnapshots(req.params.slug);
   res.json({ ok: true });
+});
+
+// ─── Health Dashboard ───────────────────────────────────────────
+
+/** Full health dashboard */
+router.get('/health/dashboard', (req, res) => {
+  res.json(getDashboard());
+});
+
+/** Uptime */
+router.get('/health/uptime', (req, res) => {
+  res.json(getUptime());
+});
+
+/** Health score */
+router.get('/health/score', (req, res) => {
+  res.json(getHealthScore());
+});
+
+/** Latency stats */
+router.get('/health/latency', (req, res) => {
+  const opts = {};
+  if (req.query.endpoint) opts.endpoint = req.query.endpoint;
+  if (req.query.windowMs) opts.windowMs = parseInt(req.query.windowMs, 10);
+  res.json(getLatencyStats(opts));
+});
+
+/** Record latency */
+router.post('/health/latency', (req, res) => {
+  const { endpoint, ms } = req.body;
+  if (!endpoint || typeof ms !== 'number') {
+    return res.status(400).json({ error: 'endpoint and ms required' });
+  }
+  recordLatency(endpoint, ms);
+  res.json({ ok: true });
+});
+
+/** Error stats */
+router.get('/health/errors', (req, res) => {
+  const opts = {};
+  if (req.query.windowMs) opts.windowMs = parseInt(req.query.windowMs, 10);
+  if (req.query.limit) opts.limit = parseInt(req.query.limit, 10);
+  res.json(getErrorStats(opts));
+});
+
+/** Record error */
+router.post('/health/errors', (req, res) => {
+  const { message, endpoint } = req.body;
+  if (!message) return res.status(400).json({ error: 'message required' });
+  recordError(message, endpoint);
+  res.json({ ok: true });
+});
+
+/** Clear errors */
+router.delete('/health/errors', (req, res) => {
+  clearErrors();
+  res.json({ ok: true });
+});
+
+/** Backend health */
+router.get('/health/backends', (req, res) => {
+  res.json(getBackendHealth());
+});
+
+/** Record backend check */
+router.post('/health/backends', (req, res) => {
+  const { backend, available, latencyMs } = req.body;
+  if (!backend || typeof available !== 'boolean') {
+    return res.status(400).json({ error: 'backend and available required' });
+  }
+  recordBackendCheck(backend, available, latencyMs || 0);
+  res.json({ ok: true });
+});
+
+/** Get thresholds */
+router.get('/health/thresholds', (req, res) => {
+  res.json(getThresholds());
+});
+
+/** Set thresholds */
+router.put('/health/thresholds', (req, res) => {
+  res.json(setThresholds(req.body));
+});
+
+/** Check thresholds */
+router.get('/health/thresholds/check', (req, res) => {
+  res.json(checkThresholds());
 });
 
 export default router;
