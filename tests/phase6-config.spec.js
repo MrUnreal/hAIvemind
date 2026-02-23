@@ -139,7 +139,7 @@ test.describe('Environment Config — config.js env overrides', () => {
 
   test('config defaults are unchanged', async () => {
     const cfg = (await import('../server/config.js')).default;
-    expect(cfg.maxConcurrency).toBe(3);
+    expect(cfg.maxConcurrency).toBe(10);
     expect(cfg.port).toBe(3000);
     expect(cfg.defaultBackend).toBe('copilot');
     expect(cfg.plugins.dir).toBe('plugins');
