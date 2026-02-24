@@ -1,9 +1,8 @@
 /**
- * Hivemind radial layout — places nodes in concentric rings radiating
- * outward from a central "hive" node, creating an organic web-like feel.
- *
- * Wave 0 (roots) sits closest to center, later waves expand outward.
- * Nodes within each ring are distributed with slight jitter for organic feel.
+ * Hivemind balanced layout — left-to-right column flow.
+ * Each wave/depth is a column. Columns are vertically centered
+ * against the tallest column for a balanced, symmetric look.
+ * Slight organic jitter keeps it from feeling like a rigid grid.
  */
 
 export function hivemindLayout(tasks, edgeList) {
@@ -46,11 +45,11 @@ export function hivemindLayout(tasks, edgeList) {
 
   const maxDepth = Math.max(0, ...depthMap.values());
 
-  // ── Radial positioning ──
-  const CX = 0;
-  const CY = 0;
-  const BASE_RADIUS = 250;
-  const RING_GAP = 220;
+  // ── Layout constants ──
+  const NODE_W = 240;
+  const NODE_H = 90;
+  const X_GAP = 100;
+  const Y_GAP = 30;
 
   // Deterministic seeded "jitter" for organic feel
   function seededRandom(seed) {
@@ -58,47 +57,48 @@ export function hivemindLayout(tasks, edgeList) {
     return x - Math.floor(x);
   }
 
+  // Find tallest column to center everything against
+  let maxColHeight = 0;
+  for (let d = 0; d <= maxDepth; d++) {
+    const count = (layers.get(d) || []).length;
+    const h = count * NODE_H + (count - 1) * Y_GAP;
+    if (h > maxColHeight) maxColHeight = h;
+  }
+
   const nodes = [];
 
-  // Central hive node
+  // ── HIVE node (START) — left of first column ──
+  const rootCount = (layers.get(0) || []).length;
+  const rootColH = rootCount * NODE_H + (rootCount - 1) * Y_GAP;
+  const rootOffY = (maxColHeight - rootColH) / 2;
   nodes.push({
     id: '__start__',
     type: 'bookend',
-    position: { x: CX - 50, y: CY - 50 },
+    position: { x: -X_GAP - 50, y: maxColHeight / 2 - 50 },
     data: { label: 'HIVE', variant: 'start' },
     selectable: false,
   });
 
-  // Place task nodes in concentric rings
+  // ── Place task nodes column by column ──
   for (let depth = 0; depth <= maxDepth; depth++) {
     const ids = layers.get(depth) || [];
     const count = ids.length;
-    const radius = BASE_RADIUS + depth * RING_GAP;
-
-    // Golden-ratio angular offset per layer
-    const baseAngle = (depth * 0.618033988749895 * Math.PI * 2) % (Math.PI * 2);
-    const useArc = count > 6;
-    const arcSpan = useArc
-      ? Math.min(Math.PI * 1.7, (Math.PI * 2 / Math.max(count, 1)) * count * 1.1)
-      : Math.PI * 2;
-    const arcStart = useArc ? -arcSpan / 2 + baseAngle : baseAngle;
-    const step = count > 1 ? arcSpan / count : 0;
+    const colHeight = count * NODE_H + (count - 1) * Y_GAP;
+    const offsetY = (maxColHeight - colHeight) / 2;
+    const x = depth * (NODE_W + X_GAP);
 
     ids.forEach((id, i) => {
       const task = tasks.find(t => t.id === id);
-      const angle = count === 1 ? baseAngle : arcStart + (i + 0.5) * step;
+      const baseY = offsetY + i * (NODE_H + Y_GAP);
 
-      // Organic jitter
-      const jitterR = (seededRandom(i * 7 + depth * 13) - 0.5) * 40;
-      const jitterA = (seededRandom(i * 11 + depth * 17) - 0.5) * 0.07;
-
-      const x = CX + (radius + jitterR) * Math.cos(angle + jitterA) - 120;
-      const y = CY + (radius + jitterR) * Math.sin(angle + jitterA) - 45;
+      // Subtle organic jitter
+      const jX = (seededRandom(i * 7 + depth * 13) - 0.5) * 16;
+      const jY = (seededRandom(i * 11 + depth * 17) - 0.5) * 10;
 
       nodes.push({
         id,
         type: task.type === 'prompt' ? 'prompt' : 'agent',
-        position: { x, y },
+        position: { x: x + jX, y: baseY + jY },
         data: {
           label: task.label,
           taskId: task.id,
@@ -112,12 +112,11 @@ export function hivemindLayout(tasks, edgeList) {
     });
   }
 
-  // END node
-  const endRadius = BASE_RADIUS + (maxDepth + 1) * RING_GAP;
+  // ── END node — right of last column ──
   nodes.push({
     id: '__end__',
     type: 'bookend',
-    position: { x: CX + endRadius - 50, y: CY - 25 },
+    position: { x: (maxDepth + 1) * (NODE_W + X_GAP) + X_GAP / 2, y: maxColHeight / 2 - 25 },
     data: { label: 'DONE', variant: 'end' },
     selectable: false,
   });
