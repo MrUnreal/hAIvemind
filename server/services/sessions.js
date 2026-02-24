@@ -266,10 +266,20 @@ export async function startSession(userPrompt, projectSlug, predefinedPlan) {
       taskCount: plan.tasks.length,
     }).catch(err => log.debug(`[webhook] session:complete fire failed: ${err.message}`));
 
+    // Rebuild edges from the final plan — plan.tasks is mutated by task splits
+    // and task.dependencies are mutated by DAG rewrites, so the local `edges`
+    // variable from initial decomposition is stale.
+    const finalEdges = [];
+    for (const task of plan.tasks) {
+      for (const depId of (task.dependencies || [])) {
+        finalEdges.push({ id: `${depId}->${task.id}`, source: depId, target: task.id });
+      }
+    }
+
     workspace.finalizeSession(projectSlug, sessionId, {
       status: 'completed',
       tasks: plan.tasks,
-      edges,
+      edges: finalEdges,
       agents: agentManager.getSessionSnapshot(),
       costSummary: costSummaryData,
       timeline,

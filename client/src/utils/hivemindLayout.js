@@ -45,6 +45,41 @@ export function hivemindLayout(tasks, edgeList) {
     }
   }
 
+  // ── Split-aware depth adjustment ──
+  // Split sub-tasks whose dependencies were rewritten away still show at depth 0.
+  // Place them after their parent task's column instead.
+  const taskIdSet = new Set(tasks.map(t => t.id));
+  for (const t of tasks) {
+    if (!t.id.includes('-split-')) continue;
+    // Find the immediate parent's ID (strip the last -split-sub-N suffix)
+    const lastSplitIdx = t.id.lastIndexOf('-split-');
+    const parentId = t.id.substring(0, lastSplitIdx);
+    if (!taskIdSet.has(parentId)) continue;
+    const parentDepth = depthMap.get(parentId) || 0;
+    const currentDepth = depthMap.get(t.id) || 0;
+    // Only adjust if the sub-task would be placed before or at the parent's column
+    if (currentDepth <= parentDepth) {
+      depthMap.set(t.id, parentDepth + 1);
+    }
+  }
+
+  // Re-propagate depths for split sub-tasks that depend on other split sub-tasks
+  // (e.g. sub-1 → sub-2 → sub-3 chains within a split group)
+  let changed = true;
+  while (changed) {
+    changed = false;
+    for (const t of tasks) {
+      if (!t.id.includes('-split-')) continue;
+      for (const depId of (t.dependencies || [])) {
+        const depDepth = depthMap.get(depId);
+        if (depDepth !== undefined && depthMap.get(t.id) <= depDepth) {
+          depthMap.set(t.id, depDepth + 1);
+          changed = true;
+        }
+      }
+    }
+  }
+
   // Group tasks by wave/layer
   const layers = new Map();
   for (const [id, depth] of depthMap) {
@@ -56,12 +91,17 @@ export function hivemindLayout(tasks, edgeList) {
 
   // ── Layout constants ──
   const NODE_W = 240;
-  const NODE_H = 90;
-  const X_GAP = 120;
+  // Scale node height and gap based on total task count
+  const isLarge = tasks.length > 15;
+  const NODE_H = isLarge ? 100 : 90;
+  const X_GAP = isLarge ? 100 : 120;
 
-  // Dynamic vertical gap — increases with column size to prevent cramping
+  // Dynamic vertical gap — wider for small columns, tighter for large
   const maxColSize = Math.max(1, ...Array.from(layers.values()).map(l => l.length));
-  const Y_GAP = maxColSize <= 3 ? 35 : maxColSize <= 5 ? 28 : 22;
+  const Y_GAP = maxColSize <= 3 ? 35 : maxColSize <= 5 ? 28 : maxColSize <= 7 ? 22 : 16;
+
+  // Reduce jitter for larger DAGs — precision matters more than organic feel
+  const jitterScale = tasks.length > 12 ? 0 : 1;
 
   // Deterministic seeded "jitter" for organic feel
   function seededRandom(seed) {
@@ -103,9 +143,9 @@ export function hivemindLayout(tasks, edgeList) {
       const task = tasks.find(t => t.id === id);
       const baseY = offsetY + i * (NODE_H + Y_GAP);
 
-      // Subtle organic jitter
-      const jX = (seededRandom(i * 7 + depth * 13) - 0.5) * 16;
-      const jY = (seededRandom(i * 11 + depth * 17) - 0.5) * 10;
+      // Subtle organic jitter (disabled for large DAGs)
+      const jX = (seededRandom(i * 7 + depth * 13) - 0.5) * 16 * jitterScale;
+      const jY = (seededRandom(i * 11 + depth * 17) - 0.5) * 10 * jitterScale;
 
       nodes.push({
         id,

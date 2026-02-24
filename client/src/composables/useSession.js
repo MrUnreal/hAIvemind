@@ -111,9 +111,30 @@ export async function loadSession(projectSlug, sessionId) {
     // Restore tasks and edges
     if (Array.isArray(session.tasks)) {
       tasks.value = session.tasks;
-    }
-    if (Array.isArray(session.edges)) {
-      edges.value = session.edges;
+
+      // Rebuild edges from task dependencies — stored edges may be stale
+      // (task splits and DAG rewrites mutate dependencies but old sessions
+      // may have been saved with the initial edge set)
+      const rebuilt = [];
+      for (const t of session.tasks) {
+        for (const depId of (t.dependencies || [])) {
+          rebuilt.push({ id: `${depId}->${t.id}`, source: depId, target: t.id });
+        }
+      }
+      edges.value = rebuilt;
+
+      // Detect split parent tasks — any task whose ID is a prefix + '-split-'
+      // of another task was split into sub-tasks (success by delegation)
+      const taskIds = new Set(session.tasks.map(t => t.id));
+      for (const t of session.tasks) {
+        const prefix = t.id + '-split-';
+        for (const otherId of taskIds) {
+          if (otherId.startsWith(prefix)) {
+            splitTasks.value.add(t.id);
+            break;
+          }
+        }
+      }
     }
 
     // Restore agent data
@@ -151,6 +172,18 @@ export async function loadSession(projectSlug, sessionId) {
     costSummary.value = session.costSummary || null;
     timeline.value = Array.isArray(session.timeline) ? session.timeline : [];
     sessionStatus.value = session.status || 'completed';
+
+    // Override split parent tasks — agent data shows them as "failed" but
+    // they succeeded by delegation (their sub-tasks did the work)
+    for (const splitId of splitTasks.value) {
+      taskStatusMap.set(splitId, {
+        taskId: splitId,
+        status: 'success',
+        retries: taskStatusMap.get(splitId)?.retries || 0,
+        modelTier: taskStatusMap.get(splitId)?.modelTier || 'T0',
+        split: true,
+      });
+    }
 
     // Build event log from agent data
     if (session.agents) {

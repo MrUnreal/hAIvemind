@@ -178,6 +178,11 @@ function applyNodeStatuses(nodes) {
       newData = { ...newData, agentId: agentInfo.agentId, model: agentInfo.model, multiplier: agentInfo.multiplier, status: agentInfo.status || newData.status, reason: agentInfo.reason || newData.reason };
     }
 
+    // Split parent tasks are "success by delegation" — don't show as failed
+    if (newData.splitFrom) {
+      newData.status = 'success';
+    }
+
     // In completed/failed sessions, promote unknown tasks to success/failed
     if (!taskStatus && !agentInfo && newData.status === 'pending') {
       if (sessionStatus.value === 'completed') newData.status = 'success';
