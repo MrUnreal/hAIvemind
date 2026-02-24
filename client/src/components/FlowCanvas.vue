@@ -126,7 +126,7 @@ import {
 const flowNodes = ref([]);
 const flowEdges = ref([]);
 
-const { fitView } = useVueFlow();
+const { fitView, updateNodeInternals } = useVueFlow();
 
 // ── Planning overlay thinking animation ──
 const thinkingSteps = [
@@ -314,6 +314,10 @@ watch(tasks, (newTasks) => {
     const layout = hivemindLayout(newTasks, edges.value);
     flowNodes.value = applyNodeStatuses(layout.nodes);
     flowEdges.value = layout.edges;
+    // Force VueFlow to recalculate handle positions after DOM renders
+    nextTick(() => {
+      requestAnimationFrame(() => updateNodeInternals());
+    });
   }
 }, { immediate: true });
 
@@ -322,6 +326,10 @@ watch([taskStatusMap, taskAgentMap, sessionStatus], () => {
   if (flowNodes.value.length === 0) return;
   flowNodes.value = applyNodeStatuses(flowNodes.value);
   flowEdges.value = applyEdgeStatuses(flowEdges.value);
+  // Recalculate handle positions when node content changes height
+  nextTick(() => {
+    requestAnimationFrame(() => updateNodeInternals());
+  });
 }, { deep: true });
 
 function onNodeClick(event) {
@@ -633,6 +641,21 @@ const waveProgress = computed(() => {
 /* Override vue-flow bg */
 :deep(.vue-flow) {
   background: radial-gradient(ellipse at center, rgba(10, 18, 30, 1) 0%, rgba(5, 8, 14, 1) 70%);
+}
+
+/* ── Handle dots — subtle, blending with edge endpoints ── */
+:deep(.vue-flow__handle) {
+  width: 8px;
+  height: 8px;
+  background: rgba(74, 158, 255, 0.12);
+  border: 1.5px solid rgba(74, 158, 255, 0.25);
+  transition: background 0.3s, border-color 0.3s;
+}
+
+:deep(.vue-flow__node.selected .vue-flow__handle),
+:deep(.vue-flow__node:hover .vue-flow__handle) {
+  background: rgba(74, 158, 255, 0.3);
+  border-color: rgba(74, 158, 255, 0.5);
 }
 
 /* ── Hivemind edge effects ── */
