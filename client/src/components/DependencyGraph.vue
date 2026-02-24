@@ -1,5 +1,6 @@
 <template>
-  <div v-if="visible" class="dep-viz-overlay" @click.self="$emit('close')">
+  <Teleport to="body">
+  <div v-if="visible" class="dep-viz-overlay" @click.self="$emit('close')" @keydown.escape="$emit('close')" tabindex="0" ref="overlayRef">
     <div class="dep-viz-panel">
       <div class="dep-header">
         <h3>🔗 Dependency Graph</h3>
@@ -67,10 +68,11 @@
       </template>
     </div>
   </div>
+  </Teleport>
 </template>
 
 <script setup>
-import { ref, watch } from 'vue';
+import { ref, watch, nextTick } from 'vue';
 
 const props = defineProps({
   visible: { type: Boolean, default: false },
@@ -80,6 +82,7 @@ const props = defineProps({
 
 defineEmits(['close']);
 
+const overlayRef = ref(null);
 const data = ref(null);
 const loading = ref(false);
 const error = ref('');
@@ -124,7 +127,10 @@ async function fetchDeps() {
 }
 
 watch(() => props.visible, (v) => {
-  if (v) fetchDeps();
+  if (v) {
+    fetchDeps();
+    nextTick(() => overlayRef.value?.focus());
+  }
 });
 </script>
 
