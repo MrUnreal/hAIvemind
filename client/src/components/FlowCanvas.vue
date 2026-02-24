@@ -205,6 +205,19 @@ watch([taskStatusMap, taskAgentMap, sessionStatus], () => {
 }, { deep: true });
 
 function onNodeClick(event) {
+  const nodeId = event.node?.id;
+  if (!nodeId || nodeId === '__start__' || nodeId === '__end__') return;
+
+  // Look up agent directly from taskAgentMap using the node's task ID
+  // (VueFlow's internal node data may be stale after reactivity updates)
+  const taskId = event.node?.data?.taskId || nodeId;
+  const agentInfo = taskAgentMap.value.get(taskId);
+  if (agentInfo?.agentId) {
+    selectedAgentId.value = agentInfo.agentId;
+    return;
+  }
+
+  // Fallback: check the node data directly
   const agentId = event.node?.data?.agentId;
   if (agentId) {
     selectedAgentId.value = agentId;

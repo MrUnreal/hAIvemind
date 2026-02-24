@@ -360,10 +360,12 @@ export async function runVerifyFixLoop({ sessionId, projectSlug, plan, edges, ag
       issues: verifyResult.issues,
     }));
 
+    // Use a single round prefix so inter-fix dependencies resolve correctly
+    const roundPrefix = ++fixCounter.n;
     const fixTasks = verifyResult.followUpTasks.map(t => ({
       ...t,
-      id: `fix-${++fixCounter.n}-${t.id}`,
-      dependencies: t.dependencies.map(d => `fix-${fixCounter.n}-${d}`),
+      id: `fix-${roundPrefix}-${t.id}`,
+      dependencies: (t.dependencies || []).map(d => `fix-${roundPrefix}-${d}`),
     }));
 
     for (const task of fixTasks) {

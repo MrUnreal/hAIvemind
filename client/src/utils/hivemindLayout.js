@@ -36,6 +36,15 @@ export function hivemindLayout(tasks, edgeList) {
     }
   }
 
+  // Handle tasks with unresolvable deps (e.g. broken fix-task dependency IDs)
+  // Place them one layer past the current deepest so they still get nodes.
+  for (const t of tasks) {
+    if (!depthMap.has(t.id)) {
+      const currentMax = depthMap.size > 0 ? Math.max(...depthMap.values()) : 0;
+      depthMap.set(t.id, currentMax + 1);
+    }
+  }
+
   // Group tasks by wave/layer
   const layers = new Map();
   for (const [id, depth] of depthMap) {

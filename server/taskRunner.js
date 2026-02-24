@@ -233,6 +233,9 @@ export default class TaskRunner {
   }
 
   async _doScheduleEligible() {
+    // Loop until no more tasks can be scheduled — this handles wave transitions
+    // where completing batch N makes batch N+1 eligible.
+    while (true) {
     const eligible = [];
     const speculative = [];
 
@@ -369,7 +372,15 @@ export default class TaskRunner {
     // Broadcast wave progress
     this._broadcastWaveProgress();
 
+    // Nothing to launch — exit the scheduling loop
+    if (allLaunches.length === 0) break;
+
     await Promise.allSettled(allLaunches);
+
+    // Check if all tasks are done before looping to schedule more
+    const allDone = [...this.taskStates.values()].every(s => s.status === 'success' || s.status === 'blocked');
+    if (allDone) break;
+    } // end while(true)
   }
 
   /**
@@ -535,8 +546,9 @@ export default class TaskRunner {
     // Check if all done
     this._checkCompletion();
 
-    // Schedule next batch
-    await this._scheduleEligible();
+    // Note: wave transitions are handled by the loop in _doScheduleEligible
+    // The nested call below is a no-op when called from within _doScheduleEligible
+    // (reentrancy guard), but is needed for gate resolution and stall rewrites.
   }
 
   /**
