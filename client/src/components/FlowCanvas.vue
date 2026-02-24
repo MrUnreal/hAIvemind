@@ -16,7 +16,7 @@
       fit-view-on-init
       @node-click="onNodeClick"
     >
-      <Background variant="dots" :gap="20" :size="1" color="#222" />
+      <Background variant="dots" :gap="30" :size="0.8" color="rgba(74,158,255,0.06)" />
       <Controls />
 
       <template #node-agent="nodeProps">
@@ -76,7 +76,7 @@ import '@vue-flow/controls/dist/style.css';
 import AgentNode from './AgentNode.vue';
 import BookendNode from './BookendNode.vue';
 import PromptNode from './PromptNode.vue';
-import { layoutNodes } from '../utils/layout.js';
+import { hivemindLayout } from '../utils/hivemindLayout.js';
 import {
   sessionStatus,
   tasks,
@@ -126,23 +126,22 @@ function applyEdgeStatuses(edgeList) {
 
     // Active: either end is running
     if (sourceStatus === 'running' || targetStatus === 'running') {
-      // Speculative edges get dashed styling
       const isSpeculative = speculativeTasks.value.has(edge.target);
       if (isSpeculative) {
-        return { ...edge, animated: true, style: { stroke: '#b88aff', strokeWidth: 2.5, strokeDasharray: '6 3' } };
+        return { ...edge, animated: true, style: { stroke: '#b88aff', strokeWidth: 2.5, strokeDasharray: '6 3' }, class: 'edge-active edge-speculative' };
       }
-      return { ...edge, animated: true, style: { stroke: '#4a9eff', strokeWidth: 2.5 } };
+      return { ...edge, animated: true, style: { stroke: '#4a9eff', strokeWidth: 2.5 }, class: 'edge-active' };
     }
-    // Completed path: source is done
+    // Completed path
     if (sourceStatus === 'success' && (targetStatus === 'success' || targetStatus === 'running')) {
-      return { ...edge, animated: false, style: { stroke: '#4caf50', strokeWidth: 1.5 } };
+      return { ...edge, animated: false, style: { stroke: 'rgba(76, 175, 80, 0.5)', strokeWidth: 2 }, class: 'edge-done' };
     }
     // Failed/blocked
     if (targetStatus === 'failed' || targetStatus === 'blocked') {
-      return { ...edge, animated: false, style: { stroke: '#f44336', strokeWidth: 1.5 } };
+      return { ...edge, animated: false, style: { stroke: 'rgba(244, 67, 54, 0.5)', strokeWidth: 2 }, class: 'edge-failed' };
     }
-    // Default
-    return { ...edge, animated: false, style: { stroke: '#333' } };
+    // Default — dim tendril
+    return { ...edge, animated: false, style: { stroke: 'rgba(74, 158, 255, 0.08)', strokeWidth: 1.5 }, class: 'edge-dormant' };
   });
 }
 
@@ -182,7 +181,7 @@ function applyNodeStatuses(nodes) {
 // Generate layout when plan arrives
 watch(tasks, (newTasks) => {
   if (newTasks.length > 0) {
-    const layout = layoutNodes(newTasks, edges.value);
+    const layout = hivemindLayout(newTasks, edges.value);
     flowNodes.value = applyNodeStatuses(layout.nodes);
     flowEdges.value = layout.edges;
   }
@@ -339,6 +338,37 @@ const waveProgress = computed(() => {
 
 /* Override vue-flow bg */
 :deep(.vue-flow) {
-  background: var(--bg-primary);
+  background: radial-gradient(ellipse at center, rgba(10, 18, 30, 1) 0%, rgba(5, 8, 14, 1) 70%);
+}
+
+/* ── Hivemind edge effects ── */
+:deep(.vue-flow__edge-path) {
+  transition: stroke 0.6s ease, stroke-width 0.4s ease, opacity 0.5s ease;
+}
+
+:deep(.edge-active .vue-flow__edge-path) {
+  filter: drop-shadow(0 0 4px rgba(74, 158, 255, 0.4));
+}
+
+:deep(.edge-done .vue-flow__edge-path) {
+  filter: drop-shadow(0 0 3px rgba(76, 175, 80, 0.25));
+}
+
+:deep(.edge-failed .vue-flow__edge-path) {
+  filter: drop-shadow(0 0 3px rgba(244, 67, 54, 0.3));
+}
+
+:deep(.edge-dormant .vue-flow__edge-path) {
+  opacity: 0.4;
+}
+
+/* Animated edge flow particles */
+:deep(.vue-flow__edge.animated .vue-flow__edge-path) {
+  stroke-dasharray: 8 4;
+  animation: edgeFlow 1.2s linear infinite;
+}
+
+@keyframes edgeFlow {
+  to { stroke-dashoffset: -24; }
 }
 </style>
