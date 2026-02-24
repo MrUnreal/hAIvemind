@@ -127,6 +127,8 @@ export function hivemindLayout(tasks, edgeList) {
     id: '__start__',
     type: 'bookend',
     position: { x: -X_GAP - 50, y: maxColHeight / 2 - 50 },
+    sourcePosition: 'right',
+    targetPosition: 'left',
     data: { label: 'HIVE', variant: 'start' },
     selectable: false,
   });
@@ -151,6 +153,8 @@ export function hivemindLayout(tasks, edgeList) {
         id,
         type: task.type === 'prompt' ? 'prompt' : 'agent',
         position: { x: x + jX, y: baseY + jY },
+        sourcePosition: 'right',
+        targetPosition: 'left',
         data: {
           label: task.label,
           taskId: task.id,
@@ -169,6 +173,8 @@ export function hivemindLayout(tasks, edgeList) {
     id: '__end__',
     type: 'bookend',
     position: { x: (maxDepth + 1) * (NODE_W + X_GAP) + X_GAP / 2, y: maxColHeight / 2 - 34 },
+    sourcePosition: 'right',
+    targetPosition: 'left',
     data: { label: 'DONE', variant: 'end' },
     selectable: false,
   });
