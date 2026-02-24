@@ -96,16 +96,16 @@ const flowEdges = ref([]);
 
 const { fitView } = useVueFlow();
 
-// Auto-focus viewport on running nodes when they change
-watch(taskStatusMap, () => {
-  const runningNodeIds = flowNodes.value
-    .filter(n => n.type === 'agent' && getNodeStatus(n.data.taskId) === 'running')
-    .map(n => n.id);
-  if (runningNodeIds.length > 0) {
-    nextTick(() => {
-      fitView({ nodes: runningNodeIds, padding: 0.3, duration: 400 });
-    });
-  }
+// Auto-focus: fit entire DAG once on plan load, then gently pan only on wave transitions
+const lastFocusedWave = ref(-1);
+
+watch(swarmWave, (wave) => {
+  if (!wave || wave.currentWave === lastFocusedWave.value) return;
+  lastFocusedWave.value = wave.currentWave;
+  // On wave transition, fit the full DAG so user sees the big picture
+  nextTick(() => {
+    fitView({ padding: 0.15, duration: 600 });
+  });
 }, { deep: true });
 
 // Resolve effective status for a node ID (agent or bookend)

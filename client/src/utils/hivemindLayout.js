@@ -57,8 +57,11 @@ export function hivemindLayout(tasks, edgeList) {
   // ── Layout constants ──
   const NODE_W = 240;
   const NODE_H = 90;
-  const X_GAP = 100;
-  const Y_GAP = 30;
+  const X_GAP = 120;
+
+  // Dynamic vertical gap — increases with column size to prevent cramping
+  const maxColSize = Math.max(1, ...Array.from(layers.values()).map(l => l.length));
+  const Y_GAP = maxColSize <= 3 ? 35 : maxColSize <= 5 ? 28 : 22;
 
   // Deterministic seeded "jitter" for organic feel
   function seededRandom(seed) {
@@ -125,7 +128,7 @@ export function hivemindLayout(tasks, edgeList) {
   nodes.push({
     id: '__end__',
     type: 'bookend',
-    position: { x: (maxDepth + 1) * (NODE_W + X_GAP) + X_GAP / 2, y: maxColHeight / 2 - 25 },
+    position: { x: (maxDepth + 1) * (NODE_W + X_GAP) + X_GAP / 2, y: maxColHeight / 2 - 34 },
     data: { label: 'DONE', variant: 'end' },
     selectable: false,
   });
@@ -137,11 +140,14 @@ export function hivemindLayout(tasks, edgeList) {
   const depTargets = new Set(tasks.flatMap(t => t.dependencies || []));
   const leafTasks = tasks.filter(t => !depTargets.has(t.id)).map(t => t.id);
 
+  // Use smoothstep edges for cleaner routing when many edges converge/fan
+  const edgeType = tasks.length > 4 ? 'smoothstep' : 'default';
+
   const flowEdges = edgeList.map(e => ({
     id: e.id,
     source: e.source,
     target: e.target,
-    type: 'default',
+    type: edgeType,
     animated: false,
     style: { stroke: 'rgba(74, 158, 255, 0.18)', strokeWidth: 1.5 },
   }));
@@ -151,7 +157,7 @@ export function hivemindLayout(tasks, edgeList) {
       id: `__start__->${rootId}`,
       source: '__start__',
       target: rootId,
-      type: 'default',
+      type: edgeType,
       animated: false,
       style: { stroke: 'rgba(245, 197, 66, 0.3)', strokeWidth: 2 },
     });
@@ -162,7 +168,7 @@ export function hivemindLayout(tasks, edgeList) {
       id: `${leafId}->__end__`,
       source: leafId,
       target: '__end__',
-      type: 'default',
+      type: edgeType,
       animated: false,
       style: { stroke: 'rgba(138, 138, 245, 0.25)', strokeWidth: 1.5 },
     });

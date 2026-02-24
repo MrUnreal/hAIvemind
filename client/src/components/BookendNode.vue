@@ -86,26 +86,27 @@ const displayLabel = computed(() => {
 
 /* ── End node ── */
 .bookend-node.end {
-  width: 90px;
-  height: 50px;
-  border-radius: 25px;
-  font-size: 10px;
-  background: rgba(12, 12, 30, 0.9);
-  border: 1.5px solid rgba(138, 138, 245, 0.25);
-  color: rgba(138, 138, 245, 0.6);
-  box-shadow: 0 0 12px rgba(138, 138, 245, 0.06);
-}
-
-/* ── Complete node ── */
-.bookend-node.complete {
   width: 100px;
   height: 60px;
   border-radius: 30px;
   font-size: 11px;
-  background: radial-gradient(circle, rgba(76, 175, 80, 0.1) 0%, rgba(10, 20, 12, 0.95) 70%);
-  border: 2px solid rgba(76, 175, 80, 0.5);
+  background: radial-gradient(circle, rgba(138, 138, 245, 0.08) 0%, rgba(12, 12, 30, 0.95) 70%);
+  border: 1.5px solid rgba(138, 138, 245, 0.3);
+  color: rgba(138, 138, 245, 0.7);
+  box-shadow: 0 0 20px rgba(138, 138, 245, 0.08);
+  transition: all 0.5s ease;
+}
+
+/* ── Complete node ── */
+.bookend-node.complete {
+  width: 110px;
+  height: 68px;
+  border-radius: 34px;
+  font-size: 13px;
+  background: radial-gradient(circle, rgba(76, 175, 80, 0.15) 0%, rgba(10, 20, 12, 0.95) 70%);
+  border: 2px solid rgba(76, 175, 80, 0.6);
   color: #6ecf6e;
-  box-shadow: 0 0 20px rgba(76, 175, 80, 0.15);
+  box-shadow: 0 0 25px rgba(76, 175, 80, 0.2);
   animation: completeGlow 2s ease-in-out infinite;
 }
 
