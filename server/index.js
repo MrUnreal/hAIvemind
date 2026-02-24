@@ -155,8 +155,11 @@ process.on('SIGINT', gracefulShutdown);
 // ── Crash-safety handlers ──
 process.on('unhandledRejection', (err) => {
   log.error(`[server] Unhandled rejection: ${err?.message || err}`);
+  if (err?.stack) log.error(err.stack);
 });
 process.on('uncaughtException', (err) => {
   log.error(`[server] Uncaught exception: ${err?.message || err}`);
+  if (err?.stack) log.error(err.stack);
   gracefulShutdown();
 });
+

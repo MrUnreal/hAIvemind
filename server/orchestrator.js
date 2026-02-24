@@ -47,6 +47,7 @@ Output ONLY valid JSON (no markdown fences, no preamble):
     let timedOut = false;
     const child = spawn(modelConfig.cmd, fullArgs, {
       cwd: workDir,
+      stdio: ['ignore', 'pipe', 'pipe'],
       env: { ...process.env },
     });
 
@@ -177,6 +178,7 @@ When modifying an existing project (file tree provided below), reference specifi
 
     const child = spawn(modelConfig.cmd, fullArgs, {
       cwd: workDir,
+      stdio: ['ignore', 'pipe', 'pipe'],
       env: { ...process.env },
     });
 
@@ -306,6 +308,7 @@ If everything looks good, set passed=true. Each fix task should target ONE file.
     let timedOut = false;
     const child = spawn(modelConfig.cmd, fullArgs, {
       cwd: workDir,
+      stdio: ['ignore', 'pipe', 'pipe'],
       env: { ...process.env },
     });
 
@@ -318,6 +321,7 @@ If everything looks good, set passed=true. Each fix task should target ONE file.
         console.warn(`[orchestrator] Verification timed out after ${timeoutMinutes} minutes`);
         resolve({ passed: false, issues: [`Verification timed out after ${timeoutMinutes} minutes`], followUpTasks: [] });
       }
+      // Non-timeout errors (e.g. non-zero exit) are handled by the 'close' handler
     });
 
     child.on('close', (code) => {
@@ -381,6 +385,7 @@ Analyze the failure and output ONLY valid JSON (no markdown fences):
     let timedOut = false;
     const child = spawn(modelConfig.cmd, fullArgs, {
       cwd: workDir,
+      stdio: ['ignore', 'pipe', 'pipe'],
       env: { ...process.env },
     });
 
