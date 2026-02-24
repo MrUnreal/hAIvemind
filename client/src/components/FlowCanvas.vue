@@ -115,6 +115,9 @@ function getNodeStatus(nodeId) {
   if (ts) return ts.status;
   const agent = taskAgentMap.value.get(nodeId);
   if (agent) return agent.status;
+  // In completed/failed sessions, treat untracked tasks as done
+  if (sessionStatus.value === 'completed') return 'success';
+  if (sessionStatus.value === 'failed') return 'failed';
   return 'pending';
 }
 
@@ -141,7 +144,7 @@ function applyEdgeStatuses(edgeList) {
       return { ...edge, animated: false, style: { stroke: 'rgba(244, 67, 54, 0.5)', strokeWidth: 2 }, class: 'edge-failed' };
     }
     // Default — dim tendril
-    return { ...edge, animated: false, style: { stroke: 'rgba(74, 158, 255, 0.08)', strokeWidth: 1.5 }, class: 'edge-dormant' };
+    return { ...edge, animated: false, style: { stroke: 'rgba(74, 158, 255, 0.18)', strokeWidth: 1.5 }, class: 'edge-dormant' };
   });
 }
 
@@ -174,6 +177,13 @@ function applyNodeStatuses(nodes) {
     if (agentInfo) {
       newData = { ...newData, agentId: agentInfo.agentId, model: agentInfo.model, multiplier: agentInfo.multiplier, status: agentInfo.status || newData.status, reason: agentInfo.reason || newData.reason };
     }
+
+    // In completed/failed sessions, promote unknown tasks to success/failed
+    if (!taskStatus && !agentInfo && newData.status === 'pending') {
+      if (sessionStatus.value === 'completed') newData.status = 'success';
+      else if (sessionStatus.value === 'failed') newData.status = 'failed';
+    }
+
     return { ...node, data: newData };
   });
 }
@@ -188,7 +198,7 @@ watch(tasks, (newTasks) => {
 }, { immediate: true });
 
 // Update node data when task/agent statuses change — must replace the whole array for reactivity
-watch([taskStatusMap, taskAgentMap], () => {
+watch([taskStatusMap, taskAgentMap, sessionStatus], () => {
   if (flowNodes.value.length === 0) return;
   flowNodes.value = applyNodeStatuses(flowNodes.value);
   flowEdges.value = applyEdgeStatuses(flowEdges.value);

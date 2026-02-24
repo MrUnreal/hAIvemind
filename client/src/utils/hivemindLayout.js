@@ -49,8 +49,8 @@ export function hivemindLayout(tasks, edgeList) {
   // ── Radial positioning ──
   const CX = 0;
   const CY = 0;
-  const BASE_RADIUS = 300;
-  const RING_GAP = 340;
+  const BASE_RADIUS = 250;
+  const RING_GAP = 220;
 
   // Deterministic seeded "jitter" for organic feel
   function seededRandom(seed) {
@@ -133,9 +133,9 @@ export function hivemindLayout(tasks, edgeList) {
     id: e.id,
     source: e.source,
     target: e.target,
-    type: 'smoothstep',
+    type: 'default',
     animated: false,
-    style: { stroke: 'rgba(74, 158, 255, 0.08)', strokeWidth: 1.5 },
+    style: { stroke: 'rgba(74, 158, 255, 0.18)', strokeWidth: 1.5 },
   }));
 
   for (const rootId of rootTasks) {
@@ -143,9 +143,9 @@ export function hivemindLayout(tasks, edgeList) {
       id: `__start__->${rootId}`,
       source: '__start__',
       target: rootId,
-      type: 'smoothstep',
+      type: 'default',
       animated: false,
-      style: { stroke: 'rgba(245, 197, 66, 0.15)', strokeWidth: 2 },
+      style: { stroke: 'rgba(245, 197, 66, 0.3)', strokeWidth: 2 },
     });
   }
 
@@ -154,9 +154,9 @@ export function hivemindLayout(tasks, edgeList) {
       id: `${leafId}->__end__`,
       source: leafId,
       target: '__end__',
-      type: 'smoothstep',
+      type: 'default',
       animated: false,
-      style: { stroke: 'rgba(138, 138, 245, 0.12)', strokeWidth: 1.5 },
+      style: { stroke: 'rgba(138, 138, 245, 0.25)', strokeWidth: 1.5 },
     });
   }
 

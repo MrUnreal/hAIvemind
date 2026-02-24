@@ -150,11 +150,11 @@ const elapsed = computed(() => {
 
 /* ── Dormant state — faded, waiting ── */
 .node-dormant {
-  opacity: 0.35;
-  border-color: rgba(74, 158, 255, 0.06);
+  opacity: 0.5;
+  border-color: rgba(74, 158, 255, 0.08);
 }
 .node-dormant:hover {
-  opacity: 0.7;
+  opacity: 0.8;
 }
 
 .agent-node:hover {
