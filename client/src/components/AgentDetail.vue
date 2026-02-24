@@ -29,7 +29,7 @@
       </div>
       <div class="info-row">
         <span class="info-label">Cost</span>
-        <span class="cost">{{ agent.multiplier }}× premium request</span>
+        <span class="cost">{{ agent.multiplier }}× premium {{ agent.multiplier === 1 ? 'request' : 'requests' }}</span>
       </div>
       <div class="info-row">
         <span class="info-label">Retries</span>

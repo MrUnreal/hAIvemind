@@ -79,7 +79,7 @@
               {{ project.name }}
               <span v-if="project.linked" class="linked-badge">linked</span>
             </span>
-            <span class="project-slug">{{ project.slug }}</span>
+            <span v-if="project.slug !== project.name" class="project-slug">{{ project.slug }}</span>
           </div>
           <div class="project-meta">
             <span class="meta-pill sessions">{{ project.sessionCount || 0 }} {{ (project.sessionCount || 0) === 1 ? 'session' : 'sessions' }}</span>

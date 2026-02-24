@@ -7,7 +7,7 @@
 
     <div class="chat-messages" ref="messagesRef">
       <div v-if="messages.length === 0" class="chat-empty">
-        <p>Waiting for session to start...</p>
+        <p>{{ sessionStatus === 'completed' ? 'Session completed — describe your next change below.' : sessionStatus === 'running' ? 'Session in progress...' : 'Describe what to build to start a session.' }}</p>
       </div>
 
       <template v-for="(msg, i) in messages" :key="i">
