@@ -92,20 +92,14 @@
 
     <div v-if="sessionsLoading" class="loading">Loading sessions...</div>
 
-    <!-- Phase 6.4: Workspace Intelligence -->
-    <WorkspaceOverview
-      v-if="activeProject?.slug && !sessionsLoading"
-      :projectSlug="activeProject.slug"
-    />
-
-    <div v-else-if="sessions.length === 0" class="empty">
+    <div v-if="!sessionsLoading && sessions.length === 0" class="empty">
       <p>No sessions yet. Start your first one!</p>
       <button class="new-session-btn" @click="$emit('newSession')">
         + Start Session
       </button>
     </div>
 
-    <div v-else class="session-list">
+    <div v-if="!sessionsLoading && sessions.length > 0" class="session-list">
       <div
         v-for="session in sortedSessions"
         :key="session.id"
@@ -248,6 +242,12 @@
         />
       </div>
     </div>
+
+    <!-- Phase 6.4: Workspace Intelligence -->
+    <WorkspaceOverview
+      v-if="activeProject?.slug && !sessionsLoading"
+      :projectSlug="activeProject.slug"
+    />
 
     <!-- Phase 8.4: Dependency Graph -->
     <DependencyGraph

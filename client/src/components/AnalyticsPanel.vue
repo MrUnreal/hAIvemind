@@ -94,7 +94,7 @@
           :key="i"
           class="analytics-spark-bar"
           :style="{ height: sparkHeight(b.sessions) }"
-          :title="`${b.period}: ${b.sessions} sessions`"
+          :title="`${b.period}: ${b.sessions} ${b.sessions === 1 ? 'session' : 'sessions'}`"
         ></div>
       </div>
     </div>

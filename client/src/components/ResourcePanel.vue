@@ -28,7 +28,7 @@
     <div class="resource-info">
       <div class="info-row">
         <span>CPU</span>
-        <span>{{ metrics.cpu?.count || 0 }} cores · {{ shortModel(metrics.cpu?.model) }}</span>
+        <span :title="metrics.cpu?.model || ''">{{ metrics.cpu?.count || 0 }} cores · {{ shortModel(metrics.cpu?.model) }}</span>
       </div>
       <div class="info-row">
         <span>Memory</span>
@@ -129,7 +129,7 @@ function formatTime(ts) {
 
 function shortModel(model) {
   if (!model) return 'Unknown';
-  return model.replace(/\(R\)|\(TM\)|CPU|@.*$/gi, '').trim().slice(0, 30);
+  return model.replace(/\(R\)|\(TM\)|CPU|@.*$/gi, '').trim().slice(0, 48);
 }
 
 async function loadMetrics() {
@@ -225,9 +225,10 @@ onUnmounted(() => stopPolling());
 .info-row {
   display: flex; justify-content: space-between;
   font-size: 0.75rem; padding: 3px 0;
-  color: var(--text-secondary);
+  color: var(--text-secondary); gap: 0.5rem;
 }
-.info-row span:first-child { font-weight: 600; color: var(--text-primary); }
+.info-row span:first-child { font-weight: 600; color: var(--text-primary); white-space: nowrap; }
+.info-row span:last-child { text-align: right; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .resource-alerts { margin-bottom: 0.75rem; }
 .alerts-header { display: flex; justify-content: space-between; align-items: center; }
 .alerts-clear-btn {

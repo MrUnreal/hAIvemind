@@ -49,16 +49,17 @@ export function getSystemMetrics() {
   let disk = { total: 0, used: 0, free: 0, percent: 0 };
   try {
     if (process.platform === 'win32') {
-      const out = execSync('wmic logicaldisk get size,freespace,caption /format:csv', {
-        encoding: 'utf-8', timeout: 3000,
-      });
-      const lines = out.trim().split('\n').filter(l => l.includes(','));
-      // Parse first disk with data
+      // Try PowerShell first (wmic is deprecated on modern Windows)
+      const out = execSync(
+        'powershell -NoProfile -Command "Get-CimInstance Win32_LogicalDisk -Filter \'DriveType=3\' | Select-Object DeviceID,Size,FreeSpace | ConvertTo-Csv -NoTypeInformation"',
+        { encoding: 'utf-8', timeout: 5000 }
+      );
+      const lines = out.trim().split('\n').filter(l => l.trim().length > 0);
       for (const line of lines.slice(1)) {
-        const parts = line.trim().split(',');
-        if (parts.length >= 4) {
-          const free = parseInt(parts[1]) || 0;
-          const total = parseInt(parts[2]) || 0;
+        const parts = line.replace(/"/g, '').split(',');
+        if (parts.length >= 3) {
+          const total = parseInt(parts[1]) || 0;
+          const free = parseInt(parts[2]) || 0;
           if (total > 0) {
             disk = {
               total, free, used: total - free,

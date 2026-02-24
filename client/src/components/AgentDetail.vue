@@ -10,14 +10,14 @@
     <!-- Agent selected -->
     <template v-else>
     <div class="detail-header">
-      <h3>{{ agent?.model || 'Agent' }}</h3>
+      <h3>{{ taskLabel || agent?.model || 'Agent' }}</h3>
       <button class="close-btn" @click="selectedAgentId = null">✕</button>
     </div>
 
     <div v-if="agent" class="detail-info">
       <div class="info-row">
-        <span class="info-label">Task</span>
-        <span>{{ taskLabel }}</span>
+        <span class="info-label">Model</span>
+        <span>{{ agent?.model || '—' }}</span>
       </div>
       <div class="info-row">
         <span class="info-label">Status</span>
