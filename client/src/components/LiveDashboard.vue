@@ -86,7 +86,7 @@
         <div class="project-table">
           <div v-for="p in health.projects" :key="p.slug" class="project-row">
             <span class="proj-name">{{ p.name || p.slug }}</span>
-            <span class="proj-stat">{{ p.sessions ?? 0 }} sessions</span>
+            <span class="proj-stat">{{ p.sessions ?? 0 }} {{ (p.sessions ?? 0) === 1 ? 'session' : 'sessions' }}</span>
             <span v-if="p.linked" class="proj-linked">linked</span>
           </div>
         </div>

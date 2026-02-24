@@ -97,8 +97,8 @@ onMounted(async () => {
 
 <style scoped>
 .diff-viewer {
-  background: #1a1a2e;
-  border: 1px solid #333;
+  background: var(--border-primary);
+  border: 1px solid var(--border-subtle);
   border-radius: 8px;
   padding: 16px;
   max-height: 70vh;
@@ -114,12 +114,12 @@ onMounted(async () => {
 
 .diff-header h3 {
   margin: 0;
-  color: #e0e0e0;
+  color: var(--text-primary);
   font-size: 16px;
 }
 
 .file-count {
-  color: #888;
+  color: var(--text-muted);
   font-size: 13px;
 }
 
@@ -127,7 +127,7 @@ onMounted(async () => {
   margin-left: auto;
   background: none;
   border: none;
-  color: #888;
+  color: var(--text-muted);
   cursor: pointer;
   font-size: 18px;
   padding: 4px 8px;
@@ -138,7 +138,7 @@ onMounted(async () => {
 }
 
 .diff-loading, .diff-error {
-  color: #888;
+  color: var(--text-muted);
   text-align: center;
   padding: 24px;
 }
@@ -148,8 +148,8 @@ onMounted(async () => {
 }
 
 .diff-summary {
-  background: #111;
-  color: #aaa;
+  background: var(--bg-secondary);
+  color: var(--text-secondary);
   padding: 10px 14px;
   border-radius: 6px;
   font-size: 12px;
@@ -168,20 +168,20 @@ onMounted(async () => {
   align-items: center;
   gap: 8px;
   padding: 8px 12px;
-  background: #222;
+  background: var(--border-primary);
   border-radius: 4px;
   cursor: pointer;
-  color: #e0e0e0;
+  color: var(--text-primary);
   font-size: 13px;
 }
 
 .file-header:hover {
-  background: #2a2a3e;
+  background: var(--border-secondary);
 }
 
 .file-icon {
   font-size: 10px;
-  color: #888;
+  color: var(--text-muted);
 }
 
 .file-name {
@@ -189,8 +189,8 @@ onMounted(async () => {
 }
 
 .file-patch {
-  background: #0d0d1a;
-  border-left: 3px solid #333;
+  background: var(--bg-primary);
+  border-left: 3px solid var(--border-subtle);
   margin-left: 12px;
   padding: 0;
   overflow-x: auto;
@@ -202,7 +202,7 @@ onMounted(async () => {
   font-size: 12px;
   line-height: 1.5;
   font-family: 'Fira Code', monospace;
-  color: #ccc;
+  color: var(--btn-text);
 }
 
 .file-patch :deep(.diff-add) {
@@ -223,7 +223,7 @@ onMounted(async () => {
 }
 
 .file-patch :deep(.diff-meta) {
-  color: #888;
+  color: var(--text-muted);
   font-weight: bold;
   display: block;
 }

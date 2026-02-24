@@ -237,7 +237,7 @@ const waveProgress = computed(() => {
   justify-content: center;
   height: 100%;
   gap: 20px;
-  color: #666;
+  color: var(--text-tertiary);
 }
 
 .planning-overlay p {
@@ -249,7 +249,7 @@ const waveProgress = computed(() => {
 .spinner {
   width: 40px;
   height: 40px;
-  border: 3px solid #1a1a2e;
+  border: 3px solid var(--border-primary);
   border-top-color: #f5c542;
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
@@ -306,11 +306,11 @@ const waveProgress = computed(() => {
   left: 50%;
   transform: translateX(-50%);
   background: rgba(15, 15, 22, 0.92);
-  border: 1px solid #1e1e2e;
+  border: 1px solid var(--bg-card);
   border-radius: 10px;
   padding: 8px 18px;
   font-size: 12px;
-  color: #aaa;
+  color: var(--text-secondary);
   backdrop-filter: blur(8px);
   min-width: 280px;
   animation: banner-appear 0.4s ease-out;
@@ -324,7 +324,7 @@ const waveProgress = computed(() => {
 }
 
 .wave-bar {
-  background: #1a1a2e;
+  background: var(--border-primary);
   border-radius: 4px;
   height: 6px;
   overflow: hidden;
@@ -339,6 +339,6 @@ const waveProgress = computed(() => {
 
 /* Override vue-flow bg */
 :deep(.vue-flow) {
-  background: #0a0a0f;
+  background: var(--bg-primary);
 }
 </style>

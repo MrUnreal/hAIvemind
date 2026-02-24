@@ -66,7 +66,7 @@ watch(values, (v) => emit('update:variables', { ...v }), { deep: true });
 <style scoped>
 .template-form {
   padding: 12px;
-  background: #111118;
+  background: var(--bg-secondary);
   border: 1px solid #f5c54266;
   border-radius: 10px;
   margin-bottom: 16px;
@@ -91,7 +91,7 @@ watch(values, (v) => emit('update:variables', { ...v }), { deep: true });
 .btn-clear {
   background: none;
   border: none;
-  color: #666;
+  color: var(--text-tertiary);
   cursor: pointer;
   font-size: 16px;
   padding: 2px 6px;
@@ -108,17 +108,17 @@ watch(values, (v) => emit('update:variables', { ...v }), { deep: true });
 .field label {
   display: block;
   font-size: 12px;
-  color: #888;
+  color: var(--text-muted);
   margin-bottom: 4px;
 }
 
 .field-input {
   width: 100%;
   padding: 8px 12px;
-  background: #0a0a10;
-  border: 1px solid #333;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-subtle);
   border-radius: 6px;
-  color: #e0e0e0;
+  color: var(--text-primary);
   font-size: 13px;
   outline: none;
 }
@@ -128,7 +128,7 @@ watch(values, (v) => emit('update:variables', { ...v }), { deep: true });
 
 .task-preview-title {
   font-size: 12px;
-  color: #666;
+  color: var(--text-tertiary);
   margin-bottom: 6px;
 }
 
@@ -137,7 +137,7 @@ watch(values, (v) => emit('update:variables', { ...v }), { deep: true });
   align-items: center;
   gap: 6px;
   font-size: 12px;
-  color: #aaa;
+  color: var(--text-secondary);
   padding: 2px 0;
 }
 

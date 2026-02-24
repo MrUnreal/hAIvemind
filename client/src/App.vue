@@ -1063,10 +1063,11 @@ onUnmounted(() => cleanupShortcuts());
 }
 
 .replay-panel {
-  flex: 2;
-  min-height: 180px;
-  max-height: 40vh;
-  border-top: 1px solid var(--border-subtle);
+  flex: 0 0 auto;
+  min-height: 160px;
+  max-height: 35vh;
+  overflow-y: auto;
+  border-top: 2px solid var(--border-subtle);
 }
 
 .side-panel {

@@ -128,8 +128,8 @@ watch(() => props.projectSlug, (slug) => {
 
 <style scoped>
 .workspace-overview {
-  background: #1a1a2e;
-  border: 1px solid #333;
+  background: var(--border-primary);
+  border: 1px solid var(--border-subtle);
   border-radius: 8px;
   padding: 16px;
 }
@@ -144,25 +144,25 @@ watch(() => props.projectSlug, (slug) => {
 .overview-header h3 {
   margin: 0;
   font-size: 16px;
-  color: #e0e0e0;
+  color: var(--text-primary);
 }
 
 .refresh-btn {
   background: none;
-  border: 1px solid #444;
+  border: 1px solid var(--border-input);
   border-radius: 4px;
-  color: #ccc;
+  color: var(--btn-text);
   cursor: pointer;
   padding: 4px 8px;
   font-size: 14px;
 }
 
 .refresh-btn:hover:not(:disabled) {
-  background: #333;
+  background: var(--border-subtle);
 }
 
 .overview-loading, .overview-error {
-  color: #888;
+  color: var(--text-muted);
   text-align: center;
   padding: 16px;
 }
@@ -172,7 +172,7 @@ watch(() => props.projectSlug, (slug) => {
 }
 
 .overview-summary {
-  color: #aaa;
+  color: var(--text-secondary);
   font-size: 13px;
   margin: 0 0 12px;
   line-height: 1.5;
@@ -183,7 +183,7 @@ watch(() => props.projectSlug, (slug) => {
 }
 
 .section h4 {
-  color: #e0e0e0;
+  color: var(--text-primary);
   font-size: 13px;
   margin: 0 0 6px;
 }
@@ -204,7 +204,7 @@ watch(() => props.projectSlug, (slug) => {
 }
 
 .tech-tag {
-  background: #2a2a4e;
+  background: var(--border-secondary);
   color: #a78bfa;
   padding: 2px 10px;
   border-radius: 12px;
@@ -220,18 +220,18 @@ watch(() => props.projectSlug, (slug) => {
 .conv-item {
   display: flex;
   justify-content: space-between;
-  background: #222;
+  background: var(--border-primary);
   padding: 4px 10px;
   border-radius: 4px;
   font-size: 12px;
 }
 
 .conv-label {
-  color: #888;
+  color: var(--text-muted);
 }
 
 .conv-value {
-  color: #e0e0e0;
+  color: var(--text-primary);
   font-weight: 500;
 }
 
@@ -252,13 +252,13 @@ watch(() => props.projectSlug, (slug) => {
 }
 
 .dep-badge.dev {
-  background: #2a2a3e;
+  background: var(--border-secondary);
   color: #60a5fa;
 }
 
 .file-tree {
-  background: #111;
-  color: #aaa;
+  background: var(--bg-secondary);
+  color: var(--text-secondary);
   padding: 10px 14px;
   border-radius: 6px;
   font-size: 11px;
@@ -281,7 +281,7 @@ watch(() => props.projectSlug, (slug) => {
 }
 
 .ep-preview {
-  color: #666;
+  color: var(--text-tertiary);
   font-size: 11px;
   font-family: 'Fira Code', monospace;
 }

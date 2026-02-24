@@ -81,7 +81,7 @@
           <span :class="['detail-pill', `pill-${entries[hoveredIdx].status}`]">
             {{ entries[hoveredIdx].status }}
           </span>
-          <span>{{ entries[hoveredIdx].taskCount }} tasks</span>
+          <span>{{ entries[hoveredIdx].taskCount }} {{ entries[hoveredIdx].taskCount === 1 ? 'task' : 'tasks' }}</span>
           <span v-for="(count, tier) in entries[hoveredIdx].tiers" :key="tier" v-show="count > 0">
             <span :class="['tier-badge', tier.toLowerCase()]">{{ tier }}: {{ count }}</span>
           </span>
@@ -184,7 +184,7 @@ watch(() => props.projectSlug, fetchCostHistory);
 }
 
 .chart-header h4 {
-  color: #888;
+  color: var(--text-muted);
   font-size: 11px;
   text-transform: uppercase;
   font-weight: 600;
@@ -195,7 +195,7 @@ watch(() => props.projectSlug, fetchCostHistory);
   display: flex;
   gap: 10px;
   font-size: 10px;
-  color: #666;
+  color: var(--text-tertiary);
 }
 
 .legend-item {
@@ -216,7 +216,7 @@ watch(() => props.projectSlug, fetchCostHistory);
 
 .chart-loading, .chart-empty {
   padding: 16px 0;
-  color: #555;
+  color: var(--text-tertiary);
   font-size: 12px;
   text-align: center;
 }
@@ -226,9 +226,9 @@ watch(() => props.projectSlug, fetchCostHistory);
   gap: 16px;
   margin-bottom: 12px;
   padding: 8px 12px;
-  background: #16161e;
+  background: var(--bg-tertiary);
   border-radius: 6px;
-  border: 1px solid #2a2a3e;
+  border: 1px solid var(--border-secondary);
 }
 
 .total-item {
@@ -246,7 +246,7 @@ watch(() => props.projectSlug, fetchCostHistory);
 .total-tier.t1 { color: #f5c542; }
 .total-tier.t2 { color: #4a9eff; }
 .total-tier.t3 { color: #c07ef5; }
-.total-tier.total { color: #e0e0e0; }
+.total-tier.total { color: var(--text-primary); }
 
 .total-count {
   color: #c0c0c0;
@@ -257,8 +257,8 @@ watch(() => props.projectSlug, fetchCostHistory);
   display: flex;
   gap: 4px;
   height: 140px;
-  background: #0d0d14;
-  border: 1px solid #1a1a2e;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-primary);
   border-radius: 6px;
   padding: 8px;
 }
@@ -273,7 +273,7 @@ watch(() => props.projectSlug, fetchCostHistory);
 
 .y-label {
   font-size: 9px;
-  color: #444;
+  color: var(--border-input);
   text-align: right;
   font-family: 'Cascadia Code', 'Fira Code', monospace;
 }
@@ -326,7 +326,7 @@ watch(() => props.projectSlug, fetchCostHistory);
   position: absolute;
   bottom: -14px;
   font-size: 8px;
-  color: #444;
+  color: var(--border-input);
   white-space: nowrap;
   transform: rotate(-30deg);
   transform-origin: top left;
@@ -335,14 +335,14 @@ watch(() => props.projectSlug, fetchCostHistory);
 .hover-detail {
   margin-top: 8px;
   padding: 8px 12px;
-  background: #16161e;
-  border: 1px solid #2a2a3e;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-secondary);
   border-radius: 6px;
   font-size: 12px;
 }
 
 .detail-prompt {
-  color: #ddd;
+  color: var(--text-primary);
   margin-bottom: 4px;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -353,7 +353,7 @@ watch(() => props.projectSlug, fetchCostHistory);
   display: flex;
   gap: 8px;
   flex-wrap: wrap;
-  color: #888;
+  color: var(--text-muted);
   font-size: 11px;
 }
 

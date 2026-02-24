@@ -93,8 +93,8 @@ const elapsed = computed(() => {
 
 <style scoped>
 .agent-node {
-  background: #0f0f16;
-  border: 2px solid #1e1e2e;
+  background: var(--bg-primary);
+  border: 2px solid var(--bg-card);
   border-radius: 12px;
   padding: 12px 16px;
   min-width: 220px;
@@ -107,7 +107,7 @@ const elapsed = computed(() => {
   transform: translateY(-1px);
 }
 
-.status-pending { border-color: #2a2a3e; }
+.status-pending { border-color: var(--border-secondary); }
 .status-running {
   border-color: #4a9eff;
   box-shadow: 0 0 16px rgba(74, 158, 255, 0.2);
@@ -136,7 +136,7 @@ const elapsed = computed(() => {
 .label {
   font-size: 13px;
   font-weight: 600;
-  color: #e0e0e0;
+  color: var(--text-primary);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -164,7 +164,7 @@ const elapsed = computed(() => {
   font-size: 10px;
   padding: 2px 6px;
   border-radius: 4px;
-  background: #1a1a2e;
+  background: var(--border-primary);
   color: #f5c542;
 }
 
@@ -180,7 +180,7 @@ const elapsed = computed(() => {
   font-size: 10px;
   padding: 2px 6px;
   border-radius: 4px;
-  background: #1a1a2e;
+  background: var(--border-primary);
   color: #b88aff;
   font-weight: 500;
 }
@@ -206,8 +206,8 @@ const elapsed = computed(() => {
   font-size: 10px;
   padding: 2px 6px;
   border-radius: 4px;
-  background: #1a1a2e;
-  color: #888;
+  background: var(--border-primary);
+  color: var(--text-muted);
   font-variant-numeric: tabular-nums;
 }
 
@@ -219,7 +219,7 @@ const elapsed = computed(() => {
 .node-reason {
   margin-top: 6px;
   font-size: 10px;
-  color: #888;
+  color: var(--text-muted);
   line-height: 1.3;
   white-space: normal;
   overflow: hidden;

@@ -66,8 +66,8 @@ const groupedShortcuts = computed(() => {
 }
 
 .shortcuts-dialog {
-  background: #1a1a2e;
-  border: 1px solid #2a2a4a;
+  background: var(--border-primary);
+  border: 1px solid var(--border-secondary);
   border-radius: 12px;
   width: 480px;
   max-height: 70vh;
@@ -81,20 +81,20 @@ const groupedShortcuts = computed(() => {
   align-items: center;
   justify-content: space-between;
   padding: 16px 20px;
-  border-bottom: 1px solid #2a2a4a;
+  border-bottom: 1px solid var(--border-secondary);
 }
 
 .shortcuts-header h2 {
   font-size: 16px;
   font-weight: 600;
-  color: #e0e0e0;
+  color: var(--text-primary);
   margin: 0;
 }
 
 .shortcuts-close {
   background: none;
   border: none;
-  color: #888;
+  color: var(--text-muted);
   font-size: 16px;
   cursor: pointer;
   padding: 4px 8px;
@@ -137,7 +137,7 @@ const groupedShortcuts = computed(() => {
 
 .shortcut-desc {
   font-size: 13px;
-  color: #ccc;
+  color: var(--btn-text);
 }
 
 .shortcut-key {
@@ -145,9 +145,9 @@ const groupedShortcuts = computed(() => {
   padding: 3px 8px;
   font-family: 'JetBrains Mono', monospace;
   font-size: 12px;
-  color: #e0e0e0;
-  background: #252540;
-  border: 1px solid #3a3a5a;
+  color: var(--text-primary);
+  background: var(--bg-hover);
+  border: 1px solid var(--border-secondary);
   border-radius: 4px;
   min-width: 28px;
   text-align: center;
@@ -155,10 +155,10 @@ const groupedShortcuts = computed(() => {
 
 .shortcuts-footer {
   padding: 12px 20px;
-  border-top: 1px solid #2a2a4a;
+  border-top: 1px solid var(--border-secondary);
   text-align: center;
   font-size: 12px;
-  color: #888;
+  color: var(--text-muted);
 }
 
 .shortcuts-footer kbd {
@@ -166,9 +166,9 @@ const groupedShortcuts = computed(() => {
   padding: 1px 6px;
   font-family: 'JetBrains Mono', monospace;
   font-size: 11px;
-  color: #e0e0e0;
-  background: #252540;
-  border: 1px solid #3a3a5a;
+  color: var(--text-primary);
+  background: var(--bg-hover);
+  border: 1px solid var(--border-secondary);
   border-radius: 3px;
   margin: 0 2px;
 }

@@ -192,8 +192,8 @@ function eventMessage(event) {
   display: flex;
   flex-direction: column;
   min-height: 0;
-  background: #0d0d14;
-  border-top: 1px solid #1a1a2e;
+  background: var(--bg-primary);
+  border-top: 1px solid var(--border-primary);
 }
 
 .replay-header {
@@ -201,14 +201,14 @@ function eventMessage(event) {
   flex-direction: column;
   gap: 4px;
   padding: 12px 16px;
-  border-bottom: 1px solid #1a1a2e;
+  border-bottom: 1px solid var(--border-primary);
 }
 
 .replay-header h3 {
   margin: 0;
   font-size: 14px;
   font-weight: 600;
-  color: #e0e0e0;
+  color: var(--text-primary);
 }
 
 .time-meta {
@@ -216,11 +216,11 @@ function eventMessage(event) {
   flex-wrap: wrap;
   gap: 10px;
   font-size: 11px;
-  color: #666;
+  color: var(--text-tertiary);
 }
 
 .time-meta.empty {
-  color: #555;
+  color: var(--text-tertiary);
 }
 
 .time-label {
@@ -232,12 +232,12 @@ function eventMessage(event) {
   align-items: center;
   gap: 12px;
   padding: 10px 16px;
-  border-bottom: 1px solid #1a1a2e;
+  border-bottom: 1px solid var(--border-primary);
 }
 
 .slider-time {
   font-size: 11px;
-  color: #aaa;
+  color: var(--text-secondary);
   min-width: 90px;
 }
 
@@ -263,12 +263,12 @@ function eventMessage(event) {
 }
 
 .event-row:nth-child(odd) {
-  background: #111118;
+  background: var(--bg-secondary);
 }
 
 .event-time {
   font-size: 11px;
-  color: #555;
+  color: var(--text-tertiary);
   min-width: 88px;
 }
 
@@ -313,13 +313,13 @@ function eventMessage(event) {
 }
 
 .event-badge.badge-generic {
-  background: #1a1a2e;
-  color: #aaa;
+  background: var(--border-primary);
+  color: var(--text-secondary);
 }
 
 .event-message {
   font-size: 12px;
-  color: #ccc;
+  color: var(--btn-text);
   white-space: nowrap;
   text-overflow: ellipsis;
   overflow: hidden;
@@ -328,7 +328,7 @@ function eventMessage(event) {
 .events-empty {
   margin-top: 12px;
   font-size: 12px;
-  color: #555;
+  color: var(--text-tertiary);
   text-align: center;
 }
 </style>

@@ -1,5 +1,14 @@
 <template>
   <div class="detail-container">
+    <!-- Empty state: no agent selected -->
+    <div v-if="!agent" class="empty-state">
+      <div class="empty-icon">🤖</div>
+      <p class="empty-title">No agent selected</p>
+      <p class="empty-hint">Click an agent node in the DAG to view its details and console output</p>
+    </div>
+
+    <!-- Agent selected -->
+    <template v-else>
     <div class="detail-header">
       <h3>{{ agent?.model || 'Agent' }}</h3>
       <button class="close-btn" @click="selectedAgentId = null">✕</button>
@@ -57,6 +66,7 @@
         {{ matchCount }} match{{ matchCount !== 1 ? 'es' : '' }}
       </div>
     </div>
+    </template>
   </div>
 </template>
 
@@ -162,40 +172,54 @@ watch(cleanOutput, async () => {
   display: flex;
   flex-direction: column;
   height: 100%;
-  background: #111118;
+  background: var(--bg-secondary);
 }
+
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  gap: 8px;
+  padding: 40px 20px;
+  text-align: center;
+}
+.empty-icon { font-size: 2.5rem; opacity: 0.5; }
+.empty-title { color: var(--text-secondary); font-size: 1.1rem; font-weight: 500; margin: 0; }
+.empty-hint { color: var(--text-muted); font-size: 0.85rem; margin: 0; max-width: 240px; line-height: 1.4; }
 
 .detail-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 14px 20px;
-  border-bottom: 1px solid #222;
+  border-bottom: 1px solid var(--border-primary);
 }
 
 .detail-header h3 {
   font-size: 15px;
   font-weight: 600;
-  color: #e0e0e0;
+  color: var(--text-primary);
 }
 
 .close-btn {
   background: none;
   border: none;
-  color: #666;
+  color: var(--text-tertiary);
   font-size: 18px;
   cursor: pointer;
   padding: 4px 8px;
   border-radius: 4px;
 }
 .close-btn:hover {
-  background: #222;
-  color: #e0e0e0;
+  background: var(--border-primary);
+  color: var(--text-primary);
 }
 
 .detail-info {
   padding: 12px 20px;
-  border-bottom: 1px solid #222;
+  border-bottom: 1px solid var(--border-primary);
 }
 
 .info-row {
@@ -207,7 +231,7 @@ watch(cleanOutput, async () => {
 }
 
 .info-label {
-  color: #666;
+  color: var(--text-tertiary);
 }
 
 .status-badge {
@@ -250,8 +274,8 @@ watch(cleanOutput, async () => {
   color: #b0b0d0;
   font-size: 12px;
   line-height: 1.4;
-  background: #1a1a2e;
-  border: 1px solid #2a2a3e;
+  background: var(--border-primary);
+  border: 1px solid var(--border-secondary);
   border-radius: 6px;
   padding: 6px 10px;
 }
@@ -263,10 +287,10 @@ watch(cleanOutput, async () => {
   padding: 10px 20px;
   font-size: 12px;
   font-weight: 600;
-  color: #666;
+  color: var(--text-tertiary);
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  border-bottom: 1px solid #222;
+  border-bottom: 1px solid var(--border-primary);
 }
 
 .console-controls {
@@ -277,8 +301,8 @@ watch(cleanOutput, async () => {
 
 .search-input {
   padding: 4px 8px;
-  background: #0a0a0f;
-  border: 1px solid #333;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-subtle);
   border-radius: 4px;
   color: #c0c0c0;
   font-size: 11px;
@@ -291,15 +315,15 @@ watch(cleanOutput, async () => {
 
 .toggle-btn {
   padding: 3px 8px;
-  background: #1a1a22;
-  border: 1px solid #333;
+  background: var(--border-primary);
+  border: 1px solid var(--border-subtle);
   border-radius: 4px;
-  color: #888;
+  color: var(--text-muted);
   font-size: 11px;
   cursor: pointer;
   transition: all 0.2s;
 }
-.toggle-btn:hover { border-color: #555; }
+.toggle-btn:hover { border-color: var(--text-tertiary); }
 .toggle-btn.active { border-color: #f5c542; color: #f5c542; }
 
 .live-dot {
@@ -320,7 +344,7 @@ watch(cleanOutput, async () => {
   font-family: 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
   font-size: 12px;
   line-height: 1.6;
-  background: #0a0a0f;
+  background: var(--bg-primary);
 }
 
 .console pre {
@@ -338,7 +362,7 @@ watch(cleanOutput, async () => {
 }
 
 .console-empty {
-  color: #444;
+  color: var(--border-input);
   font-style: italic;
 }
 
@@ -346,10 +370,10 @@ watch(cleanOutput, async () => {
   position: sticky;
   bottom: 0;
   padding: 4px 12px;
-  background: #1a1a22;
-  border-top: 1px solid #333;
+  background: var(--border-primary);
+  border-top: 1px solid var(--border-subtle);
   font-size: 11px;
-  color: #888;
+  color: var(--text-muted);
 }
 
 /* Phase 8.2: File path annotations */

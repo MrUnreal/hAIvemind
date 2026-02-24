@@ -387,7 +387,7 @@ async function onFinish() {
 
 .onboarding-btn.primary {
   background: var(--accent-gold);
-  color: #111;
+  color: var(--bg-secondary);
   border-color: var(--accent-gold);
 }
 .onboarding-btn.primary:hover:not(:disabled) {

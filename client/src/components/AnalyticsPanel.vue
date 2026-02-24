@@ -62,7 +62,7 @@
       <div class="analytics-digest-trends">
         <span :class="['trend', digest.trends.sessionsDelta >= 0 ? 'up' : 'down']">
           {{ digest.trends.sessionsDelta >= 0 ? '↑' : '↓' }}
-          {{ Math.abs(digest.trends.sessionsDelta) }} sessions
+          {{ Math.abs(digest.trends.sessionsDelta) }} {{ Math.abs(digest.trends.sessionsDelta) === 1 ? 'session' : 'sessions' }}
         </span>
         <span :class="['trend', digest.trends.successRateDelta >= 0 ? 'up' : 'down']">
           {{ digest.trends.successRateDelta >= 0 ? '↑' : '↓' }}
@@ -80,7 +80,7 @@
       <h4>Model Usage</h4>
       <div v-for="m in models" :key="m.model" class="analytics-model-row">
         <span class="analytics-model-name">{{ m.model }}</span>
-        <span class="analytics-model-count">{{ m.count }} sessions</span>
+        <span class="analytics-model-count">{{ m.count }} {{ m.count === 1 ? 'session' : 'sessions' }}</span>
         <span class="analytics-model-cost">cost: {{ m.totalCost }}</span>
       </div>
     </div>

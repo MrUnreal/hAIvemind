@@ -7,7 +7,7 @@
       <span class="diff-stat pending">{{ stats.byStatus?.pending || 0 }} pending</span>
       <span class="diff-stat approved">{{ stats.byStatus?.approved || 0 }} approved</span>
       <span class="diff-stat rejected">{{ stats.byStatus?.rejected || 0 }} rejected</span>
-      <span class="diff-stat">{{ stats.filesChanged || 0 }} files</span>
+      <span class="diff-stat">{{ stats.filesChanged || 0 }} {{ (stats.filesChanged || 0) === 1 ? 'file' : 'files' }}</span>
     </div>
 
     <!-- Filter -->

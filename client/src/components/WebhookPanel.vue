@@ -153,8 +153,8 @@ watch(() => props.visible, (v) => {
 
 <style scoped>
 .webhook-panel {
-  background: #16161e;
-  border: 1px solid #333;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-subtle);
   border-radius: 10px;
   padding: 16px;
   margin-bottom: 16px;
@@ -167,12 +167,12 @@ watch(() => props.visible, (v) => {
   margin-bottom: 12px;
 }
 
-.wh-header h3 { font-size: 15px; color: #e0e0e0; }
+.wh-header h3 { font-size: 15px; color: var(--text-primary); }
 
 .close-btn {
   background: none;
   border: none;
-  color: #888;
+  color: var(--text-muted);
   font-size: 18px;
   cursor: pointer;
 }
@@ -185,13 +185,13 @@ watch(() => props.visible, (v) => {
   align-items: center;
   margin-bottom: 16px;
   padding-bottom: 12px;
-  border-bottom: 1px solid #222;
+  border-bottom: 1px solid var(--border-primary);
 }
 
 .wh-input {
-  background: #1a1a2e;
-  border: 1px solid #333;
-  color: #e0e0e0;
+  background: var(--border-primary);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-primary);
   border-radius: 6px;
   padding: 6px 10px;
   font-size: 12px;
@@ -210,7 +210,7 @@ watch(() => props.visible, (v) => {
 
 .wh-event-check {
   font-size: 11px;
-  color: #aaa;
+  color: var(--text-secondary);
   display: flex;
   align-items: center;
   gap: 3px;
@@ -232,7 +232,7 @@ watch(() => props.visible, (v) => {
 .wh-loading, .wh-empty {
   text-align: center;
   padding: 20px;
-  color: #666;
+  color: var(--text-tertiary);
   font-size: 13px;
 }
 
@@ -240,8 +240,8 @@ watch(() => props.visible, (v) => {
 .wh-list { display: flex; flex-direction: column; gap: 8px; }
 
 .wh-item {
-  background: #1a1a2e;
-  border: 1px solid #2a2a3a;
+  background: var(--border-primary);
+  border: 1px solid var(--border-secondary);
   border-radius: 8px;
   padding: 10px 14px;
 }
@@ -258,7 +258,7 @@ watch(() => props.visible, (v) => {
 .wh-name-label {
   font-size: 13px;
   font-weight: 600;
-  color: #e0e0e0;
+  color: var(--text-primary);
 }
 
 .wh-url {
@@ -273,7 +273,7 @@ watch(() => props.visible, (v) => {
   display: flex;
   justify-content: space-between;
   font-size: 11px;
-  color: #888;
+  color: var(--text-muted);
   margin-bottom: 8px;
 }
 
@@ -288,9 +288,9 @@ watch(() => props.visible, (v) => {
   font-size: 11px;
   padding: 3px 10px;
   border-radius: 6px;
-  border: 1px solid #444;
+  border: 1px solid var(--border-input);
   background: transparent;
-  color: #ccc;
+  color: var(--btn-text);
   cursor: pointer;
   transition: all 0.2s;
 }

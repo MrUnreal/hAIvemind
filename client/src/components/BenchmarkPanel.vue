@@ -169,47 +169,47 @@ watch(() => props.visible, v => { if (v) loadBenchmarks(); });
 </script>
 
 <style scoped>
-.bench-panel { background: #1e1e2e; border: 1px solid #444; border-radius: 8px; padding: 16px; margin: 12px 0; }
+.bench-panel { background: var(--bg-card); border: 1px solid var(--border-input); border-radius: 8px; padding: 16px; margin: 12px 0; }
 .bench-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
-.bench-header h3 { margin: 0; color: #e0e0e0; }
-.bench-close { background: none; border: none; color: #888; cursor: pointer; font-size: 18px; }
-.bench-loading { color: #888; text-align: center; padding: 20px; }
-.bench-empty { color: #666; font-style: italic; text-align: center; padding: 20px; }
+.bench-header h3 { margin: 0; color: var(--text-primary); }
+.bench-close { background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 18px; }
+.bench-loading { color: var(--text-muted); text-align: center; padding: 20px; }
+.bench-empty { color: var(--text-tertiary); font-style: italic; text-align: center; padding: 20px; }
 
 .bench-averages { display: flex; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; }
-.bench-stat { background: #262636; border-radius: 6px; padding: 10px 14px; flex: 1; min-width: 100px; text-align: center; }
-.bench-stat-label { display: block; font-size: 11px; color: #888; text-transform: uppercase; margin-bottom: 4px; }
-.bench-stat-value { display: block; font-size: 18px; font-weight: 600; color: #e0e0e0; }
+.bench-stat { background: var(--bg-hover); border-radius: 6px; padding: 10px 14px; flex: 1; min-width: 100px; text-align: center; }
+.bench-stat-label { display: block; font-size: 11px; color: var(--text-muted); text-transform: uppercase; margin-bottom: 4px; }
+.bench-stat-value { display: block; font-size: 18px; font-weight: 600; color: var(--text-primary); }
 
 .bench-regressions { background: #2a1a1a; border: 1px solid #ff6b6b44; border-radius: 6px; padding: 10px; margin-bottom: 12px; }
 .bench-regressions h4 { margin: 0 0 8px; color: #ff6b6b; font-size: 14px; }
 .bench-regression-item { display: flex; gap: 8px; align-items: center; padding: 4px 0; font-size: 13px; }
 .bench-reg-metric { font-weight: 600; color: #ffa94d; text-transform: capitalize; }
 .bench-reg-change { color: #ff6b6b; font-weight: 600; }
-.bench-reg-msg { color: #ccc; }
+.bench-reg-msg { color: var(--btn-text); }
 .bench-sev-high { border-left: 3px solid #ff6b6b; padding-left: 8px; }
 .bench-sev-medium { border-left: 3px solid #ffa94d; padding-left: 8px; }
 
 .bench-trend-section { margin-bottom: 14px; }
-.bench-trend-section h4 { margin: 0 0 8px; color: #ccc; font-size: 13px; }
-.bench-trend-chart { display: flex; gap: 3px; align-items: flex-end; min-height: 70px; background: #1a1a2a; border-radius: 4px; padding: 8px; overflow-x: auto; }
+.bench-trend-section h4 { margin: 0 0 8px; color: var(--btn-text); font-size: 13px; }
+.bench-trend-chart { display: flex; gap: 3px; align-items: flex-end; min-height: 70px; background: var(--bg-input); border-radius: 4px; padding: 8px; overflow-x: auto; }
 .bench-bar-col { display: flex; flex-direction: column; align-items: center; min-width: 16px; }
 .bench-bar { width: 12px; border-radius: 2px 2px 0 0; transition: height 0.3s; }
 .bench-status-completed { background: #51cf66; }
 .bench-status-failed { background: #ff6b6b; }
 .bench-bar-cost { background: #4c8dff; }
-.bench-bar-label { font-size: 9px; color: #666; margin-top: 2px; }
+.bench-bar-label { font-size: 9px; color: var(--text-tertiary); margin-top: 2px; }
 
 .bench-models { margin-bottom: 14px; }
-.bench-models h4 { margin: 0 0 8px; color: #ccc; font-size: 13px; }
+.bench-models h4 { margin: 0 0 8px; color: var(--btn-text); font-size: 13px; }
 .bench-model-table { width: 100%; border-collapse: collapse; font-size: 12px; }
-.bench-model-table th { text-align: left; padding: 6px 8px; color: #888; border-bottom: 1px solid #333; }
-.bench-model-table td { padding: 6px 8px; color: #ccc; border-bottom: 1px solid #262636; }
-.bench-tier-name { font-weight: 600; color: #e0e0e0; }
+.bench-model-table th { text-align: left; padding: 6px 8px; color: var(--text-muted); border-bottom: 1px solid var(--border-subtle); }
+.bench-model-table td { padding: 6px 8px; color: var(--btn-text); border-bottom: 1px solid var(--bg-hover); }
+.bench-tier-name { font-weight: 600; color: var(--text-primary); }
 .bench-rate-good { color: #51cf66; }
 .bench-rate-warn { color: #ffa94d; }
 .bench-rate-bad { color: #ff6b6b; }
 
-.bench-summary { display: flex; gap: 16px; flex-wrap: wrap; font-size: 13px; color: #ccc; }
-.bench-summary code { background: #262636; padding: 1px 6px; border-radius: 3px; font-size: 11px; }
+.bench-summary { display: flex; gap: 16px; flex-wrap: wrap; font-size: 13px; color: var(--btn-text); }
+.bench-summary code { background: var(--bg-hover); padding: 1px 6px; border-radius: 3px; font-size: 11px; }
 </style>

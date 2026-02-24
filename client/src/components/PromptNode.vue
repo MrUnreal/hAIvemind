@@ -20,7 +20,7 @@ defineProps({
   display: flex;
   align-items: center;
   gap: 8px;
-  background: #1a1a2e;
+  background: var(--border-primary);
   border: 2px solid #f5c542;
   border-radius: 12px;
   padding: 10px 14px;
@@ -37,7 +37,7 @@ defineProps({
 .prompt-text {
   font-size: 11px;
   font-weight: 500;
-  color: #e0e0e0;
+  color: var(--text-primary);
   line-height: 1.3;
   overflow: hidden;
   text-overflow: ellipsis;

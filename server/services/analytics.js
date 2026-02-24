@@ -26,8 +26,8 @@ export function getProjectStats(slug, opts = {}) {
   const completed = filtered.filter(s => s.status === 'complete' || s.status === 'completed');
   const failed = filtered.filter(s => s.status === 'failed' || s.status === 'error');
   const durations = filtered
-    .filter(s => s.startedAt && s.completedAt)
-    .map(s => new Date(s.completedAt) - new Date(s.startedAt));
+    .filter(s => (s.startedAt || s.createdAt) && s.completedAt)
+    .map(s => new Date(s.completedAt) - new Date(s.startedAt || s.createdAt));
 
   const avgDuration = durations.length ? Math.round(durations.reduce((a, b) => a + b, 0) / durations.length) : 0;
   const totalCost = filtered.reduce((sum, s) => sum + (s.cost || s.premiumRequests || 0), 0);
@@ -90,7 +90,19 @@ export function getModelBreakdown(slug) {
   const models = {};
 
   for (const s of sessions) {
-    const model = s.model || s.backend || 'unknown';
+    // Try session-level model, then look at task-level tiers
+    let model = s.model || s.backend;
+    if (!model && s.tasks?.length) {
+      // Aggregate models from tasks
+      const taskModels = s.tasks.map(t => t.modelTier || t.model).filter(Boolean);
+      model = taskModels[0] || null;
+    }
+    if (!model && s.costSummary?.tierBreakdown) {
+      // Use tier breakdown keys
+      const tiers = Object.keys(s.costSummary.tierBreakdown);
+      model = tiers[0] || null;
+    }
+    model = model || 'default';
     if (!models[model]) models[model] = { model, count: 0, totalCost: 0 };
     models[model].count++;
     models[model].totalCost += s.cost || s.premiumRequests || 0;
@@ -139,8 +151,8 @@ export function exportSessionsCsv(slug, opts = {}) {
 
   const headers = ['id', 'status', 'prompt', 'model', 'startedAt', 'completedAt', 'durationMs', 'cost', 'tasks'];
   const rows = filtered.map(s => {
-    const dur = s.startedAt && s.completedAt
-      ? new Date(s.completedAt) - new Date(s.startedAt)
+    const dur = (s.startedAt || s.createdAt) && s.completedAt
+      ? new Date(s.completedAt) - new Date(s.startedAt || s.createdAt)
       : '';
     return [
       s.id || '',
@@ -174,8 +186,8 @@ export function getTopSessions(slug, sortBy = 'duration', limit = 10) {
     prompt: (s.prompt || '').slice(0, 100),
     model: s.model || s.backend,
     startedAt: s.startedAt || s.createdAt,
-    durationMs: s.startedAt && s.completedAt
-      ? new Date(s.completedAt) - new Date(s.startedAt)
+    durationMs: (s.startedAt || s.createdAt) && s.completedAt
+      ? new Date(s.completedAt) - new Date(s.startedAt || s.createdAt)
       : 0,
     cost: s.cost || s.premiumRequests || 0,
   }));

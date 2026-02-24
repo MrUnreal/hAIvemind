@@ -143,7 +143,7 @@ h2 {
 }
 
 .subtitle {
-  color: #666;
+  color: var(--text-tertiary);
   margin-bottom: 24px;
   line-height: 1.6;
   font-size: 15px;
@@ -161,7 +161,7 @@ h2 {
   inset: 0;
   border-radius: 14px;
   padding: 1px;
-  background: linear-gradient(135deg, #2a2a3e, #1a1a2e);
+  background: linear-gradient(135deg, var(--border-secondary), var(--border-primary));
   -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
   -webkit-mask-composite: xor;
   mask-composite: exclude;
@@ -175,11 +175,11 @@ h2 {
 
 textarea {
   width: 100%;
-  background: #0f0f16;
+  background: var(--bg-primary);
   border: none;
   border-radius: 14px;
   padding: 18px 20px;
-  color: #e0e0e0;
+  color: var(--text-primary);
   font-size: 15px;
   font-family: inherit;
   resize: vertical;
@@ -202,7 +202,7 @@ textarea:disabled {
 
 .btn-primary {
   background: linear-gradient(135deg, #f5c542, #e6a817);
-  color: #111;
+  color: var(--bg-secondary);
   border: none;
   padding: 12px 32px;
   border-radius: 10px;
@@ -226,22 +226,22 @@ textarea:disabled {
 
 .hint {
   font-size: 12px;
-  color: #444;
+  color: var(--border-input);
 }
 
 /* ── Tier info ── */
 .tier-info {
   margin-top: 40px;
   padding: 18px 20px;
-  background: #0f0f16;
-  border: 1px solid #1a1a2e;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-primary);
   border-radius: 14px;
 }
 
 .tier-info h4 {
   font-size: 12px;
   font-weight: 600;
-  color: #555;
+  color: var(--text-tertiary);
   margin-bottom: 14px;
   text-transform: uppercase;
   letter-spacing: 0.05em;
@@ -286,7 +286,7 @@ textarea:disabled {
 .tier-step.t3 { background: #1f0e2a; color: #b56af5; }
 
 .arrow {
-  color: #333;
+  color: var(--border-subtle);
   font-size: 14px;
   flex-shrink: 0;
 }
@@ -294,7 +294,7 @@ textarea:disabled {
 .tier-note {
   margin-top: 12px;
   font-size: 12px;
-  color: #444;
+  color: var(--border-input);
   line-height: 1.4;
 }
 </style>

@@ -172,8 +172,8 @@ watch(() => [props.visible, props.sessionA, props.sessionB], () => {
 
 <style scoped>
 .session-compare {
-  background: #1a1a2e;
-  border: 1px solid #333;
+  background: var(--border-primary);
+  border: 1px solid var(--border-subtle);
   border-radius: 8px;
   padding: 16px;
   margin: 12px 0;
@@ -186,19 +186,19 @@ watch(() => [props.visible, props.sessionA, props.sessionB], () => {
 }
 .compare-header h3 {
   margin: 0;
-  color: #e0e0e0;
+  color: var(--text-primary);
   font-size: 14px;
 }
 .close-btn {
   background: none;
   border: none;
-  color: #888;
+  color: var(--text-muted);
   cursor: pointer;
   font-size: 16px;
 }
 .close-btn:hover { color: #fff; }
 .compare-loading, .compare-error {
-  color: #888;
+  color: var(--text-muted);
   font-size: 13px;
   padding: 8px 0;
 }
@@ -207,7 +207,7 @@ watch(() => [props.visible, props.sessionA, props.sessionB], () => {
   margin-bottom: 16px;
 }
 .compare-section h4 {
-  color: #aaa;
+  color: var(--text-secondary);
   font-size: 12px;
   text-transform: uppercase;
   letter-spacing: 0.5px;
@@ -219,28 +219,28 @@ watch(() => [props.visible, props.sessionA, props.sessionB], () => {
   gap: 8px;
 }
 .compare-card {
-  background: #222;
+  background: var(--border-primary);
   border-radius: 6px;
   padding: 10px;
-  border-left: 3px solid #555;
+  border-left: 3px solid var(--text-tertiary);
 }
 .compare-card.completed { border-left-color: #4caf50; }
 .compare-card.failed { border-left-color: #f44336; }
 .card-label {
-  color: #888;
+  color: var(--text-muted);
   font-size: 11px;
   font-weight: bold;
   margin-bottom: 4px;
 }
 .card-prompt {
-  color: #e0e0e0;
+  color: var(--text-primary);
   font-size: 13px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 .card-meta {
-  color: #666;
+  color: var(--text-tertiary);
   font-size: 11px;
   margin-top: 4px;
 }
@@ -253,17 +253,17 @@ watch(() => [props.visible, props.sessionA, props.sessionB], () => {
   display: flex;
   align-items: center;
   gap: 4px;
-  background: #222;
+  background: var(--border-primary);
   border-radius: 6px;
   padding: 6px 10px;
   font-size: 13px;
 }
 .metric-label {
-  color: #888;
+  color: var(--text-muted);
   margin-right: 4px;
 }
-.metric-val { color: #e0e0e0; font-weight: bold; }
-.metric-vs { color: #555; font-size: 11px; }
+.metric-val { color: var(--text-primary); font-weight: bold; }
+.metric-vs { color: var(--text-tertiary); font-size: 11px; }
 .metric-delta {
   font-size: 11px;
   margin-left: 4px;
@@ -272,7 +272,7 @@ watch(() => [props.visible, props.sessionA, props.sessionB], () => {
 .metric-delta.down { color: #4caf50; }
 .overlap-bar {
   height: 6px;
-  background: #333;
+  background: var(--border-subtle);
   border-radius: 3px;
   overflow: hidden;
   margin-bottom: 8px;
@@ -296,8 +296,8 @@ watch(() => [props.visible, props.sessionA, props.sessionB], () => {
 .overlap-tag.only-b { background: #4a148c; color: #ce93d8; }
 .task-label {
   font-size: 11px;
-  color: #aaa;
-  background: #2a2a2a;
+  color: var(--text-secondary);
+  background: var(--border-secondary);
   padding: 2px 6px;
   border-radius: 3px;
 }
@@ -309,7 +309,7 @@ watch(() => [props.visible, props.sessionA, props.sessionB], () => {
   align-items: center;
   font-size: 12px;
 }
-.tier-name { color: #888; font-weight: bold; }
+.tier-name { color: var(--text-muted); font-weight: bold; }
 .tier-count { text-align: center; }
 .tier-count.a { color: #64b5f6; }
 .tier-count.b { color: #ba68c8; }

@@ -130,10 +130,10 @@
 
         <div class="session-meta">
           <span class="meta-item" v-if="session.taskCount">
-            📋 {{ session.taskCount }} tasks
+            📋 {{ session.taskCount }} {{ session.taskCount === 1 ? 'task' : 'tasks' }}
           </span>
           <span class="meta-item" v-if="session.agentCount">
-            🤖 {{ session.agentCount }} agents
+            🤖 {{ session.agentCount }} {{ session.agentCount === 1 ? 'agent' : 'agents' }}
           </span>
           <span class="meta-item cost" v-if="session.totalCost > 0">
             💰 {{ session.totalCost.toFixed(1) }}× premium
@@ -600,19 +600,19 @@ async function bulkExport(format) {
 
 .history-header h2 {
   font-size: 20px;
-  color: #e0e0e0;
+  color: var(--text-primary);
   margin: 0;
 }
 
 .subtitle {
-  color: #666;
+  color: var(--text-tertiary);
   font-size: 13px;
   margin-top: 4px;
 }
 
 .new-session-btn {
   background: linear-gradient(135deg, #f5c542, #e6a817);
-  color: #111;
+  color: var(--bg-secondary);
   border: none;
   padding: 10px 24px;
   border-radius: 10px;
@@ -628,13 +628,13 @@ async function bulkExport(format) {
 
 .loading {
   text-align: center;
-  color: #666;
+  color: var(--text-tertiary);
   padding: 40px;
 }
 
 .empty {
   text-align: center;
-  color: #666;
+  color: var(--text-tertiary);
   padding: 60px 0;
 }
 .empty p {
@@ -648,8 +648,8 @@ async function bulkExport(format) {
 }
 
 .session-card {
-  background: #0f0f16;
-  border: 1px solid #1e1e2e;
+  background: var(--bg-primary);
+  border: 1px solid var(--bg-card);
   border-radius: 14px;
   padding: 18px 22px;
   cursor: pointer;
@@ -678,11 +678,11 @@ async function bulkExport(format) {
 .pill-failed { background: #3a1a1a; color: #f56a6a; }
 .pill-running { background: #1a2a3a; color: #4a9eff; }
 .pill-planning { background: #2a2a1a; color: #c5c56a; }
-.pill-cancelled { background: #2a1a1a; color: #999; }
+.pill-cancelled { background: #2a1a1a; color: var(--text-secondary); }
 
 .session-time {
   font-size: 12px;
-  color: #555;
+  color: var(--text-tertiary);
 }
 
 .session-prompt {
@@ -701,7 +701,7 @@ async function bulkExport(format) {
 
 .meta-item {
   font-size: 12px;
-  color: #888;
+  color: var(--text-muted);
 }
 .meta-item.cost {
   color: #f5c542;
@@ -719,9 +719,9 @@ async function bulkExport(format) {
 
 .task-chip {
   font-size: 11px;
-  color: #999;
-  background: #111118;
-  border: 1px solid #1e1e2e;
+  color: var(--text-secondary);
+  background: var(--bg-secondary);
+  border: 1px solid var(--bg-card);
   padding: 3px 8px;
   border-radius: 6px;
   white-space: nowrap;
@@ -737,7 +737,7 @@ async function bulkExport(format) {
 
 .more {
   font-size: 11px;
-  color: #666;
+  color: var(--text-tertiary);
 }
 
 .session-actions {
@@ -870,14 +870,14 @@ async function bulkExport(format) {
   font-size: 12px;
   padding: 6px 14px;
   border-radius: 6px;
-  border: 1px solid #888;
+  border: 1px solid var(--text-muted);
   background: transparent;
-  color: #bbb;
+  color: var(--btn-text);
   cursor: pointer;
   transition: all 0.2s;
 }
 .bulk-toggle-btn:hover {
-  border-color: #aaa;
+  border-color: var(--text-secondary);
   color: #fff;
 }
 
@@ -951,9 +951,9 @@ async function bulkExport(format) {
 }
 
 .filter-select {
-  background: #1a1a2e;
-  color: #ccc;
-  border: 1px solid #333;
+  background: var(--border-primary);
+  color: var(--btn-text);
+  border: 1px solid var(--border-subtle);
   border-radius: 6px;
   padding: 5px 10px;
   font-size: 12px;
@@ -962,8 +962,8 @@ async function bulkExport(format) {
 
 .clear-filters {
   background: none;
-  border: 1px solid #666;
-  color: #888;
+  border: 1px solid var(--text-tertiary);
+  color: var(--text-muted);
   border-radius: 6px;
   padding: 4px 10px;
   font-size: 11px;
@@ -985,7 +985,7 @@ async function bulkExport(format) {
   align-items: center;
   gap: 2px;
   background: rgba(100, 181, 246, 0.1);
-  border: 1px solid #335;
+  border: 1px solid var(--border-primary);
   color: #90caf9;
   border-radius: 12px;
   padding: 1px 8px;
@@ -998,7 +998,7 @@ async function bulkExport(format) {
 .tag-remove {
   background: none;
   border: none;
-  color: #666;
+  color: var(--text-tertiary);
   font-size: 13px;
   cursor: pointer;
   padding: 0 2px;
@@ -1008,8 +1008,8 @@ async function bulkExport(format) {
 
 .tag-add-btn {
   background: none;
-  border: 1px dashed #444;
-  color: #666;
+  border: 1px dashed var(--border-input);
+  color: var(--text-tertiary);
   border-radius: 12px;
   padding: 1px 8px;
   font-size: 11px;
@@ -1024,9 +1024,9 @@ async function bulkExport(format) {
 }
 
 .tag-input {
-  background: #1a1a2e;
+  background: var(--border-primary);
   border: 1px solid #64b5f6;
-  color: #e0e0e0;
+  color: var(--text-primary);
   border-radius: 6px;
   padding: 2px 6px;
   font-size: 11px;
@@ -1043,7 +1043,7 @@ async function bulkExport(format) {
 
 .webhook-toggle-btn {
   background: none;
-  border: 1px solid #444;
+  border: 1px solid var(--border-input);
   border-radius: 6px;
   padding: 4px 8px;
   font-size: 14px;
@@ -1056,7 +1056,7 @@ async function bulkExport(format) {
 }
 .scheduler-toggle-btn {
   background: none;
-  border: 1px solid #444;
+  border: 1px solid var(--border-input);
   border-radius: 6px;
   padding: 4px 8px;
   font-size: 14px;
@@ -1069,7 +1069,7 @@ async function bulkExport(format) {
 }
 .benchmark-toggle-btn {
   background: none;
-  border: 1px solid #444;
+  border: 1px solid var(--border-input);
   border-radius: 6px;
   padding: 4px 8px;
   font-size: 14px;

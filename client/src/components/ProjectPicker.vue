@@ -82,7 +82,7 @@
             <span class="project-slug">{{ project.slug }}</span>
           </div>
           <div class="project-meta">
-            <span class="meta-pill sessions">{{ project.sessionCount || 0 }} sessions</span>
+            <span class="meta-pill sessions">{{ project.sessionCount || 0 }} {{ (project.sessionCount || 0) === 1 ? 'session' : 'sessions' }}</span>
             <span v-if="project.totalCost" class="meta-pill cost">{{ project.totalCost.toFixed(1) }}×</span>
             <span class="project-date">{{ formatDate(project.createdAt) }}</span>
           </div>
@@ -271,7 +271,7 @@ function formatDate(ts) {
 }
 
 .hero-tagline {
-  color: #666;
+  color: var(--text-tertiary);
   font-size: 15px;
   line-height: 1.5;
 }
@@ -293,11 +293,11 @@ function formatDate(ts) {
 
 .text-input {
   flex: 1;
-  background: #111118;
-  border: 1px solid #2a2a3e;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-secondary);
   border-radius: 10px;
   padding: 11px 16px;
-  color: #e0e0e0;
+  color: var(--text-primary);
   font-size: 14px;
   font-family: inherit;
   outline: none;
@@ -311,12 +311,12 @@ function formatDate(ts) {
   max-width: 180px;
 }
 .text-input::placeholder {
-  color: #444;
+  color: var(--border-input);
 }
 
 .btn-primary {
   background: linear-gradient(135deg, #f5c542, #e6a817);
-  color: #111;
+  color: var(--bg-secondary);
   border: none;
   padding: 11px 22px;
   border-radius: 10px;
@@ -336,7 +336,7 @@ function formatDate(ts) {
 .btn-primary:disabled { opacity: 0.35; cursor: not-allowed; }
 
 .btn-secondary {
-  background: #14141e;
+  background: var(--bg-tertiary);
   color: #6aacf5;
   border: 1px solid #1e2a3a;
   padding: 11px 16px;
@@ -363,11 +363,11 @@ function formatDate(ts) {
 
 .search-input {
   width: 100%;
-  background: #111118;
-  border: 1px solid #2a2a3e;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-secondary);
   border-radius: 10px;
   padding: 10px 16px;
-  color: #e0e0e0;
+  color: var(--text-primary);
   font-size: 13px;
   font-family: inherit;
   outline: none;
@@ -378,7 +378,7 @@ function formatDate(ts) {
   box-shadow: 0 0 0 3px rgba(74, 158, 255, 0.08);
 }
 .search-input::placeholder {
-  color: #444;
+  color: var(--border-input);
 }
 
 /* ── Loading ── */
@@ -387,14 +387,14 @@ function formatDate(ts) {
   align-items: center;
   justify-content: center;
   gap: 12px;
-  color: #555;
+  color: var(--text-tertiary);
   padding: 40px 0;
 }
 
 .loading-spinner {
   width: 20px;
   height: 20px;
-  border: 2px solid #333;
+  border: 2px solid var(--border-subtle);
   border-top-color: #f5c542;
   border-radius: 50%;
   animation: spin 0.7s linear infinite;
@@ -417,19 +417,19 @@ function formatDate(ts) {
 }
 
 .empty p {
-  color: #666;
+  color: var(--text-tertiary);
   font-size: 15px;
   margin-bottom: 4px;
 }
 
 .empty-hint {
-  color: #444;
+  color: var(--border-input);
   font-size: 13px;
 }
 
 .empty-search {
   text-align: center;
-  color: #555;
+  color: var(--text-tertiary);
   padding: 24px;
   font-size: 13px;
 }
@@ -446,15 +446,15 @@ function formatDate(ts) {
   align-items: center;
   gap: 14px;
   padding: 12px 16px;
-  background: #111118;
-  border: 1px solid #1e1e2e;
+  background: var(--bg-secondary);
+  border: 1px solid var(--bg-card);
   border-radius: 12px;
   cursor: pointer;
   transition: border-color 0.2s, background 0.2s, transform 0.15s, box-shadow 0.2s;
 }
 .project-item:hover {
   border-color: #f5c54266;
-  background: #14141e;
+  background: var(--bg-tertiary);
   transform: translateX(2px);
   box-shadow: 0 2px 12px rgba(245, 197, 66, 0.06);
 }
@@ -486,7 +486,7 @@ function formatDate(ts) {
 
 .project-name {
   font-weight: 600;
-  color: #e0e0e0;
+  color: var(--text-primary);
   font-size: 14px;
   white-space: nowrap;
   overflow: hidden;
@@ -507,7 +507,7 @@ function formatDate(ts) {
 
 .project-slug {
   font-size: 11px;
-  color: #444;
+  color: var(--border-input);
   font-family: 'JetBrains Mono', 'Consolas', monospace;
 }
 
@@ -527,8 +527,8 @@ function formatDate(ts) {
 }
 
 .meta-pill.sessions {
-  background: #1a1a2e;
-  color: #888;
+  background: var(--border-primary);
+  color: var(--text-muted);
 }
 
 .meta-pill.cost {
@@ -537,14 +537,14 @@ function formatDate(ts) {
 }
 
 .project-date {
-  color: #444;
+  color: var(--border-input);
   font-size: 11px;
 }
 
 .btn-delete {
   background: none;
   border: none;
-  color: #333;
+  color: var(--border-subtle);
   font-size: 14px;
   cursor: pointer;
   padding: 4px 8px;

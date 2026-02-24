@@ -153,8 +153,8 @@ function execute(cmd) {
 .palette-container {
   width: 540px;
   max-height: 420px;
-  background: #111118;
-  border: 1px solid #2a2a3e;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-secondary);
   border-radius: 16px;
   overflow: hidden;
   box-shadow: 0 16px 64px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(245, 197, 66, 0.08);
@@ -167,7 +167,7 @@ function execute(cmd) {
   align-items: center;
   gap: 10px;
   padding: 14px 18px;
-  border-bottom: 1px solid #1e1e2e;
+  border-bottom: 1px solid var(--bg-card);
 }
 
 .palette-icon {
@@ -181,21 +181,21 @@ function execute(cmd) {
   background: none;
   border: none;
   outline: none;
-  color: #e0e0e0;
+  color: var(--text-primary);
   font-size: 15px;
   font-family: inherit;
 }
 .palette-input::placeholder {
-  color: #444;
+  color: var(--border-input);
 }
 
 .palette-shortcut {
-  background: #1a1a2e;
-  border: 1px solid #2a2a3e;
+  background: var(--border-primary);
+  border: 1px solid var(--border-secondary);
   border-radius: 5px;
   padding: 2px 7px;
   font-size: 11px;
-  color: #555;
+  color: var(--text-tertiary);
   font-family: inherit;
 }
 
@@ -207,7 +207,7 @@ function execute(cmd) {
 .palette-section-label {
   font-size: 11px;
   font-weight: 600;
-  color: #555;
+  color: var(--text-tertiary);
   text-transform: uppercase;
   letter-spacing: 0.05em;
   padding: 8px 18px 4px;
@@ -223,7 +223,7 @@ function execute(cmd) {
 }
 .palette-item:hover,
 .palette-item.active {
-  background: #1a1a2e;
+  background: var(--border-primary);
 }
 
 .item-icon {
@@ -236,19 +236,19 @@ function execute(cmd) {
 .item-label {
   flex: 1;
   font-size: 14px;
-  color: #e0e0e0;
+  color: var(--text-primary);
 }
 
 .item-hint {
   font-size: 12px;
-  color: #555;
+  color: var(--text-tertiary);
   flex-shrink: 0;
 }
 
 .palette-empty {
   padding: 24px 18px;
   text-align: center;
-  color: #555;
+  color: var(--text-tertiary);
   font-size: 13px;
 }
 

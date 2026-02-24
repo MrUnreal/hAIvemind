@@ -140,8 +140,8 @@ watch(() => props.visible, (v) => {
 }
 
 .dep-viz-panel {
-  background: #16161e;
-  border: 1px solid #333;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-subtle);
   border-radius: 10px;
   width: 90%;
   max-width: 800px;
@@ -159,13 +159,13 @@ watch(() => props.visible, (v) => {
 
 .dep-header h3 {
   font-size: 16px;
-  color: #e0e0e0;
+  color: var(--text-primary);
 }
 
 .close-btn {
   background: none;
   border: none;
-  color: #888;
+  color: var(--text-muted);
   font-size: 18px;
   cursor: pointer;
 }
@@ -173,7 +173,7 @@ watch(() => props.visible, (v) => {
 .dep-loading, .dep-error {
   text-align: center;
   padding: 40px;
-  color: #888;
+  color: var(--text-muted);
 }
 
 .dep-error { color: #ef5350; }
@@ -190,7 +190,7 @@ watch(() => props.visible, (v) => {
   display: flex;
   flex-direction: column;
   align-items: center;
-  background: #1e1e2e;
+  background: var(--bg-card);
   border-radius: 8px;
   padding: 10px 16px;
   min-width: 80px;
@@ -206,7 +206,7 @@ watch(() => props.visible, (v) => {
 
 .stat-label {
   font-size: 11px;
-  color: #888;
+  color: var(--text-muted);
   margin-top: 2px;
 }
 
@@ -227,7 +227,7 @@ watch(() => props.visible, (v) => {
 .layer-label {
   min-width: 60px;
   font-size: 11px;
-  color: #888;
+  color: var(--text-muted);
   padding-top: 8px;
   text-align: right;
 }
@@ -243,12 +243,12 @@ watch(() => props.visible, (v) => {
   display: flex;
   align-items: center;
   gap: 6px;
-  background: #1e1e2e;
-  border: 1px solid #333;
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
   border-radius: 6px;
   padding: 6px 10px;
   font-size: 12px;
-  color: #ccc;
+  color: var(--btn-text);
   transition: all 0.2s;
 }
 
@@ -271,7 +271,7 @@ watch(() => props.visible, (v) => {
   font-size: 10px;
   padding: 1px 5px;
   border-radius: 4px;
-  background: #2a2a3a;
+  background: var(--border-secondary);
   color: #90caf9;
 }
 
@@ -279,12 +279,12 @@ watch(() => props.visible, (v) => {
 .dep-section {
   margin-top: 16px;
   padding-top: 12px;
-  border-top: 1px solid #222;
+  border-top: 1px solid var(--border-primary);
 }
 
 .dep-section h4 {
   font-size: 13px;
-  color: #bbb;
+  color: var(--btn-text);
   margin-bottom: 8px;
 }
 
@@ -302,7 +302,7 @@ watch(() => props.visible, (v) => {
 }
 
 .arrow {
-  color: #666;
+  color: var(--text-tertiary);
   margin: 0 2px;
 }
 
@@ -316,6 +316,6 @@ watch(() => props.visible, (v) => {
 }
 
 .bn-label { color: #ffb74d; font-weight: 600; }
-.bn-reason { color: #888; font-style: italic; }
-.bn-detail { color: #666; font-size: 11px; }
+.bn-reason { color: var(--text-muted); font-style: italic; }
+.bn-detail { color: var(--text-tertiary); font-size: 11px; }
 </style>

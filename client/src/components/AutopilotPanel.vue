@@ -175,7 +175,7 @@ defineExpose({ onAutopilotCycle, onAutopilotStopped });
   display: flex;
   flex-direction: column;
   height: 100%;
-  background: #0a0a0f;
+  background: var(--bg-primary);
   color: #c0c0c0;
   font-size: 13px;
 }
@@ -185,19 +185,19 @@ defineExpose({ onAutopilotCycle, onAutopilotStopped });
   justify-content: space-between;
   align-items: center;
   padding: 12px 16px;
-  border-bottom: 1px solid #2a2a3e;
+  border-bottom: 1px solid var(--border-secondary);
 }
 
 .autopilot-header h3 {
   margin: 0;
   font-size: 15px;
-  color: #e0e0e0;
+  color: var(--text-primary);
 }
 
 .close-btn {
   background: none;
   border: none;
-  color: #666;
+  color: var(--text-tertiary);
   cursor: pointer;
   font-size: 20px;
 }
@@ -210,7 +210,7 @@ defineExpose({ onAutopilotCycle, onAutopilotStopped });
 }
 
 .hint {
-  color: #888;
+  color: var(--text-muted);
   font-size: 12px;
   margin: 0;
 }
@@ -223,14 +223,14 @@ defineExpose({ onAutopilotCycle, onAutopilotStopped });
 
 .form-row label {
   min-width: 100px;
-  color: #aaa;
+  color: var(--text-secondary);
   font-size: 12px;
 }
 
 .form-input {
-  background: #16161e;
-  border: 1px solid #2a2a3e;
-  color: #e0e0e0;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-secondary);
+  color: var(--text-primary);
   padding: 6px 10px;
   border-radius: 4px;
   font-size: 13px;
@@ -269,7 +269,7 @@ defineExpose({ onAutopilotCycle, onAutopilotStopped });
 }
 
 .history-section h4 {
-  color: #e0e0e0;
+  color: var(--text-primary);
   font-size: 13px;
   margin: 0 0 8px;
 }
@@ -279,14 +279,14 @@ defineExpose({ onAutopilotCycle, onAutopilotStopped });
   align-items: center;
   gap: 10px;
   padding: 6px 10px;
-  background: #16161e;
+  background: var(--bg-tertiary);
   border-radius: 6px;
   margin-bottom: 4px;
   font-size: 12px;
 }
 
 .history-time {
-  color: #888;
+  color: var(--text-muted);
 }
 
 .history-cycles {
@@ -330,7 +330,7 @@ defineExpose({ onAutopilotCycle, onAutopilotStopped });
 }
 
 .cycle-badge {
-  background: #2a2a4e;
+  background: var(--border-secondary);
   color: #a78bfa;
   padding: 4px 12px;
   border-radius: 12px;
@@ -361,8 +361,8 @@ defineExpose({ onAutopilotCycle, onAutopilotStopped });
 }
 
 .decision-card {
-  background: #16161e;
-  border: 1px solid #2a2a3e;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-secondary);
   border-radius: 8px;
   padding: 10px 12px;
 }
@@ -380,18 +380,18 @@ defineExpose({ onAutopilotCycle, onAutopilotStopped });
 }
 
 .decision-time {
-  color: #666;
+  color: var(--text-tertiary);
   font-size: 11px;
 }
 
 .decision-prompt {
-  color: #ccc;
+  color: var(--btn-text);
   font-size: 12px;
   margin-bottom: 4px;
 }
 
 .decision-reasoning {
-  color: #888;
+  color: var(--text-muted);
   font-size: 11px;
   margin-bottom: 4px;
 }

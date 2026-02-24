@@ -59,10 +59,10 @@ function select(tpl) {
   gap: 8px;
   cursor: pointer;
   padding: 10px 14px;
-  background: #0f0f16;
-  border: 1px solid #1e1e2e;
+  background: var(--bg-primary);
+  border: 1px solid var(--bg-card);
   border-radius: 10px;
-  color: #888;
+  color: var(--text-muted);
   font-size: 13px;
   font-weight: 600;
   user-select: none;
@@ -70,7 +70,7 @@ function select(tpl) {
 }
 .template-header:hover {
   border-color: #f5c54266;
-  color: #ccc;
+  color: var(--btn-text);
 }
 
 .expand-arrow {
@@ -87,30 +87,30 @@ function select(tpl) {
 
 .template-card {
   padding: 14px;
-  background: #0f0f16;
-  border: 1px solid #1e1e2e;
+  background: var(--bg-primary);
+  border: 1px solid var(--bg-card);
   border-radius: 12px;
   cursor: pointer;
   transition: border-color 0.2s, background 0.2s, transform 0.15s;
 }
 .template-card:hover {
-  border-color: #3a3a5a;
+  border-color: var(--border-secondary);
   transform: translateY(-1px);
 }
 .template-card.active {
   border-color: #f5c542;
-  background: #14141e;
+  background: var(--bg-tertiary);
 }
 
 .template-name {
   font-size: 14px;
   font-weight: 600;
-  color: #e0e0e0;
+  color: var(--text-primary);
   margin-bottom: 4px;
 }
 .template-desc {
   font-size: 12px;
-  color: #888;
+  color: var(--text-muted);
   margin-bottom: 8px;
   line-height: 1.4;
 }

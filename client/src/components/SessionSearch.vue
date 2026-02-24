@@ -42,7 +42,7 @@
         <div class="result-prompt" v-html="highlight(result.prompt || '', query)"></div>
 
         <div class="result-meta">
-          <span class="meta-item">📋 {{ result.taskCount }} tasks</span>
+          <span class="meta-item">📋 {{ result.taskCount }} {{ result.taskCount === 1 ? 'task' : 'tasks' }}</span>
           <span class="match-type" :class="result.matchType">
             {{ matchLabel(result.matchType) }}
           </span>
@@ -194,8 +194,8 @@ defineExpose({ focus, clearSearch });
 .search-bar {
   display: flex;
   align-items: center;
-  background: #1e1e2e;
-  border: 1px solid #333;
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
   border-radius: 8px;
   padding: 0 12px;
   gap: 8px;
@@ -215,20 +215,20 @@ defineExpose({ focus, clearSearch });
   flex: 1;
   background: transparent;
   border: none;
-  color: #e0e0e0;
+  color: var(--text-primary);
   font-size: 14px;
   padding: 10px 0;
   outline: none;
 }
 
 .search-input::placeholder {
-  color: #666;
+  color: var(--text-tertiary);
 }
 
 .clear-btn {
   background: none;
   border: none;
-  color: #888;
+  color: var(--text-muted);
   cursor: pointer;
   font-size: 14px;
   padding: 4px 6px;
@@ -237,19 +237,19 @@ defineExpose({ focus, clearSearch });
 
 .clear-btn:hover {
   color: #fff;
-  background: #333;
+  background: var(--border-subtle);
 }
 
 .search-status {
   padding: 12px 0;
-  color: #888;
+  color: var(--text-muted);
   font-size: 13px;
 }
 
 .results-header {
   padding: 8px 0;
   font-size: 13px;
-  color: #888;
+  color: var(--text-muted);
 }
 
 .scope-badge {
@@ -264,8 +264,8 @@ defineExpose({ focus, clearSearch });
 }
 
 .result-card {
-  background: #1a1a2e;
-  border: 1px solid #2a2a3e;
+  background: var(--border-primary);
+  border: 1px solid var(--border-secondary);
   border-radius: 8px;
   padding: 12px 16px;
   cursor: pointer;
@@ -288,7 +288,7 @@ defineExpose({ focus, clearSearch });
   font-size: 11px;
   padding: 2px 8px;
   border-radius: 10px;
-  background: #333;
+  background: var(--border-subtle);
 }
 
 .pill-completed { background: #1b4332; color: #95d5b2; }
@@ -298,18 +298,18 @@ defineExpose({ focus, clearSearch });
 
 .result-project {
   font-size: 12px;
-  color: #aaa;
+  color: var(--text-secondary);
 }
 
 .result-time {
   font-size: 12px;
-  color: #666;
+  color: var(--text-tertiary);
   margin-left: auto;
 }
 
 .result-prompt {
   font-size: 14px;
-  color: #ddd;
+  color: var(--text-primary);
   line-height: 1.4;
   margin-bottom: 6px;
   overflow: hidden;
@@ -331,7 +331,7 @@ defineExpose({ focus, clearSearch });
   align-items: center;
   gap: 12px;
   font-size: 12px;
-  color: #888;
+  color: var(--text-muted);
 }
 
 .match-type {
@@ -353,8 +353,8 @@ defineExpose({ focus, clearSearch });
 
 .task-chip {
   font-size: 12px;
-  color: #aaa;
-  background: #222;
+  color: var(--text-secondary);
+  background: var(--border-primary);
   padding: 2px 8px;
   border-radius: 4px;
 }
@@ -368,13 +368,13 @@ defineExpose({ focus, clearSearch });
 
 .more {
   font-size: 12px;
-  color: #666;
+  color: var(--text-tertiary);
   padding: 2px 8px;
 }
 
 .no-results {
   padding: 16px 0;
-  color: #666;
+  color: var(--text-tertiary);
   font-size: 13px;
   text-align: center;
 }

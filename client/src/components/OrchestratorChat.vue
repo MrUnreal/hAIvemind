@@ -254,7 +254,7 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   height: 100%;
-  background: #0a0a0f;
+  background: var(--bg-primary);
 }
 
 .chat-header {
@@ -262,14 +262,14 @@ onMounted(() => {
   align-items: center;
   justify-content: space-between;
   padding: 14px 20px;
-  border-bottom: 1px solid #1a1a2e;
-  background: #0f0f16;
+  border-bottom: 1px solid var(--border-primary);
+  background: var(--bg-primary);
 }
 
 .chat-header h3 {
   font-size: 14px;
   font-weight: 700;
-  color: #e0e0e0;
+  color: var(--text-primary);
   margin: 0;
 }
 
@@ -295,7 +295,7 @@ onMounted(() => {
 }
 
 .chat-empty {
-  color: #555;
+  color: var(--text-tertiary);
   font-size: 13px;
   line-height: 1.6;
   padding: 20px 8px;
@@ -332,8 +332,8 @@ onMounted(() => {
 }
 
 .bubble-assistant {
-  background: #111118;
-  border: 1px solid #1e1e2e;
+  background: var(--bg-secondary);
+  border: 1px solid var(--bg-card);
   border-bottom-right-radius: 4px;
   color: #c0c0d0;
 }
@@ -355,7 +355,7 @@ onMounted(() => {
 .msg-time {
   display: block;
   font-size: 10px;
-  color: #555;
+  color: var(--text-tertiary);
   margin-top: 4px;
   text-align: right;
 }
@@ -366,14 +366,14 @@ onMounted(() => {
 
 /* ── Status bubbles (compact orchestrator updates) ── */
 .bubble-status {
-  background: #13131a;
-  border-color: #1e1e2e;
+  background: var(--bg-tertiary);
+  border-color: var(--bg-card);
   padding: 6px 12px 4px;
 }
 
 .bubble-status .bubble-text {
   font-size: 11px;
-  color: #888;
+  color: var(--text-muted);
 }
 
 /* ── Input row ── */
@@ -381,16 +381,16 @@ onMounted(() => {
   display: flex;
   gap: 8px;
   padding: 12px 16px;
-  border-top: 1px solid #1a1a2e;
-  background: #111118;
+  border-top: 1px solid var(--border-primary);
+  background: var(--bg-secondary);
 }
 
 .chat-input-row textarea {
   flex: 1;
-  background: #111118;
-  border: 1px solid #1e1e2e;
+  background: var(--bg-secondary);
+  border: 1px solid var(--bg-card);
   border-radius: 20px;
-  color: #e0e0e0;
+  color: var(--text-primary);
   padding: 10px 16px;
   font-size: 13px;
   font-family: inherit;
@@ -405,12 +405,12 @@ onMounted(() => {
 }
 
 .chat-input-row textarea::placeholder {
-  color: #444;
+  color: var(--border-input);
 }
 
 .chat-input-row button {
   background: #f5c542;
-  color: #111;
+  color: var(--bg-secondary);
   border: none;
   border-radius: 50%;
   width: 38px;

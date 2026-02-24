@@ -5,6 +5,7 @@ import { Router } from 'express';
 import { MSG, makeMsg } from '../../shared/protocol.js';
 import { refs } from '../state.js';
 import { broadcast } from '../ws/broadcast.js';
+import { appendAuditEntry } from '../services/auditLog.js';
 import {
   exportProject, importProject, validateArchive, previewArchive,
 } from '../services/projectExport.js';
@@ -103,6 +104,7 @@ router.put('/projects/:slug/settings', (req, res) => {
   if (!project) return res.status(404).json({ error: 'Project not found' });
   const updated = refs.workspace.updateProjectSettings(req.params.slug, req.body);
   broadcast(makeMsg(MSG.SETTINGS_UPDATE, { projectSlug: req.params.slug, settings: updated }));
+  try { appendAuditEntry(req.params.slug, { action: 'settings.update', actor: 'user', details: { keys: Object.keys(req.body) } }); } catch { /* ignore */ }
   res.json(updated);
 });
 

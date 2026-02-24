@@ -188,7 +188,7 @@ onMounted(async () => {
   display: flex;
   flex-direction: column;
   height: 100%;
-  background: #0a0a0f;
+  background: var(--bg-primary);
   color: #c0c0c0;
   font-size: 13px;
 }
@@ -198,26 +198,26 @@ onMounted(async () => {
   justify-content: space-between;
   align-items: center;
   padding: 12px 16px;
-  border-bottom: 1px solid #2a2a3e;
+  border-bottom: 1px solid var(--border-secondary);
 }
 
 .panel-header h3 {
   margin: 0;
   font-size: 14px;
-  color: #e0e0e0;
+  color: var(--text-primary);
 }
 
 .close-btn {
   background: none;
   border: none;
-  color: #888;
+  color: var(--text-muted);
   font-size: 18px;
   cursor: pointer;
   padding: 2px 6px;
   border-radius: 4px;
 }
 .close-btn:hover {
-  background: #2a2a3e;
+  background: var(--border-secondary);
   color: #fff;
 }
 
@@ -231,7 +231,7 @@ onMounted(async () => {
 
 .aggregate-section h4,
 .reflections-section h4 {
-  color: #888;
+  color: var(--text-muted);
   font-size: 11px;
   text-transform: uppercase;
   font-weight: 600;
@@ -246,8 +246,8 @@ onMounted(async () => {
 }
 
 .stat-card {
-  background: #16161e;
-  border: 1px solid #2a2a3e;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-secondary);
   border-radius: 8px;
   padding: 12px;
   text-align: center;
@@ -257,7 +257,7 @@ onMounted(async () => {
   display: block;
   font-size: 20px;
   font-weight: 700;
-  color: #e0e0e0;
+  color: var(--text-primary);
   line-height: 1.2;
 }
 
@@ -265,7 +265,7 @@ onMounted(async () => {
   display: block;
   font-size: 10px;
   text-transform: uppercase;
-  color: #555;
+  color: var(--text-tertiary);
   margin-top: 4px;
 }
 
@@ -301,7 +301,7 @@ onMounted(async () => {
 .bar-track {
   flex: 1;
   height: 8px;
-  background: #16161e;
+  background: var(--bg-tertiary);
   border-radius: 4px;
   overflow: hidden;
 }
@@ -319,20 +319,20 @@ onMounted(async () => {
 .bar-count {
   width: 24px;
   font-size: 11px;
-  color: #666;
+  color: var(--text-tertiary);
   text-align: right;
 }
 
 /* ── Reflections ── */
 
 .reflections-section {
-  border-top: 1px solid #1a1a2e;
+  border-top: 1px solid var(--border-primary);
   padding-top: 16px;
 }
 
 .reflection-card {
-  background: #16161e;
-  border: 1px solid #2a2a3e;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-secondary);
   border-radius: 8px;
   padding: 12px;
   margin-bottom: 8px;
@@ -355,12 +355,12 @@ onMounted(async () => {
 
 .reflection-date {
   font-size: 12px;
-  color: #888;
+  color: var(--text-muted);
 }
 
 .reflection-duration {
   font-size: 11px;
-  color: #555;
+  color: var(--text-tertiary);
   margin-left: auto;
   font-family: 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
 }
@@ -373,7 +373,7 @@ onMounted(async () => {
 
 .r-stat {
   font-size: 12px;
-  color: #666;
+  color: var(--text-tertiary);
 }
 
 .r-val {
@@ -408,14 +408,14 @@ onMounted(async () => {
 .cost-row {
   margin-top: 8px;
   font-size: 11px;
-  color: #666;
+  color: var(--text-tertiary);
   display: flex;
   gap: 8px;
   align-items: center;
 }
 
 .cost-label {
-  color: #555;
+  color: var(--text-tertiary);
 }
 
 .cost-value {
@@ -424,7 +424,7 @@ onMounted(async () => {
 }
 
 .cost-detail {
-  color: #555;
+  color: var(--text-tertiary);
 }
 
 /* ── Empty ── */
@@ -441,12 +441,12 @@ onMounted(async () => {
 
 .empty-state p {
   font-size: 16px;
-  color: #666;
+  color: var(--text-tertiary);
   margin: 0 0 8px;
 }
 
 .empty-state span {
   font-size: 12px;
-  color: #444;
+  color: var(--border-input);
 }
 </style>

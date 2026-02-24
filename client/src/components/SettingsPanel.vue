@@ -475,7 +475,7 @@ watch(activeTab, (tab) => {
   display: flex;
   flex-direction: column;
   height: 100%;
-  background: #0a0a0f;
+  background: var(--bg-primary);
   color: #c0c0c0;
   font-size: 13px;
 }
@@ -485,26 +485,26 @@ watch(activeTab, (tab) => {
   justify-content: space-between;
   align-items: center;
   padding: 12px 16px;
-  border-bottom: 1px solid #2a2a3e;
+  border-bottom: 1px solid var(--border-secondary);
 }
 
 .panel-header h3 {
   margin: 0;
   font-size: 14px;
-  color: #e0e0e0;
+  color: var(--text-primary);
 }
 
 .close-btn {
   background: none;
   border: none;
-  color: #888;
+  color: var(--text-muted);
   font-size: 18px;
   cursor: pointer;
   padding: 2px 6px;
   border-radius: 4px;
 }
 .close-btn:hover {
-  background: #2a2a3e;
+  background: var(--border-secondary);
   color: #fff;
 }
 
@@ -516,14 +516,14 @@ watch(activeTab, (tab) => {
 
 .tab-bar {
   display: flex;
-  border-bottom: 1px solid #2a2a3e;
+  border-bottom: 1px solid var(--border-secondary);
   padding: 0 12px;
 }
 
 .tab-btn {
   background: none;
   border: none;
-  color: #666;
+  color: var(--text-tertiary);
   padding: 10px 14px;
   cursor: pointer;
   font-size: 12px;
@@ -531,7 +531,7 @@ watch(activeTab, (tab) => {
   transition: all 0.2s;
 }
 .tab-btn:hover {
-  color: #aaa;
+  color: var(--text-secondary);
 }
 .tab-btn.active {
   color: #4a9eff;
@@ -543,7 +543,7 @@ watch(activeTab, (tab) => {
 }
 
 .section-hint {
-  color: #555;
+  color: var(--text-tertiary);
   font-size: 12px;
   margin: 0 0 16px;
   line-height: 1.5;
@@ -555,7 +555,7 @@ watch(activeTab, (tab) => {
 
 .setting-row label {
   display: block;
-  color: #888;
+  color: var(--text-muted);
   font-size: 11px;
   text-transform: uppercase;
   font-weight: 600;
@@ -575,15 +575,15 @@ watch(activeTab, (tab) => {
 }
 
 .step-index {
-  color: #555;
+  color: var(--text-tertiary);
   font-size: 11px;
   width: 20px;
   font-family: 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
 }
 
 .tier-select {
-  background: #16161e;
-  border: 1px solid #2a2a3e;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-secondary);
   color: #c0c0c0;
   padding: 6px 10px;
   border-radius: 4px;
@@ -601,8 +601,8 @@ watch(activeTab, (tab) => {
 }
 
 .add-step-btn {
-  background: #1a1a2e;
-  border: 1px dashed #2a2a3e;
+  background: var(--border-primary);
+  border: 1px dashed var(--border-secondary);
   color: #4a9eff;
   padding: 6px;
   border-radius: 4px;
@@ -614,8 +614,8 @@ watch(activeTab, (tab) => {
 }
 
 .number-input {
-  background: #16161e;
-  border: 1px solid #2a2a3e;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-secondary);
   color: #c0c0c0;
   padding: 6px 10px;
   border-radius: 4px;
@@ -624,7 +624,7 @@ watch(activeTab, (tab) => {
 }
 
 .input-hint {
-  color: #444;
+  color: var(--border-input);
   font-size: 11px;
   margin-left: 8px;
 }
@@ -634,7 +634,7 @@ watch(activeTab, (tab) => {
   gap: 8px;
   margin-top: 20px;
   padding-top: 16px;
-  border-top: 1px solid #1a1a2e;
+  border-top: 1px solid var(--border-primary);
 }
 
 .save-btn {
@@ -656,9 +656,9 @@ watch(activeTab, (tab) => {
 }
 
 .reset-btn {
-  background: #1a1a2e;
-  border: 1px solid #2a2a3e;
-  color: #888;
+  background: var(--border-primary);
+  border: 1px solid var(--border-secondary);
+  color: var(--text-muted);
   padding: 8px 16px;
   border-radius: 6px;
   cursor: pointer;
@@ -666,7 +666,7 @@ watch(activeTab, (tab) => {
 }
 .reset-btn:hover {
   color: #c0c0c0;
-  border-color: #444;
+  border-color: var(--border-input);
 }
 
 /* ── Skills tab ── */
@@ -676,7 +676,7 @@ watch(activeTab, (tab) => {
 }
 
 .skill-category h4 {
-  color: #aaa;
+  color: var(--text-secondary);
   font-size: 12px;
   margin: 0 0 8px;
 }
@@ -692,8 +692,8 @@ watch(activeTab, (tab) => {
   display: flex;
   align-items: center;
   gap: 6px;
-  background: #16161e;
-  border: 1px solid #2a2a3e;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-secondary);
   border-radius: 4px;
   padding: 4px 8px;
   font-size: 12px;
@@ -711,7 +711,7 @@ watch(activeTab, (tab) => {
 .chip-remove {
   background: none;
   border: none;
-  color: #666;
+  color: var(--text-tertiary);
   cursor: pointer;
   font-size: 12px;
   padding: 0 2px;
@@ -721,7 +721,7 @@ watch(activeTab, (tab) => {
 }
 
 .empty-hint {
-  color: #444;
+  color: var(--border-input);
   font-size: 12px;
   font-style: italic;
 }
@@ -733,8 +733,8 @@ watch(activeTab, (tab) => {
 }
 
 .skill-input {
-  background: #16161e;
-  border: 1px solid #2a2a3e;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-secondary);
   color: #c0c0c0;
   padding: 6px 10px;
   border-radius: 4px;
@@ -759,7 +759,7 @@ watch(activeTab, (tab) => {
 .loading-state {
   padding: 32px;
   text-align: center;
-  color: #555;
+  color: var(--text-tertiary);
 }
 
 /* Phase 6.5: Plugin styles */
@@ -770,8 +770,8 @@ watch(activeTab, (tab) => {
 }
 
 .plugin-card {
-  background: #16161e;
-  border: 1px solid #2a2a3e;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-secondary);
   border-radius: 8px;
   padding: 12px;
 }
@@ -785,11 +785,11 @@ watch(activeTab, (tab) => {
 
 .plugin-name {
   font-weight: 600;
-  color: #e0e0e0;
+  color: var(--text-primary);
 }
 
 .plugin-version {
-  color: #666;
+  color: var(--text-tertiary);
   font-size: 11px;
 }
 
@@ -803,11 +803,11 @@ watch(activeTab, (tab) => {
 }
 
 .plugin-status.disabled {
-  color: #666;
+  color: var(--text-tertiary);
 }
 
 .plugin-desc {
-  color: #888;
+  color: var(--text-muted);
   font-size: 12px;
   margin: 4px 0 8px;
 }
@@ -821,9 +821,9 @@ watch(activeTab, (tab) => {
   font-size: 11px;
   padding: 3px 10px;
   border-radius: 6px;
-  border: 1px solid #444;
+  border: 1px solid var(--border-input);
   background: transparent;
-  color: #ccc;
+  color: var(--btn-text);
   cursor: pointer;
 }
 
@@ -832,14 +832,14 @@ watch(activeTab, (tab) => {
 }
 
 .empty-state {
-  color: #666;
+  color: var(--text-tertiary);
   text-align: center;
   padding: 24px;
   font-size: 13px;
 }
 
 .empty-state code {
-  background: #222;
+  background: var(--border-primary);
   padding: 2px 6px;
   border-radius: 3px;
   color: #a78bfa;
@@ -853,8 +853,8 @@ watch(activeTab, (tab) => {
 }
 
 .backend-card {
-  background: #16161e;
-  border: 1px solid #2a2a3e;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-secondary);
   border-radius: 8px;
   padding: 10px 16px;
   cursor: pointer;
@@ -875,7 +875,7 @@ watch(activeTab, (tab) => {
 
 .backend-name {
   font-weight: 500;
-  color: #e0e0e0;
+  color: var(--text-primary);
   text-transform: capitalize;
 }
 
@@ -899,9 +899,9 @@ watch(activeTab, (tab) => {
 .swarm-btn {
   padding: 4px 12px;
   border-radius: 6px;
-  border: 1px solid #444;
+  border: 1px solid var(--border-input);
   background: transparent;
-  color: #ccc;
+  color: var(--btn-text);
   cursor: pointer;
   font-size: 12px;
 }
@@ -912,7 +912,7 @@ watch(activeTab, (tab) => {
 }
 
 .swarm-capacity {
-  color: #888;
+  color: var(--text-muted);
   font-size: 12px;
 }
 
@@ -923,8 +923,8 @@ watch(activeTab, (tab) => {
 }
 
 .runner-card {
-  background: #1a1a2e;
-  border: 1px solid #333;
+  background: var(--border-primary);
+  border: 1px solid var(--border-subtle);
   border-radius: 6px;
   padding: 4px 10px;
   font-size: 11px;
@@ -938,6 +938,6 @@ watch(activeTab, (tab) => {
 }
 
 .runner-capacity {
-  color: #888;
+  color: var(--text-muted);
 }
 </style>

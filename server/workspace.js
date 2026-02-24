@@ -2,6 +2,7 @@ import { mkdirSync, existsSync, readFileSync, writeFileSync, readdirSync, statSy
 import { join, resolve, basename } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import config from './config.js';
+import { appendAuditEntry } from './services/auditLog.js';
 
 /**
  * WorkspaceManager handles per-project isolation.
@@ -176,6 +177,9 @@ export default class WorkspaceManager {
 
     console.log(`[workspace] Session ${sessionId.slice(0, 8)} started in project "${slug}"`);
 
+    // Audit log
+    try { appendAuditEntry(slug, { action: 'session.start', actor: 'system', details: { sessionId, prompt: prompt.slice(0, 200) } }); } catch { /* ignore */ }
+
     // The work directory IS the project root — agents write directly into it
     return { sessionId, workDir: projectDir, session };
   }
@@ -205,6 +209,21 @@ export default class WorkspaceManager {
     try {
       writeFileSync(sessionFile, JSON.stringify(session, null, 2));
     } catch { /* session dir may have been deleted by parallel cleanup */ return; }
+
+    // Audit log
+    const action = session.status === 'failed' || session.status === 'error' ? 'session.fail' : 'session.complete';
+    try {
+      appendAuditEntry(slug, {
+        action,
+        actor: 'system',
+        details: {
+          sessionId,
+          status: session.status,
+          taskCount: session.tasks?.length || 0,
+          durationMs: session.completedAt - (session.createdAt || session.completedAt),
+        },
+      });
+    } catch { /* ignore */ }
 
     // Update project totals
     try {
