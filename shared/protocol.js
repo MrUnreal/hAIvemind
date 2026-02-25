@@ -76,6 +76,13 @@ export const MSG = {
   // Phase 18 — Security
   INJECTION_DETECTED: 'security:injection',
   CREDENTIAL_REDACTED: 'security:redacted',
+
+  // Phase 20 — Competitive Learnings & Platform Evolution
+  REPO_MAP_READY: 'repomap:ready',
+  TASK_CHECKPOINT: 'task:checkpoint',
+  FILE_DIFF: 'file:diff',
+  CROSS_PROJECT_LEARN: 'crossproject:learn',
+  GITHUB_ISSUE_LOADED: 'github:issue:loaded',
 };
 
 export function makeMsg(type, payload) {

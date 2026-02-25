@@ -393,3 +393,17 @@ Currently single-user, no auth. Fine for local dev, but blocks team usage or hos
 |-----------|--------|---------|
 | **19.0 — CLI Expansion** | ✅ | 4 new commands: `intelligence` (learning stats), `providers` (health status), `security-scan` (injection/credential check), `dashboard` (live build) |
 | **19.1 — Terminal Dashboard** | ✅ | ANSI box-drawing dashboard with task progress, agent sparkline, cost meter, real-time log tail, 4fps render loop |
+
+---
+
+## Phase 20 — Competitive Learnings & Platform Evolution ✅
+
+> Researched 6 major competitors (Aider, Cline, AutoGen, CrewAI, SWE-agent, OpenManus-RL) and incorporated their best ideas.
+
+| Sub-phase | Status | Details |
+|-----------|--------|---------|
+| **20.0 — AST-Aware Repo Map** | ✅ | Regex-based symbol extraction for 8 languages (JS/TS/Python/Rust/Go/Java/Ruby/C#), function/class/method/export mapping, prompt-ready context output. Inspired by Aider. |
+| **20.1 — GitHub Issue Integration** | ✅ | Parse issue URLs + short refs, fetch via raw GitHub API (public + private), auto-convert issues to decomposition prompts, `haivemind issue` CLI command. Inspired by SWE-agent. |
+| **20.2 — Per-Task Checkpoints** | ✅ | Granular workspace snapshots at each task boundary via `git write-tree`, per-task diff comparison, rollback to any checkpoint. Inspired by Cline. |
+| **20.3 — Cross-Project Learning** | ✅ | Global pattern index (`__global__` slug), pattern promotion with deduplication, cross-project context injection into orchestrator. Inspired by CrewAI. |
+| **20.4 — Streaming Diff Preview** | ✅ | Real-time file watcher with debouncing, git diff integration, file content caching, WebSocket diff broadcast. Inspired by Cline. |

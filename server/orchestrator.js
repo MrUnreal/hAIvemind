@@ -3,6 +3,7 @@ import config, { getOrchestratorModel } from './config.js';
 import { withTimeout } from './processTimeout.js';
 import { getPatternsAsContext } from './services/patternBank.js';
 import { getGraphContext } from './services/knowledgeGraph.js';
+import { getCrossProjectContext } from './services/crossProjectLearning.js';
 
 /**
  * Planner mode: Research and evaluate a feature proposal before decomposing.
@@ -174,6 +175,10 @@ When modifying an existing project (file tree provided below), reference specifi
 
     const graphCtx = getGraphContext(projectSlug, userPrompt);
     if (graphCtx) prompt += '\n\n' + graphCtx;
+
+    // Phase 20.3: Inject cross-project learnings
+    const crossCtx = getCrossProjectContext(projectSlug, userPrompt);
+    if (crossCtx) prompt += '\n\n' + crossCtx;
   }
 
   // Use --silent for clean output (no stats), --allow-all for non-interactive

@@ -1,5 +1,6 @@
 import { readdir, readFile, stat, access } from 'node:fs/promises';
 import { join, extname, basename, relative } from 'node:path';
+import { buildRepoMap } from './services/repoMap.js';
 
 /**
  * Default ignore patterns (mimics .gitignore-like filtering).
@@ -97,6 +98,12 @@ export async function analyzeWorkspace(workDir, opts = {}) {
   // 6. Build summary
   const summary = buildSummary(techStack, dependencies, conventions, fileTree);
 
+  // 7. Build AST-aware repo map (Phase 20.0)
+  let repoMap = null;
+  try {
+    repoMap = await buildRepoMap(workDir, { maxFiles: 200 });
+  } catch { /* repo map is optional — degrade gracefully */ }
+
   return {
     fileTree,
     techStack,
@@ -104,6 +111,7 @@ export async function analyzeWorkspace(workDir, opts = {}) {
     dependencies,
     conventions,
     summary,
+    repoMap,
     toPromptContext() {
       return formatForPrompt(this);
     },
@@ -364,6 +372,11 @@ function formatForPrompt(analysis) {
     if (importExportLines.length > 0) {
       sections.push(`**Main entry (${ep.path}):**\n\`\`\`\n${importExportLines.join('\n')}\n\`\`\``);
     }
+  }
+
+  // Phase 20.0: AST-aware repo map (symbol-level codebase overview)
+  if (analysis.repoMap && analysis.repoMap.stats.totalSymbols > 0) {
+    sections.push(analysis.repoMap.toPromptContext());
   }
 
   return sections.join('\n\n');

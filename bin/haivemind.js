@@ -120,6 +120,7 @@ ${coloured(C.bold, 'Usage:')}
   haivemind ${coloured(C.green, 'autopilot')} <slug>                    Run continuous self-improvement
   haivemind ${coloured(C.green, 'dashboard')} <slug> "<prompt>"        Build with live terminal dashboard
   haivemind ${coloured(C.green, 'intelligence')} <slug>                Show intelligence/learning stats
+  haivemind ${coloured(C.green, 'issue')} <slug> <ref>                  Fetch GitHub issue and start build
   haivemind ${coloured(C.green, 'providers')}                          Show provider health status
   haivemind ${coloured(C.green, 'security-scan')} "<text>"             Scan text for injections/credentials
   haivemind ${coloured(C.green, 'replay')} <slug> <sessionId>          Show session detail
@@ -1057,6 +1058,54 @@ async function cmdSecurityScan() {
 
 // ── Actual Dispatch ──────────────────────────────────────────────────
 
+// ── Issue — GitHub Issue Integration (Phase 20.1) ────────────────────────
+
+async function cmdIssue() {
+  const slug = positional[1];
+  const issueRef = positional[2];
+  if (!slug || !issueRef) {
+    logErr('Usage: haivemind issue <slug> <owner/repo#123 | GitHub URL>');
+    process.exit(1);
+  }
+
+  const { parseIssueRef, fetchIssue, issueToPrompt } = await import('../server/services/githubIssues.js');
+  const parsed = parseIssueRef(issueRef);
+  if (!parsed) {
+    logErr('Invalid issue ref. Use "owner/repo#123" or a full GitHub issue URL.');
+    process.exit(1);
+  }
+
+  log(coloured(C.cyan, `\n  Fetching ${parsed.owner}/${parsed.repo}#${parsed.number}...\n`));
+
+  const issue = await fetchIssue(parsed.owner, parsed.repo, parsed.number);
+
+  if (JSON_MODE) {
+    out({ issue, prompt: issueToPrompt(issue) });
+    return;
+  }
+
+  log(coloured(C.bold, `  #${issue.number}: ${issue.title}`));
+  log(`  State: ${issue.state}  |  Labels: ${issue.labels.join(', ') || 'none'}`);
+  log(`  Author: ${issue.user}  |  Comments: ${issue.commentCount}`);
+  log('');
+
+  if (issue.body) {
+    const bodyPreview = issue.body.length > 300
+      ? issue.body.slice(0, 300) + '...'
+      : issue.body;
+    log(coloured(C.dim, `  ${bodyPreview.replace(/\n/g, '\n  ')}`));
+    log('');
+  }
+
+  // Auto-start a build session with the issue prompt
+  const prompt = issueToPrompt(issue);
+  log(coloured(C.yellow, '  Starting build session from issue...\n'));
+
+  // Reuse the build flow with the generated prompt
+  positional[2] = prompt;
+  await cmdBuild();
+}
+
 const commands = {
   help: cmdHelp,
   projects: cmdProjects,
@@ -1066,6 +1115,7 @@ const commands = {
   replay: cmdReplay,
   autopilot: cmdAutopilot,
   intelligence: cmdIntelligence,
+  issue: cmdIssue,
   providers: cmdProviders,
   'security-scan': cmdSecurityScan,
   init: cmdInit,

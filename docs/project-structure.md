@@ -67,7 +67,7 @@ hAIvemind/
 |------|-------------|
 | **inputSanitizer.js** | Express middleware: control char stripping, prototype pollution blocking, depth/array limiting |
 
-### Services (46 files)
+### Services (51 files)
 
 <details>
 <summary>Full service module listing</summary>
@@ -120,6 +120,11 @@ hAIvemind/
 | **promptGuard.js** | Prompt injection detection (16 patterns, 5 categories) and sanitization |
 | **credentialRedactor.js** | API key/token/password redaction (12 credential patterns) |
 | **cliDashboard.js** | ANSI terminal dashboard — task progress, agent sparkline, cost meter |
+| **repoMap.js** | AST-aware symbol extraction for 8 languages — function/class/export mapping for orchestrator context |
+| **githubIssues.js** | GitHub issue fetching via raw API, URL/ref parsing, issue→prompt conversion |
+| **taskCheckpoints.js** | Per-task workspace snapshots via git write-tree, granular rollback, diff comparison |
+| **crossProjectLearning.js** | Global pattern promotion/search across projects, cross-project context injection |
+| **streamingDiffs.js** | Real-time file watcher with debouncing, git diff integration, WebSocket diff broadcast |
 
 </details>
 

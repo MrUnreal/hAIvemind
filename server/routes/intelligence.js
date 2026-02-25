@@ -1,7 +1,9 @@
 /**
- * server/routes/intelligence.js — REST endpoints for Phase 14 intelligence subsystems
+ * server/routes/intelligence.js — REST endpoints for Phase 14+ intelligence subsystems
  *
- * Exposes: vector memory, pattern bank, task routing, knowledge graph.
+ * Exposes: vector memory, pattern bank, task routing, knowledge graph,
+ *          repo map (20.0), GitHub issues (20.1), checkpoints (20.2),
+ *          cross-project learning (20.3).
  * All project-scoped under /projects/:slug/intelligence/*.
  */
 
@@ -11,6 +13,9 @@ import { searchVectors, storeVector, removeVector, getVectorStats } from '../ser
 import { recallPatterns, getPatternStats, recallModelPatterns, getPatternsAsContext } from '../services/patternBank.js';
 import { getRoutingStats, resetRouting } from '../services/taskRouter.js';
 import { getGraph, getGraphStats, getGraphContext, saveGraph } from '../services/knowledgeGraph.js';
+import { buildRepoMap } from '../services/repoMap.js';
+import { parseIssueRef, fetchIssue, issueToPrompt } from '../services/githubIssues.js';
+import { promoteToGlobal, searchCrossProject, autoPromotePatterns, getCrossProjectContext } from '../services/crossProjectLearning.js';
 
 const router = Router();
 
@@ -166,6 +171,83 @@ router.post('/projects/:slug/intelligence/graph/edges', (req, res) => {
   graph.addEdge(source, target, type, weight || 1, metadata || {});
   saveGraph(req.params.slug);
   res.json({ ok: true });
+});
+
+// ═══════════════════════════════════════════════════════════════════
+//  Phase 20.0 — AST-Aware Repo Map
+// ═══════════════════════════════════════════════════════════════════
+
+/** Build and return repo map for the project */
+router.get('/projects/:slug/intelligence/repomap', async (req, res) => {
+  if (!requireProject(req, res)) return;
+  const project = refs.workspace.getProject(req.params.slug);
+  try {
+    const map = await buildRepoMap(project.path);
+    res.json({
+      stats: map.stats,
+      context: map.toPromptContext(),
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ═══════════════════════════════════════════════════════════════════
+//  Phase 20.1 — GitHub Issue Integration
+// ═══════════════════════════════════════════════════════════════════
+
+/** Fetch a GitHub issue and return it as a decomposition prompt */
+router.post('/projects/:slug/intelligence/issue', async (req, res) => {
+  if (!requireProject(req, res)) return;
+  const { ref } = req.body || {};
+  if (!ref) return res.status(400).json({ error: 'Issue ref required (e.g. "owner/repo#123" or URL)' });
+  const parsed = parseIssueRef(ref);
+  if (!parsed) return res.status(400).json({ error: 'Invalid issue ref format' });
+  try {
+    const issue = await fetchIssue(parsed.owner, parsed.repo, parsed.number);
+    const prompt = issueToPrompt(issue);
+    res.json({ issue, prompt });
+  } catch (err) {
+    res.status(err.message.includes('404') ? 404 : 500).json({ error: err.message });
+  }
+});
+
+// ═══════════════════════════════════════════════════════════════════
+//  Phase 20.3 — Cross-Project Learning
+// ═══════════════════════════════════════════════════════════════════
+
+/** Search cross-project patterns */
+router.get('/projects/:slug/intelligence/cross-project', (req, res) => {
+  if (!requireProject(req, res)) return;
+  const { q, k } = req.query;
+  if (!q) return res.status(400).json({ error: 'Query "q" required' });
+  const results = searchCrossProject(req.params.slug, q, k ? parseInt(k) : 5);
+  res.json(results);
+});
+
+/** Promote a pattern to global */
+router.post('/projects/:slug/intelligence/cross-project/promote', (req, res) => {
+  if (!requireProject(req, res)) return;
+  const { patternId, text, metadata } = req.body || {};
+  if (!patternId || !text) return res.status(400).json({ error: 'patternId and text required' });
+  promoteToGlobal(req.params.slug, patternId, text, metadata || {});
+  res.json({ ok: true });
+});
+
+/** Auto-promote successful patterns */
+router.post('/projects/:slug/intelligence/cross-project/auto-promote', (req, res) => {
+  if (!requireProject(req, res)) return;
+  const promoted = autoPromotePatterns(req.params.slug);
+  res.json({ promoted });
+});
+
+/** Get cross-project context for a prompt */
+router.get('/projects/:slug/intelligence/cross-project/context', (req, res) => {
+  if (!requireProject(req, res)) return;
+  const { q } = req.query;
+  if (!q) return res.status(400).json({ error: 'Query "q" required' });
+  const context = getCrossProjectContext(req.params.slug, q);
+  res.json({ context });
 });
 
 export default router;
