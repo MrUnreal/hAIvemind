@@ -7,41 +7,36 @@ import { test, expect } from '@playwright/test';
 
 // ─── 14.0 Vector Memory ─────────────────────────────────────────────
 test.describe('Vector Memory — HNSW & Embeddings', () => {
-  test('embed() produces fixed-dimension vectors', async () => {
+  test('embed() produces correct vectors (dimension, normalization, empty)', async () => {
     const { embed } = await import('../server/services/vectorMemory.js');
+
+    // Fixed dimension
     const vec = embed('hello world');
     expect(vec).toBeInstanceOf(Float32Array);
     expect(vec.length).toBe(128);
-  });
 
-  test('embed() produces normalized vectors', async () => {
-    const { embed } = await import('../server/services/vectorMemory.js');
-    const vec = embed('test normalization check');
+    // L2-normalized
     let norm = 0;
     for (let i = 0; i < vec.length; i++) norm += vec[i] * vec[i];
     expect(Math.abs(Math.sqrt(norm) - 1)).toBeLessThan(0.001);
+
+    // Empty string → zero vector
+    const empty = embed('');
+    expect(empty.every(v => v === 0)).toBe(true);
   });
 
-  test('embed() returns zero vector for empty string', async () => {
-    const { embed } = await import('../server/services/vectorMemory.js');
-    const vec = embed('');
-    expect(vec.every(v => v === 0)).toBe(true);
-  });
-
-  test('cosineSimilarity returns 1 for identical vectors', async () => {
+  test('cosineSimilarity measures identity and relative distance', async () => {
     const { embed, cosineSimilarity } = await import('../server/services/vectorMemory.js');
+
+    // Identical vectors → 1
     const vec = embed('identical test');
     expect(cosineSimilarity(vec, vec)).toBeCloseTo(1, 5);
-  });
 
-  test('similar texts have higher similarity than dissimilar', async () => {
-    const { embed, cosineSimilarity } = await import('../server/services/vectorMemory.js');
+    // Similar texts closer than dissimilar
     const vecA = embed('create express api endpoint');
     const vecB = embed('build express rest route');
     const vecC = embed('deploy kubernetes cluster');
-    const simAB = cosineSimilarity(vecA, vecB);
-    const simAC = cosineSimilarity(vecA, vecC);
-    expect(simAB).toBeGreaterThan(simAC);
+    expect(cosineSimilarity(vecA, vecB)).toBeGreaterThan(cosineSimilarity(vecA, vecC));
   });
 
   test('HNSWIndex insert and search works', async () => {
@@ -52,7 +47,7 @@ test.describe('Vector Memory — HNSW & Embeddings', () => {
     index.insert('c', embed('express route handler'), { label: 'route' });
     const results = index.search(embed('api route express'), 2);
     expect(results.length).toBe(2);
-    expect(['a', 'c']).toContain(results[0].id); // both are express-related
+    expect(['a', 'c']).toContain(results[0].id);
   });
 
   test('HNSWIndex serialization roundtrip', async () => {
@@ -83,7 +78,7 @@ test.describe('Vector Memory — HNSW & Embeddings', () => {
     const index = new HNSWIndex();
     index.insert('a', embed('original text'), { v: 1 });
     index.insert('a', embed('updated text'), { v: 2 });
-    expect(index.size).toBe(1); // Should not duplicate
+    expect(index.size).toBe(1);
     const results = index.search(embed('updated'), 1);
     expect(results[0].data.v).toBe(2);
   });
@@ -94,7 +89,6 @@ test.describe('Vector Memory — HNSW & Embeddings', () => {
     index.insert('a', embed('express api server'));
     index.insert('b', embed('quantum physics lecture notes'));
     const results = index.search(embed('express api'), 10, 0.5);
-    // Only close matches should appear
     expect(results.length).toBeLessThanOrEqual(1);
   });
 });
@@ -115,11 +109,9 @@ test.describe('Pattern Bank — Learning', () => {
 
   test('PATTERN_TYPES has all expected categories', async () => {
     const { PATTERN_TYPES } = await import('../server/services/patternBank.js');
-    expect(PATTERN_TYPES).toHaveProperty('DECOMPOSITION');
-    expect(PATTERN_TYPES).toHaveProperty('MODEL_SUCCESS');
-    expect(PATTERN_TYPES).toHaveProperty('FAILURE_FIX');
-    expect(PATTERN_TYPES).toHaveProperty('TASK_STRATEGY');
-    expect(PATTERN_TYPES).toHaveProperty('ESCALATION');
+    for (const key of ['DECOMPOSITION', 'MODEL_SUCCESS', 'FAILURE_FIX', 'TASK_STRATEGY', 'ESCALATION']) {
+      expect(PATTERN_TYPES).toHaveProperty(key);
+    }
   });
 
   test('recordDecompositionPattern skips low success rate', async () => {
@@ -132,7 +124,7 @@ test.describe('Pattern Bank — Learning', () => {
       ],
       stats: { waves: 1, splits: 0 },
     });
-    expect(result).toBeNull(); // < 50% success → not stored
+    expect(result).toBeNull();
   });
 
   test('getPatternsAsContext returns empty for new project', async () => {
@@ -151,8 +143,10 @@ test.describe('Task Router — Learned Routing', () => {
     expect(result).toBeNull();
   });
 
-  test('recordOutcome tracks success/failure', async () => {
-    const { recordOutcome, getRoutingStats, resetRouting } = await import('../server/services/taskRouter.js');
+  test('recordOutcome tracks stats and enables recommendations', async () => {
+    const { recordOutcome, getRoutingStats, getRecommendedModel, resetRouting } = await import('../server/services/taskRouter.js');
+
+    // Track outcomes
     resetRouting('test-routing-record');
     recordOutcome('test-routing-record', 'Add unit tests', 'gpt-5.1', 'T0', true, 5000);
     recordOutcome('test-routing-record', 'Add unit tests', 'gpt-5.1', 'T0', true, 4000);
@@ -161,12 +155,9 @@ test.describe('Task Router — Learned Routing', () => {
     expect(stats.categories).toHaveProperty('testing');
     expect(stats.categories.testing[0].model).toBe('gpt-5.1');
     expect(stats.categories.testing[0].total).toBe(3);
-  });
 
-  test('getRecommendedModel returns recommendation after enough observations', async () => {
-    const { recordOutcome, getRecommendedModel, resetRouting } = await import('../server/services/taskRouter.js');
+    // Enough observations → recommendation
     resetRouting('test-routing-recommend');
-    // Record enough observations
     for (let i = 0; i < 5; i++) {
       recordOutcome('test-routing-recommend', 'Create API route', 'gpt-5.1', 'T0', true, 3000);
     }
@@ -179,21 +170,17 @@ test.describe('Task Router — Learned Routing', () => {
 
 // ─── 14.4 Knowledge Graph ───────────────────────────────────────────
 test.describe('Knowledge Graph', () => {
-  test('addNode and getNodesByType work', async () => {
-    const { KnowledgeGraph, NODE_TYPES } = await import('../server/services/knowledgeGraph.js');
+  test('addNode/addEdge and query operations', async () => {
+    const { KnowledgeGraph, NODE_TYPES, EDGE_TYPES } = await import('../server/services/knowledgeGraph.js');
     const graph = new KnowledgeGraph();
     graph.addNode('f1', NODE_TYPES.FILE, 'server.js');
     graph.addNode('f2', NODE_TYPES.FILE, 'index.js');
     graph.addNode('t1', NODE_TYPES.TASK, 'Build server');
-    const files = graph.getNodesByType(NODE_TYPES.FILE);
-    expect(files).toHaveLength(2);
-  });
 
-  test('addEdge and getEdgesFrom work', async () => {
-    const { KnowledgeGraph, NODE_TYPES, EDGE_TYPES } = await import('../server/services/knowledgeGraph.js');
-    const graph = new KnowledgeGraph();
-    graph.addNode('f1', NODE_TYPES.FILE, 'server.js');
-    graph.addNode('t1', NODE_TYPES.TASK, 'Build server');
+    // getNodesByType
+    expect(graph.getNodesByType(NODE_TYPES.FILE)).toHaveLength(2);
+
+    // addEdge + getEdgesFrom
     graph.addEdge('f1', 't1', EDGE_TYPES.MODIFIED_BY);
     const edges = graph.getEdgesFrom('f1', EDGE_TYPES.MODIFIED_BY);
     expect(edges).toHaveLength(1);
