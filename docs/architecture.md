@@ -113,9 +113,43 @@ sequenceDiagram
 | **index.js** | Express + WS server, session lifecycle, REST API, iteration handler, verify-fix loop |
 | **orchestrator.js** | Calls T3 model for: task decomposition, code verification, failure analysis |
 | **taskRunner.js** | DAG scheduler — dependency resolution, dynamic concurrency scaling (8→20), speculative execution, wave detection, task splitting, retry/escalation |
-| **agentManager.js** | Spawns `copilot` CLI processes, streams output, tracks agent lifecycle |
+| **agentManager.js** | Spawns `copilot` CLI processes, streams output, tracks agent lifecycle. Integrates prompt guard and credential redaction. |
 | **config.js** | Model definitions, tier defaults, escalation chain |
 | **workspace.js** | Creates per-project directories, manages session persistence |
+
+### Intelligence Layer (Phase 14)
+
+| Module | Role |
+|--------|------|
+| **vectorMemory.js** | Pure-JS HNSW index with FNV-1a trigram embeddings (128-dim). Cosine similarity search, project-scoped indices. |
+| **patternBank.js** | Records decomposition/model/failure patterns. 12-category task categorization. Few-shot context injection. |
+| **taskRouter.js** | Epsilon-greedy learned model routing (15% exploration). Tracks success per model per category. |
+| **knowledgeGraph.js** | Adjacency-list graph: file↔task, error↔fix relationships. Multi-hop traversal, degree ranking. |
+
+### Backends (Phase 15)
+
+| Module | Role |
+|--------|------|
+| **copilot.js** | GitHub Copilot CLI — default, free-tier backend |
+| **ollama.js** | Local Ollama models |
+| **anthropic.js** | Direct Anthropic Messages API (no SDK) — simulated ChildProcess |
+| **openai.js** | Direct OpenAI Chat Completions API (no SDK) — simulated ChildProcess |
+| **providerFailover.js** | Health tracking (3-strike cooldown), tier→provider mapping, automatic failover |
+
+### Swarm Intelligence (Phase 16)
+
+| Module | Role |
+|--------|------|
+| **topologies.js** | 5 swarm topologies (flat/hierarchical/ring/star/mesh), factory pattern |
+| **consensus.js** | 3 consensus strategies (majority-vote/quality-ranked/merge), confidence scoring |
+
+### Security (Phase 18)
+
+| Module | Role |
+|--------|------|
+| **inputSanitizer.js** | Express middleware: control chars, prototype pollution, depth/array limits |
+| **promptGuard.js** | 16 injection patterns across 5 categories, risk scoring, output leak scanning |
+| **credentialRedactor.js** | 12 credential patterns (API keys, private keys, JWT, bearer tokens, DB URLs) |
 
 ### Client
 
@@ -160,6 +194,13 @@ All messages are JSON: `{ type: string, payload: object }`
 | `swarm:wave` | `{ wave, totalWaves, stats }` | Wave progress update |
 | `task:speculative` | `{ taskId, pendingDeps }` | Task started speculatively |
 | `task:split` | `{ taskId, subTasks }` | Task split into sub-tasks |
+| `injection:detected` | `{ prompt, threats }` | Prompt injection blocked |
+| `credential:redacted` | `{ agentId, count }` | Credentials stripped from output |
+| `provider:failover` | `{ from, to, reason }` | Backend failover triggered |
+| `swarm:topology` | `{ type, assignments }` | Swarm topology applied |
+| `swarm:consensus` | `{ strategy, winnerId }` | Multi-agent consensus result |
+| `pattern:learned` | `{ type, category }` | New pattern recorded |
+| `routing:decision` | `{ model, reason }` | Learned routing applied |
 
 ## Verify-Fix Loop
 

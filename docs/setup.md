@@ -31,13 +31,26 @@ export COPILOT_CMD=/path/to/your/copilot
 git clone git@github.com:MrUnreal/hAIvemind.git
 cd hAIvemind
 npm install          # installs server + client dependencies
+cp .env.example .env # configure environment
 ```
 
-Copy the example environment file:
+## Quick Start with Docker
+
+If you prefer Docker over a local Node.js setup:
 
 ```bash
+git clone git@github.com:MrUnreal/hAIvemind.git && cd hAIvemind
 cp .env.example .env
+docker compose up -d     # → http://localhost:3000
 ```
+
+Docker commands:
+
+| Command | Description |
+|---------|-------------|
+| `npm run docker:build` | Build the container image |
+| `npm run docker:up` | Start in background |
+| `npm run docker:down` | Stop and remove containers |
 
 ## Running
 
@@ -95,7 +108,10 @@ All variables have sensible defaults. Override via `.env` or environment:
 | `HAIVEMIND_INTERRUPT_KILL_DELAY_MS` | `3000` | Interrupt → force-kill delay |
 | `HAIVEMIND_SHUTDOWN_FORCE_EXIT_MS` | `10000` | Shutdown force-exit timeout |
 | `HAIVEMIND_ANALYSIS_RACE_TIMEOUT_MS` | `3000` | Workspace analysis race timeout |
-| `HAIVEMIND_DEFAULT_BACKEND` | `copilot` | Agent backend (`copilot` or `ollama`) |
+| `HAIVEMIND_DEFAULT_BACKEND` | `copilot` | Agent backend (`copilot`, `ollama`, `anthropic`, `openai`) |
+| `ANTHROPIC_API_KEY` | — | Required for Anthropic backend |
+| `OPENAI_API_KEY` | — | Required for OpenAI backend |
+| `HAIVEMIND_OLLAMA_HOST` | `http://localhost:11434` | Ollama server URL |
 | `HAIVEMIND_SWARM_ENABLED` | `false` | Enable multi-workspace swarm |
 | `HAIVEMIND_PLUGINS_DIR` | `plugins` | Plugin directory |
 | `HAIVEMIND_PLUGINS_AUTOLOAD` | `true` | Auto-load plugins on startup |
@@ -120,3 +136,22 @@ All variables have sensible defaults. Override via `.env` or environment:
 
 **WebSocket disconnects**
 → Check that both server and client are running. The Vite dev server proxies `/ws` to the backend.
+
+**Anthropic/OpenAI backend not working**
+→ Set the API key in `.env`: `ANTHROPIC_API_KEY=sk-ant-...` or `OPENAI_API_KEY=sk-...`. The backend returns an error process if no key is configured.
+
+**Demo mode (no API keys needed)**
+→ Run `npm run dev:mock` to start with simulated agents. No Copilot CLI or API keys required.
+
+## Multi-Provider Setup
+
+hAIvemind supports 4 agent backends. You can switch backends at runtime via the UI settings or REST API.
+
+| Backend | Requirement | Cost |
+|---------|-------------|------|
+| **Copilot** (default) | GitHub Copilot CLI on PATH | Free tier (T0) included with subscription |
+| **Ollama** | [Ollama](https://ollama.ai) running locally | Free (local models) |
+| **Anthropic** | `ANTHROPIC_API_KEY` in `.env` | Pay-per-use |
+| **OpenAI** | `OPENAI_API_KEY` in `.env` | Pay-per-use |
+
+Provider failover is automatic — if one backend goes down, requests route to the next healthy provider in the tier's fallback chain.

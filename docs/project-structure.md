@@ -33,7 +33,7 @@ hAIvemind/
 | **snapshot.js** | — | Git-based workspace snapshots (pre/post-session tags, rollback). |
 | **workspaceAnalyzer.js** | — | Static analysis of workspace files (package.json, tsconfig, etc.). |
 
-### Route Modules (22 files)
+### Route Modules (23 files)
 
 | File | Description |
 |------|-------------|
@@ -61,7 +61,13 @@ hAIvemind/
 | **taskManagement.js** | Task deps, retry/recovery, decomposition, pipelines |
 | **agentConfig.js** | Cost budgets, global search, agent profiles, dashboard widgets |
 
-### Services (42 files)
+### Middleware (`middleware/` — 1 file)
+
+| File | Description |
+|------|-------------|
+| **inputSanitizer.js** | Express middleware: control char stripping, prototype pollution blocking, depth/array limiting |
+
+### Services (46 files)
 
 <details>
 <summary>Full service module listing</summary>
@@ -134,7 +140,7 @@ hAIvemind/
 | **ollama.js** | Ollama local model backend |
 | **anthropic.js** | Direct Anthropic Messages API backend |
 | **openai.js** | Direct OpenAI Chat Completions API backend |
-| **index.js** | Backend registry and switching |
+| **backends/index.js** | Backend registry and switching |
 
 ### Swarm (`swarm/` — 6 files)
 
