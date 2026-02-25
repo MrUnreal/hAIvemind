@@ -14,11 +14,11 @@
   <img src="https://img.shields.io/badge/Vue%203-Flow%20DAG-4FC08D?logo=vue.js" alt="Vue 3">
   <img src="https://img.shields.io/badge/Copilot%20CLI-Agent%20Backend-0078D4?logo=github" alt="Copilot CLI">
   <img src="https://img.shields.io/badge/Cost-Free_Tier_Default-brightgreen" alt="Free">
-  <img src="https://img.shields.io/badge/Tests-1778_passing-blue" alt="1778 Tests">
+  <img src="https://img.shields.io/badge/Tests-1867_passing-blue" alt="1867 Tests">
   <img src="https://img.shields.io/badge/Self--Evolving-🧬-blueviolet" alt="Self-Evolving">
 </p>
 
-> **Every line of this codebase was written by hAIvemind itself.** The platform decomposes its own feature requests, spawns agents to implement them, verifies the results, and merges passing changes. 31K+ lines, 1778 tests, zero manual code.
+> **Every line of this codebase was written by hAIvemind itself.** The platform decomposes its own feature requests, spawns agents to implement them, verifies the results, and merges passing changes. 33K+ lines, 1867 tests, zero manual code.
 
 ---
 
@@ -109,6 +109,11 @@ sequenceDiagram
 | **Bulk Session Actions** | Multi-select sessions for batch export (JSON/MD) or delete with action bar |
 | **Agent Output Annotations** | Clickable file paths + line numbers in console output and workspace file tree |
 | **Smart Retry Policies** | Per-project retry config: backoff strategies, skip-after-N failures, validation |
+| **Vector Memory** | HNSW index with trigram embeddings — semantic recall of past patterns and decisions |
+| **Learned Routing** | Epsilon-greedy model selection based on historical success rates per task category |
+| **Multi-Provider** | Copilot · Ollama · Anthropic · OpenAI — failover chains with health tracking |
+| **Security Hardening** | Input sanitization, prompt injection defense (16 patterns), credential redaction |
+| **Terminal Dashboard** | ANSI live dashboard with task progress, agent sparkline, cost meter |
 
 ## Architecture
 
@@ -118,10 +123,10 @@ graph TB
     UI["DAG · Chat · Settings · Diff Viewer"]
   end
 
-  subgraph Server["Server (Express · 73 modules)"]
+  subgraph Server["Server (Express · 82 modules)"]
     direction LR
-    R["Routes (22)"]
-    S["Services (38)"]
+    R["Routes (23)"]
+    S["Services (42)"]
     WS["WebSocket (3)"]
   end
 
@@ -131,6 +136,8 @@ graph TB
     AM --> BE["Backends"]
     BE --> CP["Copilot CLI"]
     BE --> OL["Ollama"]
+    BE --> AN["Anthropic"]
+    BE --> OA["OpenAI"]
     BE --> SW["Swarm"]
   end
 
@@ -143,9 +150,10 @@ graph TB
 
 | Layer | Modules |
 |-------|---------|
-| **Routes** | `health` · `sessions` · `backends` · `plugins` · `autopilot` · `projects` (re-exporter → 15 domain modules below) |
+| **Routes** | `health` · `sessions` · `backends` · `plugins` · `autopilot` · `intelligence` · `projects` (re-exporter → 15 domain modules below) |
 | **Project Routes** | `projectCore` · `webhooks` · `scheduling` · `notifications` · `security` · `templates` · `auditCollab` · `analytics` · `memory` · `resources` · `codeReview` · `events` · `sessionOps` · `taskManagement` · `agentConfig` |
-| **Services** | `sessions` · `analysis` · `recovery` · `shutdown` + 34 domain services (auth, webhooks, scheduler, monitoring, etc.) |
+| **Services** | `sessions` · `analysis` · `recovery` · `shutdown` · `vectorMemory` · `patternBank` · `taskRouter` · `knowledgeGraph` · `providerFailover` · `promptGuard` · `credentialRedactor` · `cliDashboard` + 30 domain services |
+| **Backends** | `copilot` · `ollama` · `anthropic` · `openai` (abstract base + registry) |
 | **WebSocket** | `setup` · `broadcast` · `handlers` |
 | **State** | `state.js` — shared refs bag for cross-module access |
 | **Entry** | `index.js` — 142 lines of thin wiring |
@@ -157,8 +165,11 @@ graph TB
 ```bash
 haivemind projects                              # List projects
 haivemind build my-app "Add JWT auth"           # Build something
+haivemind dashboard my-app "Add auth"           # Live terminal dashboard
 haivemind autopilot my-app --cycles=5           # Autonomous mode
-haivemind status                                # Session status
+haivemind intelligence my-app                   # Learning stats
+haivemind providers                             # Provider health
+haivemind security-scan "text to check"         # Security scan
 npm test                                        # 466 Playwright tests
 ```
 
@@ -181,7 +192,7 @@ npm test                                        # 466 Playwright tests
 
 ## Status
 
-All 12 phases shipped. 70 test files. 1778 tests. ~31K lines. 100% self-built.
+All 16 phases shipped. 75 test files. 1867 tests. ~33K lines. 100% self-built.
 
 | Phase | What |
 |-------|------|
@@ -193,6 +204,11 @@ All 12 phases shipped. 70 test files. 1778 tests. ~31K lines. 100% self-built.
 | 5 — Autonomy | Shutdown/recovery, CLI, autopilot, plugins, Docker |
 | 6 — Production | CI, logging, streaming, diff viewer, WS channels, server decomposition |
 | 7 — Quality of Life | Command palette, keyboard shortcuts, swarm parallelism, toast notifications |
+| 14 — Intelligence | Vector memory (HNSW), pattern bank, learned routing, knowledge graph |
+| 15 — Multi-Provider | Anthropic + OpenAI backends, provider failover chains |
+| 16 — Swarm Intelligence | 5 topology types, 3 consensus strategies |
+| 18 — Security | Input sanitization, prompt injection defense, credential redaction |
+| 19 — Enhanced CLI | Intelligence/provider/security commands, terminal dashboard |
 
 ## License
 

@@ -36,6 +36,7 @@ import backendsRouter from './routes/backends.js';
 import pluginsRouter from './routes/plugins.js';
 import autopilotRouter from './routes/autopilot.js';
 import authRouter from './routes/auth.js';
+import intelligenceRouter from './routes/intelligence.js';
 
 // ── WebSocket ──
 import { createWss } from './ws/setup.js';
@@ -47,6 +48,7 @@ import { pruneCompletedSessions } from './services/sessions.js';
 import { cleanupExpiredTokens } from './services/auth.js';
 import { pruneStale as pruneRateBuckets } from './services/rateLimiter.js';
 import { broadcast } from './ws/broadcast.js';
+import { inputSanitizer } from './middleware/inputSanitizer.js';
 
 // ── Paths ──
 const __filename = fileURLToPath(import.meta.url);
@@ -57,6 +59,7 @@ const DEMO = process.env.DEMO === '1' || process.argv.includes('--mock');
 const workspace = new WorkspaceManager();
 const app = express();
 app.use(express.json());
+app.use(inputSanitizer);
 const server = createServer(app);
 
 // ── WebSocket server ──
@@ -94,6 +97,7 @@ app.use('/api', backendsRouter);
 app.use('/api', pluginsRouter);
 app.use('/api', autopilotRouter);
 app.use('/api', authRouter);
+app.use('/api', intelligenceRouter);
 
 // ── Global Express error handler (must be after all routes) ──
 app.use((err, _req, res, _next) => {
@@ -155,8 +159,11 @@ process.on('SIGINT', gracefulShutdown);
 // ── Crash-safety handlers ──
 process.on('unhandledRejection', (err) => {
   log.error(`[server] Unhandled rejection: ${err?.message || err}`);
+  if (err?.stack) log.error(err.stack);
 });
 process.on('uncaughtException', (err) => {
   log.error(`[server] Uncaught exception: ${err?.message || err}`);
+  if (err?.stack) log.error(err.stack);
   gracefulShutdown();
 });
+

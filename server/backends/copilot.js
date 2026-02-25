@@ -32,6 +32,7 @@ export default class CopilotBackend extends AgentBackend {
 
     const child = spawn(modelConfig.cmd, fullArgs, {
       cwd: workDir,
+      stdio: ['ignore', 'pipe', 'pipe'],
       env: { ...process.env },
     });
 

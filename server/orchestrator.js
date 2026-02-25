@@ -1,6 +1,8 @@
 import { spawn } from 'node:child_process';
 import config, { getOrchestratorModel } from './config.js';
 import { withTimeout } from './processTimeout.js';
+import { getPatternsAsContext } from './services/patternBank.js';
+import { getGraphContext } from './services/knowledgeGraph.js';
 
 /**
  * Planner mode: Research and evaluate a feature proposal before decomposing.
@@ -47,6 +49,7 @@ Output ONLY valid JSON (no markdown fences, no preamble):
     let timedOut = false;
     const child = spawn(modelConfig.cmd, fullArgs, {
       cwd: workDir,
+      stdio: ['ignore', 'pipe', 'pipe'],
       env: { ...process.env },
     });
 
@@ -91,7 +94,7 @@ Output ONLY valid JSON (no markdown fences, no preamble):
  * Call the orchestrator (T3) model to decompose a user prompt into tasks.
  * Returns a plan: { tasks: [{ id, label, description, dependencies }] }
  */
-export async function decompose(userPrompt, workDir, { fileTree, skills, workspaceAnalysis } = {}) {
+export async function decompose(userPrompt, workDir, { fileTree, skills, workspaceAnalysis, projectSlug } = {}) {
   const { modelName, modelConfig } = getOrchestratorModel();
   const timeoutMs = config.orchestratorTimeoutMs;
   const timeoutMinutes = Math.round(timeoutMs / 60000);
@@ -164,6 +167,15 @@ When modifying an existing project (file tree provided below), reference specifi
     }
   }
 
+  // Phase 14: Inject learned patterns and knowledge graph context
+  if (projectSlug) {
+    const patternCtx = getPatternsAsContext(projectSlug, userPrompt);
+    if (patternCtx) prompt += '\n\n' + patternCtx;
+
+    const graphCtx = getGraphContext(projectSlug, userPrompt);
+    if (graphCtx) prompt += '\n\n' + graphCtx;
+  }
+
   // Use --silent for clean output (no stats), --allow-all for non-interactive
   // Note: --add-dir is NOT passed here to avoid output truncation.
   // Instead, callers can pass fileTree for codebase context.
@@ -177,6 +189,7 @@ When modifying an existing project (file tree provided below), reference specifi
 
     const child = spawn(modelConfig.cmd, fullArgs, {
       cwd: workDir,
+      stdio: ['ignore', 'pipe', 'pipe'],
       env: { ...process.env },
     });
 
@@ -306,6 +319,7 @@ If everything looks good, set passed=true. Each fix task should target ONE file.
     let timedOut = false;
     const child = spawn(modelConfig.cmd, fullArgs, {
       cwd: workDir,
+      stdio: ['ignore', 'pipe', 'pipe'],
       env: { ...process.env },
     });
 
@@ -318,6 +332,7 @@ If everything looks good, set passed=true. Each fix task should target ONE file.
         console.warn(`[orchestrator] Verification timed out after ${timeoutMinutes} minutes`);
         resolve({ passed: false, issues: [`Verification timed out after ${timeoutMinutes} minutes`], followUpTasks: [] });
       }
+      // Non-timeout errors (e.g. non-zero exit) are handled by the 'close' handler
     });
 
     child.on('close', (code) => {
@@ -381,6 +396,7 @@ Analyze the failure and output ONLY valid JSON (no markdown fences):
     let timedOut = false;
     const child = spawn(modelConfig.cmd, fullArgs, {
       cwd: workDir,
+      stdio: ['ignore', 'pipe', 'pipe'],
       env: { ...process.env },
     });
 

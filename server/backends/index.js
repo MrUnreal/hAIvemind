@@ -1,14 +1,20 @@
 import CopilotBackend from './copilot.js';
 import OllamaBackend from './ollama.js';
+import AnthropicBackend from './anthropic.js';
+import OpenAIBackend from './openai.js';
 
 export { default as AgentBackend } from './base.js';
 export { default as CopilotBackend } from './copilot.js';
 export { default as OllamaBackend } from './ollama.js';
+export { default as AnthropicBackend } from './anthropic.js';
+export { default as OpenAIBackend } from './openai.js';
 
 /** Registry of available backend classes by name */
 const registry = new Map([
   ['copilot', CopilotBackend],
   ['ollama', OllamaBackend],
+  ['anthropic', AnthropicBackend],
+  ['openai', OpenAIBackend],
 ]);
 
 /**
