@@ -332,3 +332,64 @@ Currently single-user, no auth. Fine for local dev, but blocks team usage or hos
 | **13.6 — Notifications** | ❌ | In-app notification system, notification preferences, read/unread state, WebSocket push |
 | **13.7 — Team Analytics** | ❌ | Per-user contribution stats, team velocity metrics, collaboration patterns, leaderboards |
 | **13.8 — API Keys** | ❌ | API key management for programmatic access, key scopes, rate limiting per key, usage tracking |
+
+---
+
+## Phase 14 — Intelligence & Learning ✅
+
+> Competitive gap closure: vector memory, pattern learning, intelligent routing, knowledge graphs.
+> Inspired by claude-flow's HNSW + SONA claims, but with real working implementations.
+
+| Sub-phase | Status | Details |
+|-----------|--------|---------|
+| **14.0 — Vector Memory** | ✅ | Pure-JS HNSW index with FNV-1a trigram embeddings (128-dim), cosine similarity, project-scoped indices, disk persistence to `.haivemind/vectors/` |
+| **14.1 — Pattern Bank** | ✅ | Records decomposition/model/failure patterns, 12-category task categorization, stored in vector memory + flat JSON, few-shot context injection |
+| **14.2 — Intelligent Task Router** | ✅ | Epsilon-greedy learned model routing (15% exploration), tracks success/failures per model per category, replaces static escalation when data sufficient |
+| **14.3 — Intelligence REST API** | ✅ | REST endpoints under `/projects/:slug/intelligence/` — vectors, patterns, routing stats, graph queries |
+| **14.4 — Knowledge Graph** | ✅ | Adjacency-list graph tracking file↔task, error↔fix, tech↔project relationships; multi-hop traversal; degree ranking; disk persistence |
+
+---
+
+## Phase 15 — Multi-Provider Backend ✅
+
+> Direct API backends for Anthropic and OpenAI, plus automatic provider failover.
+
+| Sub-phase | Status | Details |
+|-----------|--------|---------|
+| **15.0 — Anthropic Backend** | ✅ | Direct Anthropic Messages API via HTTPS (no SDK), simulated ChildProcess with EventEmitter + Readable streams, requires ANTHROPIC_API_KEY |
+| **15.1 — OpenAI Backend** | ✅ | Direct OpenAI Chat Completions API via HTTPS (no SDK), same simulated ChildProcess pattern, requires OPENAI_API_KEY |
+| **15.2 — Provider Failover** | ✅ | Provider health tracking (3-strike cooldown, 60s recovery), tier→provider mapping with fallback chains, `spawnWithFailover()` automatic retry |
+
+---
+
+## Phase 16 — Swarm Intelligence ✅
+
+> Advanced swarm topologies and multi-agent consensus protocols.
+
+| Sub-phase | Status | Details |
+|-----------|--------|---------|
+| **16.0 — Swarm Topologies** | ✅ | 5 topology types (flat/hierarchical/ring/star/mesh), factory pattern, task assignment algorithms, communication protocols |
+| **16.1 — Consensus Protocol** | ✅ | 3 strategies (majority-vote/quality-ranked/merge), Jaccard similarity, tier-quality scoring, confidence metrics |
+
+---
+
+## Phase 18 — Security Hardening ✅
+
+> Input sanitization, prompt injection defense, and credential safety.
+
+| Sub-phase | Status | Details |
+|-----------|--------|---------|
+| **18.0 — Input Sanitization** | ✅ | Express middleware: control char stripping, depth limiting (10), array truncation (1000), prototype pollution blocking, Infinity/NaN rejection |
+| **18.1 — Prompt Injection Defense** | ✅ | 16 injection patterns across 5 categories (override/hijack/exfiltration/obfuscation/role-confusion), risk scoring, output leak scanning |
+| **18.2 — Credential Safety** | ✅ | 12 credential patterns (API keys, private keys, JWT, bearer tokens, DB URLs), env var masking, containsCredentials() check |
+
+---
+
+## Phase 19 — Enhanced CLI & Terminal Dashboard ✅
+
+> New CLI commands for intelligence, providers, security, plus live terminal dashboard.
+
+| Sub-phase | Status | Details |
+|-----------|--------|---------|
+| **19.0 — CLI Expansion** | ✅ | 4 new commands: `intelligence` (learning stats), `providers` (health status), `security-scan` (injection/credential check), `dashboard` (live build) |
+| **19.1 — Terminal Dashboard** | ✅ | ANSI box-drawing dashboard with task progress, agent sparkline, cost meter, real-time log tail, 4fps render loop |

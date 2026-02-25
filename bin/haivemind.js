@@ -118,6 +118,10 @@ ${coloured(C.bold, 'Usage:')}
   haivemind ${coloured(C.green, 'status')} <slug>                      Show project sessions
   haivemind ${coloured(C.green, 'build')} <slug> "<prompt>"            Run a session headlessly
   haivemind ${coloured(C.green, 'autopilot')} <slug>                    Run continuous self-improvement
+  haivemind ${coloured(C.green, 'dashboard')} <slug> "<prompt>"        Build with live terminal dashboard
+  haivemind ${coloured(C.green, 'intelligence')} <slug>                Show intelligence/learning stats
+  haivemind ${coloured(C.green, 'providers')}                          Show provider health status
+  haivemind ${coloured(C.green, 'security-scan')} "<text>"             Scan text for injections/credentials
   haivemind ${coloured(C.green, 'replay')} <slug> <sessionId>          Show session detail
   haivemind ${coloured(C.green, 'init')} [name]                        Create a new project (interactive)
   haivemind ${coloured(C.green, 'watch')} <slug> [--ext=js,ts]         Watch for file changes and trigger builds
@@ -745,7 +749,7 @@ async function cmdImport() {
 async function cmdCompletions() {
   const shell = positional[1] || 'bash';
 
-  const COMMANDS = 'projects status build autopilot replay init watch export import completions help';
+  const COMMANDS = 'projects status build dashboard autopilot replay init watch export import intelligence providers security-scan completions help';
 
   const scripts = {
     bash: `# hAIvemind bash completions — add to ~/.bashrc
@@ -784,13 +788,286 @@ Register-ArgumentCompleter -CommandName haivemind -ScriptBlock {
 
 // ── Dispatch ──────────────────────────────────────────────────────────────
 
+// ── Dashboard — Live Terminal Dashboard ──────────────────────────────────
+
+async function cmdDashboard() {
+  const slug = positional[1];
+  const prompt = positional[2];
+  if (!slug || !prompt) {
+    logErr('Usage: haivemind dashboard <slug> "<prompt>"');
+    process.exit(1);
+  }
+
+  const { WorkspaceManager, MSG } = await loadBackend();
+  const { decompose, decomposeMock, verify, AgentManager, TaskRunner, createSnapshot } = await loadOrchestration();
+  const { TerminalDashboard, createDashboardBroadcast } = await import('../server/services/cliDashboard.js');
+
+  const DEMO = MOCK;
+  const workspace = new WorkspaceManager();
+  const project = workspace.getProject(slug);
+  if (!project) { logErr(`Project "${slug}" not found`); process.exit(1); }
+
+  const dashboard = new TerminalDashboard({ slug });
+  const broadcast = createDashboardBroadcast(dashboard, MSG);
+
+  dashboard.start();
+  dashboard.updateStatus('running');
+
+  let exitCode = 0;
+
+  try {
+    const { sessionId, workDir } = workspace.startSession(slug, prompt);
+    dashboard.addLog(`Session ${sessionId.slice(0, 8)}`);
+
+    const snapshot = await createSnapshot(workDir, sessionId);
+    if (snapshot.type !== 'none') dashboard.addLog(`Snapshot: ${snapshot.type}`);
+
+    const skills = workspace.getSkills(slug);
+    const overrides = workspace.getProjectSettings(slug);
+
+    dashboard.addLog('Decomposing...');
+    let plan;
+    if (DEMO) {
+      plan = await decomposeMock(prompt);
+    } else {
+      plan = await decompose(prompt, workDir, { skills });
+    }
+
+    const tasks = plan.tasks || [];
+    const edges = [];
+    for (const t of tasks) {
+      for (const dep of (t.dependencies || [])) edges.push({ source: dep, target: t.id });
+    }
+
+    broadcast({ type: MSG.PLAN_CREATED, payload: { tasks, edges } });
+
+    const agentManager = new AgentManager(broadcast, DEMO, { skills, overrides });
+    const taskRunner = new TaskRunner(plan, agentManager, broadcast, workDir, { overrides });
+
+    await taskRunner.run();
+
+    if (!DEMO) {
+      for (let round = 0; round < 3; round++) {
+        broadcast({ type: MSG.VERIFY_STATUS, payload: { status: 'running', round } });
+        const result = await verify(plan, workDir, { skills });
+        if (result.passed) {
+          broadcast({ type: MSG.VERIFY_STATUS, payload: { status: 'passed' } });
+          break;
+        }
+        for (const fixTask of (result.followUpTasks || [])) {
+          await agentManager.spawn(fixTask, 0, workDir);
+        }
+      }
+    }
+
+    const costSummary = agentManager.getCostSummary();
+    const finalTasks = tasks.map(t => ({ ...t }));
+    workspace.finalizeSession(slug, sessionId, {
+      status: 'completed', tasks: finalTasks, edges,
+      agents: agentManager.getSessionSnapshot(), costSummary, snapshot,
+    });
+
+    broadcast({ type: MSG.SESSION_COMPLETE, payload: { costSummary } });
+
+    const failedTasks = finalTasks.filter(t => t.status === 'failed');
+    if (failedTasks.length > 0) exitCode = 1;
+
+    taskRunner.cleanup();
+    await agentManager.killAll();
+  } catch (err) {
+    dashboard.addLog(`ERROR: ${err.message}`);
+    dashboard.updateStatus('failed');
+    exitCode = 1;
+  }
+
+  // Keep dashboard visible for 2 seconds before exit
+  await new Promise(r => setTimeout(r, 2000));
+  dashboard.stop();
+  process.exit(exitCode);
+}
+
+// ── Intelligence — Show Learning Stats ───────────────────────────────────
+
+async function cmdIntelligence() {
+  const slug = positional[1];
+  if (!slug) { logErr('Usage: haivemind intelligence <slug>'); process.exit(1); }
+
+  const { getVectorStats } = await import('../server/services/vectorMemory.js');
+  const { getRoutingStats } = await import('../server/services/taskRouter.js');
+  const { getGraphStats } = await import('../server/services/knowledgeGraph.js');
+
+  const vectorStats = getVectorStats(slug);
+  const routingStats = getRoutingStats(slug);
+  let graphStats;
+  try {
+    const { getGraph } = await import('../server/services/knowledgeGraph.js');
+    const graph = getGraph(slug);
+    graphStats = graph ? { nodes: graph.nodeCount, edges: graph.edgeCount, mostConnected: graph.getMostConnected(3) } : null;
+  } catch {
+    graphStats = null;
+  }
+
+  if (JSON_MODE) {
+    out({ vectorMemory: vectorStats, taskRouting: routingStats, knowledgeGraph: graphStats });
+    return;
+  }
+
+  log(coloured(C.bold + C.cyan, `\n  Intelligence Stats: ${slug}\n`));
+
+  // Vector Memory
+  log(coloured(C.bold, '  Vector Memory'));
+  if (vectorStats) {
+    log(`    Vectors: ${vectorStats.size || 0}`);
+    log(`    Dimensions: ${vectorStats.dimensions || 128}`);
+  } else {
+    log(coloured(C.dim, '    No vector index for this project'));
+  }
+  log('');
+
+  // Task Routing
+  log(coloured(C.bold, '  Task Routing'));
+  log(`    Total decisions: ${routingStats.totalDecisions || 0}`);
+  log(`    Explorations: ${routingStats.explorations || 0}`);
+  const cats = routingStats.categories || {};
+  for (const [cat, models] of Object.entries(cats)) {
+    log(`    ${coloured(C.cyan, cat)}:`);
+    for (const m of models) {
+      const rate = Math.round((m.successRate || 0) * 100);
+      const color = rate >= 80 ? C.green : rate >= 50 ? C.yellow : C.red;
+      log(`      ${coloured(color, `${rate}%`)} ${m.model} (${m.total} tasks, avg ${Math.round(m.avgDuration || 0)}ms)`);
+    }
+  }
+  log('');
+
+  // Knowledge Graph
+  log(coloured(C.bold, '  Knowledge Graph'));
+  if (graphStats) {
+    log(`    Nodes: ${graphStats.nodes}`);
+    log(`    Edges: ${graphStats.edges}`);
+    if (graphStats.mostConnected?.length) {
+      log('    Most connected:');
+      for (const n of graphStats.mostConnected) {
+        log(`      ${n.id} (${n.degree} connections)`);
+      }
+    }
+  } else {
+    log(coloured(C.dim, '    No knowledge graph for this project'));
+  }
+  log('');
+}
+
+// ── Providers — Show Provider Health ─────────────────────────────────────
+
+async function cmdProviders() {
+  const { getProviderHealthStatus, TIER_PROVIDER_MAP } = await import('../server/services/providerFailover.js');
+  const { registry } = await import('../server/backends/index.js');
+
+  const status = getProviderHealthStatus();
+
+  if (JSON_MODE) {
+    out({ providers: status, tierMap: Object.fromEntries(Object.entries(TIER_PROVIDER_MAP).map(([k, v]) => [k, v])), registeredBackends: [...registry.keys()] });
+    return;
+  }
+
+  log(coloured(C.bold + C.cyan, '\n  Provider Status\n'));
+
+  // Registered backends
+  log(coloured(C.bold, '  Registered Backends'));
+  for (const name of registry.keys()) {
+    log(`    ${coloured(C.green, '●')} ${name}`);
+  }
+  log('');
+
+  // Provider health
+  log(coloured(C.bold, '  Provider Health'));
+  if (Object.keys(status).length === 0) {
+    log(coloured(C.dim, '    No provider activity yet'));
+  } else {
+    for (const [name, health] of Object.entries(status)) {
+      const icon = health.healthy ? coloured(C.green, '●') : coloured(C.red, '●');
+      log(`    ${icon} ${name} — ${health.successes}/${health.successes + health.failures} success${health.cooldownUntil ? coloured(C.yellow, ' (cooling down)') : ''}`);
+    }
+  }
+  log('');
+
+  // Tier mapping
+  log(coloured(C.bold, '  Tier → Provider Map'));
+  for (const [tier, providers] of Object.entries(TIER_PROVIDER_MAP)) {
+    log(`    ${tier}: ${providers.join(' → ')}`);
+  }
+  log('');
+}
+
+// ── Security Scan — Check Text for Injections/Credentials ────────────────
+
+async function cmdSecurityScan() {
+  const text = positional[1];
+  if (!text) { logErr('Usage: haivemind security-scan "<text>"'); process.exit(1); }
+
+  const { scanForInjection, sanitizePrompt, scanAgentOutput } = await import('../server/services/promptGuard.js');
+  const { redact, containsCredentials } = await import('../server/services/credentialRedactor.js');
+
+  const injectionResult = scanForInjection(text);
+  const credentialResult = redact(text);
+  const outputResult = scanAgentOutput(text);
+
+  if (JSON_MODE) {
+    out({ injection: injectionResult, credentials: credentialResult, outputLeaks: outputResult });
+    return;
+  }
+
+  log(coloured(C.bold + C.cyan, '\n  Security Scan Results\n'));
+
+  // Injection Analysis
+  log(coloured(C.bold, '  Prompt Injection'));
+  if (injectionResult.safe) {
+    log(`    ${coloured(C.green, '✓')} No injection detected`);
+  } else {
+    log(`    ${coloured(C.red, '✗')} Risk score: ${injectionResult.riskScore.toFixed(2)}`);
+    for (const threat of injectionResult.threats) {
+      log(`      ${coloured(C.red, '!')} [${threat.category}] ${threat.pattern} (severity: ${threat.severity})`);
+    }
+  }
+  log('');
+
+  // Credential Analysis
+  log(coloured(C.bold, '  Credentials'));
+  if (credentialResult.redactionCount === 0) {
+    log(`    ${coloured(C.green, '✓')} No credentials detected`);
+  } else {
+    log(`    ${coloured(C.red, '✗')} ${credentialResult.redactionCount} credential(s) found`);
+    for (const t of credentialResult.redactedTypes) {
+      log(`      ${coloured(C.yellow, '!')} ${t}`);
+    }
+    log(`    Redacted output: ${credentialResult.text.slice(0, 100)}`);
+  }
+  log('');
+
+  // Output Leak Analysis
+  log(coloured(C.bold, '  Output Leaks'));
+  if (outputResult.safe) {
+    log(`    ${coloured(C.green, '✓')} No leaks detected`);
+  } else {
+    for (const leak of outputResult.leaks) {
+      log(`      ${coloured(C.red, '!')} ${leak}`);
+    }
+  }
+  log('');
+}
+
+// ── Actual Dispatch ──────────────────────────────────────────────────
+
 const commands = {
   help: cmdHelp,
   projects: cmdProjects,
   status: cmdStatus,
   build: cmdBuild,
+  dashboard: cmdDashboard,
   replay: cmdReplay,
   autopilot: cmdAutopilot,
+  intelligence: cmdIntelligence,
+  providers: cmdProviders,
+  'security-scan': cmdSecurityScan,
   init: cmdInit,
   watch: cmdWatch,
   export: cmdExport,

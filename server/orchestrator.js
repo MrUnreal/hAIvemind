@@ -1,6 +1,8 @@
 import { spawn } from 'node:child_process';
 import config, { getOrchestratorModel } from './config.js';
 import { withTimeout } from './processTimeout.js';
+import { getPatternsAsContext } from './services/patternBank.js';
+import { getGraphContext } from './services/knowledgeGraph.js';
 
 /**
  * Planner mode: Research and evaluate a feature proposal before decomposing.
@@ -92,7 +94,7 @@ Output ONLY valid JSON (no markdown fences, no preamble):
  * Call the orchestrator (T3) model to decompose a user prompt into tasks.
  * Returns a plan: { tasks: [{ id, label, description, dependencies }] }
  */
-export async function decompose(userPrompt, workDir, { fileTree, skills, workspaceAnalysis } = {}) {
+export async function decompose(userPrompt, workDir, { fileTree, skills, workspaceAnalysis, projectSlug } = {}) {
   const { modelName, modelConfig } = getOrchestratorModel();
   const timeoutMs = config.orchestratorTimeoutMs;
   const timeoutMinutes = Math.round(timeoutMs / 60000);
@@ -163,6 +165,15 @@ When modifying an existing project (file tree provided below), reference specifi
     if (skillLines.length > 0) {
       prompt += `\n\n## Project Knowledge (from previous sessions)\n${skillLines.join('\n')}`;
     }
+  }
+
+  // Phase 14: Inject learned patterns and knowledge graph context
+  if (projectSlug) {
+    const patternCtx = getPatternsAsContext(projectSlug, userPrompt);
+    if (patternCtx) prompt += '\n\n' + patternCtx;
+
+    const graphCtx = getGraphContext(projectSlug, userPrompt);
+    if (graphCtx) prompt += '\n\n' + graphCtx;
   }
 
   // Use --silent for clean output (no stats), --allow-all for non-interactive

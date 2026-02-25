@@ -58,6 +58,24 @@ export const MSG = {
   // Phase 6.7 — Scoped WS Channels
   WS_SUBSCRIBE: 'ws:subscribe',
   WS_UNSUBSCRIBE: 'ws:unsubscribe',
+
+  // Phase 14 — Intelligence & Learning
+  PATTERN_LEARNED: 'pattern:learned',
+  ROUTING_DECISION: 'routing:decision',
+  VECTOR_RECALL: 'vector:recall',
+  GRAPH_UPDATE: 'graph:update',
+
+  // Phase 15 — Multi-Provider
+  PROVIDER_FAILOVER: 'provider:failover',
+  PROVIDER_HEALTH: 'provider:health',
+
+  // Phase 16 — Swarm Intelligence
+  SWARM_TOPOLOGY: 'swarm:topology',
+  SWARM_CONSENSUS: 'swarm:consensus',
+
+  // Phase 18 — Security
+  INJECTION_DETECTED: 'security:injection',
+  CREDENTIAL_REDACTED: 'security:redacted',
 };
 
 export function makeMsg(type, payload) {

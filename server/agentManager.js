@@ -6,8 +6,11 @@ import { MSG, makeMsg } from '../shared/protocol.js';
 import { spawnMockAgent } from './mock.js';
 import { getBackend } from './backends/index.js';
 import { createSwarm } from './swarm/index.js';
-
 import { summarizeOutput } from './outputSummarizer.js';
+import { getRecommendedModel, recordOutcome } from './services/taskRouter.js';
+import { searchVectors } from './services/vectorMemory.js';
+import { sanitizePrompt, scanAgentOutput } from './services/promptGuard.js';
+import { redact } from './services/credentialRedactor.js';
 
 /**
  * @property {string} id
@@ -42,6 +45,7 @@ export default class AgentManager {
     this.workspaceAnalysis = opts.workspaceAnalysis || null;
     this.costCeiling = opts.overrides?.costCeiling ?? null;
     this.backendName = opts.backend || config.defaultBackend || 'copilot';
+    this.projectSlug = opts.projectSlug || null;
     /** @type {Map<string, Agent>} */
     this.agents = new Map();
 
@@ -58,7 +62,21 @@ export default class AgentManager {
    * @returns {Promise<Agent>}
    */
   spawn(task, retryIndex, workDir, extraContext = '') {
-    const { tierName, modelName, modelConfig } = getModelForRetry(retryIndex, this.overrides, task.label);
+    let { tierName, modelName, modelConfig } = getModelForRetry(retryIndex, this.overrides, task.label);
+
+    // Phase 14.2: Intelligent routing — try learned model selection
+    if (this.projectSlug && retryIndex === 0) {
+      const recommended = getRecommendedModel(this.projectSlug, task.label, retryIndex, this.overrides);
+      if (recommended) {
+        const recModelConfig = config.models[recommended.model];
+        if (recModelConfig) {
+          modelName = recommended.model;
+          tierName = recommended.tier;
+          modelConfig = recModelConfig;
+          console.log(`[agent] ${recommended.reason}`);
+        }
+      }
+    }
 
     // Phase 4: Cost ceiling enforcement
     if (this.costCeiling != null) {
@@ -446,6 +464,29 @@ export default class AgentManager {
 
     if (extraContext) {
       prompt += `\n## Additional Context (from previous failures)\n\n${extraContext}\n`;
+    }
+
+    // Phase 14: Inject relevant vector memories as semantic context
+    if (this.projectSlug) {
+      try {
+        const relevantMemories = searchVectors(this.projectSlug, task.label, 3, 0.2);
+        if (relevantMemories.length > 0) {
+          const memLines = relevantMemories.map(m => `- ${m.data?.text || m.id} (relevance: ${Math.round(m.similarity * 100)}%)`);
+          prompt += `\n## Relevant Knowledge (semantic recall)\n${memLines.join('\n')}\n`;
+        }
+      } catch { /* vector memory not available yet — skip */ }
+    }
+
+    // Phase 18.1: Prompt injection defense
+    const guardResult = sanitizePrompt(prompt);
+    if (guardResult.wasModified) {
+      prompt = guardResult.prompt;
+    }
+
+    // Phase 18.2: Credential redaction
+    const redactResult = redact(prompt);
+    if (redactResult.redactionCount > 0) {
+      prompt = redactResult.text;
     }
 
     return prompt;

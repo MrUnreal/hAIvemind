@@ -39,10 +39,11 @@ hAIvemind/
 |------|-------------|
 | **health.js** | Health check, version info |
 | **sessions.js** | Session CRUD, start, stop, replay, interrupted session management |
-| **backends.js** | Backend switching (Copilot/Ollama/Swarm) |
+| **backends.js** | Backend switching (Copilot/Ollama/Anthropic/OpenAI/Swarm) |
 | **plugins.js** | Plugin management REST API |
 | **autopilot.js** | Autopilot mode endpoints |
 | **auth.js** | Authentication middleware and token management |
+| **intelligence.js** | Intelligence REST API — vectors, patterns, routing, graph |
 | **projects.js** | Thin re-exporter → mounts 15 domain routers below |
 | **projectCore.js** | Project CRUD, skills, reflections, settings, cost-history, export/import |
 | **webhooks.js** | Webhook CRUD, delivery history, test, verify |
@@ -60,7 +61,7 @@ hAIvemind/
 | **taskManagement.js** | Task deps, retry/recovery, decomposition, pipelines |
 | **agentConfig.js** | Cost budgets, global search, agent profiles, dashboard widgets |
 
-### Services (38 files)
+### Services (42 files)
 
 <details>
 <summary>Full service module listing</summary>
@@ -105,6 +106,14 @@ hAIvemind/
 | **taskDependencies.js** | Task dependency graph operations |
 | **webhooks.js** | Webhook delivery, retry, signature verification |
 | **workspaceSnapshots.js** | Git-based workspace snapshots and diffs |
+| **vectorMemory.js** | Pure-JS HNSW index with trigram embeddings for semantic vector search |
+| **patternBank.js** | Session outcome pattern learning — decomposition, model success, failure→fix |
+| **taskRouter.js** | Epsilon-greedy learned model routing based on historical success rates |
+| **knowledgeGraph.js** | Adjacency-list knowledge graph — file↔task, error↔fix relationships |
+| **providerFailover.js** | Provider health tracking and automatic failover with tier→provider mapping |
+| **promptGuard.js** | Prompt injection detection (16 patterns, 5 categories) and sanitization |
+| **credentialRedactor.js** | API key/token/password redaction (12 credential patterns) |
+| **cliDashboard.js** | ANSI terminal dashboard — task progress, agent sparkline, cost meter |
 
 </details>
 
@@ -116,16 +125,18 @@ hAIvemind/
 | **handlers.js** | Message type routing and per-client state |
 | **broadcast.js** | Broadcasting utilities for multi-client push |
 
-### Backends (`backends/` — 4 files)
+### Backends (`backends/` — 6 files)
 
 | File | Description |
 |------|-------------|
 | **base.js** | Abstract backend interface |
 | **copilot.js** | GitHub Copilot CLI backend |
 | **ollama.js** | Ollama local model backend |
+| **anthropic.js** | Direct Anthropic Messages API backend |
+| **openai.js** | Direct OpenAI Chat Completions API backend |
 | **index.js** | Backend registry and switching |
 
-### Swarm (`swarm/` — 4 files)
+### Swarm (`swarm/` — 6 files)
 
 | File | Description |
 |------|-------------|
@@ -133,6 +144,8 @@ hAIvemind/
 | **localRunner.js** | Local process runner |
 | **dockerRunner.js** | Docker container runner |
 | **sshRunner.js** | Remote SSH runner |
+| **topologies.js** | 5 swarm topology types (flat/hierarchical/ring/star/mesh) |
+| **consensus.js** | Multi-agent consensus (majority-vote/quality-ranked/merge) |
 
 ## Client
 
