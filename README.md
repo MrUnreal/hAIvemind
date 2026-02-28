@@ -30,21 +30,15 @@ graph LR
   B --> P["🔬 Planner"]
   P --> B
 
-  subgraph SV["👁️ Supervisor — real-time monitoring"]
-    C["🐝 Agent 1"]
-    D["🐝 Agent 2"]
-    E["🐝 Agent N"]
+  subgraph SV["👁️ Supervisor"]
+    AG["🐝 Agents ×N"]
   end
 
-  B --> C & D & E
-  C & D & E --> G["🧪 Verify"]
+  B --> AG --> G["🧪 Verify"]
   SV -.->|"correct"| B
-  G -->|"Fail"| H["🔧 Fix"]
-  H --> G
-  G -->|"Gate"| K["🤝 Human"]
-  K --> G
-  G -->|"Pass"| I["💬 Chat"]
-  I --> B
+  G -->|"Fail"| H["🔧 Fix"] --> G
+  G -->|"Gate"| K["🤝 Human"] --> G
+  G -->|"Pass"| I["💬 Chat"] --> B
 
   style B fill:#f5c542,color:#111
   style P fill:#e040fb,color:#fff
