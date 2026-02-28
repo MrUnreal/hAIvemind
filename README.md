@@ -18,27 +18,26 @@
   <img src="https://img.shields.io/badge/Self--Evolving-🧬-blueviolet" alt="Self-Evolving">
 </p>
 
-> **Every line of this codebase was written by hAIvemind itself.** The platform decomposes its own feature requests, spawns agents to implement them, verifies the results, and merges passing changes. 54K+ lines, 1898 tests, zero manual code.
+> **Every line of this codebase was written by hAIvemind itself.** 54K+ lines, 1898 tests, 21 phases, zero manual code.
 
 ---
 
-Describe what you want → the hAIvemind decomposes it → spins up parallel agents → verifies → fixes → iterate.
-
 ```mermaid
-graph LR
+graph TB
   A["🗣️ Prompt"] --> B["🧠 Orchestrator"]
   B --> P["🔬 Planner"]
-  P --> B
+  P -->|"plan + risks"| B
 
   subgraph SV["👁️ Supervisor"]
     AG["🐝 Agents ×N"]
   end
 
-  B --> AG --> G["🧪 Verify"]
-  SV -.->|"correct"| B
-  G -->|"Fail"| H["🔧 Fix"] --> G
-  G -->|"Gate"| K["🤝 Human"] --> G
-  G -->|"Pass"| I["💬 Chat"] --> B
+  B -->|"decompose & spawn"| AG
+  SV -.->|"divergence → correct"| B
+  AG -->|"all tasks done"| G["🧪 Verify"]
+  G -->|"issues found"| H["🔧 Fix"] --> G
+  G -->|"needs approval"| K["🤝 Human"] --> G
+  G -->|"all clear"| I["💬 Iterate"] --> B
 
   style B fill:#f5c542,color:#111
   style P fill:#e040fb,color:#fff
@@ -58,8 +57,6 @@ npm run dev        # → http://localhost:5173
 
 > **Requires:** Node.js 18+ · GitHub Copilot CLI on PATH · Copy `.env.example` → `.env`
 
-Pick a project → describe what to build → watch agents swarm.
-
 ## How It Works
 
 ```mermaid
@@ -67,6 +64,7 @@ sequenceDiagram
   participant U as You
   participant O as Orchestrator
   participant P as Planner (T3)
+  participant S as Supervisor (T0)
   participant A as Agents (×N)
   participant V as Verifier
 
@@ -74,63 +72,37 @@ sequenceDiagram
   O->>P: Research codebase, plan approach
   P-->>O: Plan + risks + affected files
   O->>A: Spawn N agents in parallel
-  A-->>V: All complete → verify + test
-  V-->>O: Failures? → fix agents → re-verify
-  O-->>U: Done — iterate via chat
+  S-->>A: Monitor output streams in real-time
+  S-->>O: Divergence detected → kill & restart agent
+  A-->>V: All tasks complete → verify + test
+  V-->>O: Issues? → spawn fix agents → re-verify
+  O-->>U: Done — send follow-up to iterate
 ```
-
-**Plan → Decompose → Execute (parallel) → Verify → Fix → Iterate**
 
 ## Features
 
 | Category | What You Get |
 |----------|-------------|
-| **Swarm Parallelism** | Dynamic concurrency (8→20), speculative execution, wave progress, task splitting |
-| **Live DAG** | Real-time graph with status colors, runtime timers, streaming output |
-| **Smart Escalation** | `T0→T0→T1→T2→T3` — free models first, premium only when needed |
-| **Verify-Fix Loop** | Generates & runs actual tests. Failures become fix tasks. Up to 3 rounds |
-| **Orchestrator Chat** | iMessage-style panel. Send follow-ups to extend the DAG |
-| **Human Gates** | Mark tasks requiring approval. DAG pauses, you review & redirect |
-| **Planner Mode** | T3 model researches codebase before coding starts |
-| **Autopilot** | reflect→plan→build cycles with cost ceiling & safety rails |
-| **Plugin System** | Lifecycle hooks, load/unload/enable at runtime, REST + UI |
-| **Backend Switching** | Copilot · Ollama · Swarm mode — switch at runtime |
-| **Workspace Rollback** | Pre-session git snapshots, one-click undo, diff preview |
-| **Session Checkpointing** | Crash recovery from checkpoint files, interrupted session resume |
-| **Session Search** | Full-text search across all sessions — prompt + task matching, highlighting |
-| **CLI Mode** | `haivemind build <project> "prompt"` — headless/CI use |
-| **Self-Dev Mode** | hAIvemind evolves its own codebase via isolated git worktrees |
-| **Command Palette** | Ctrl+K quick-action overlay: navigate, switch projects, open panels |
-| **Keyboard Shortcuts** | ?, H, N, S, 1-5, [, ], R — full help dialog with `?` key |
-| **Toast Notifications** | Animated toast stack for session events (complete, error, warning) |
-| **Cost Analytics** | Per-session cost chart with tier-colored stacked bars, hover details |
-| **Session Export** | Download sessions as JSON or Markdown reports with task/agent/cost tables |
-| **Webhook Notifications** | POST session events to external URLs — Slack/Discord/custom integrations |
-| **Session Comparison** | Side-by-side diff of two sessions: task overlap, cost delta, model/duration comparison |
-| **Bulk Session Actions** | Multi-select sessions for batch export (JSON/MD) or delete with action bar |
-| **Agent Output Annotations** | Clickable file paths + line numbers in console output and workspace file tree |
-| **Smart Retry Policies** | Per-project retry config: backoff strategies, skip-after-N failures, validation |
-| **Vector Memory** | HNSW index with trigram embeddings — semantic recall of past patterns and decisions |
-| **Learned Routing** | Epsilon-greedy model selection based on historical success rates per task category |
-| **Multi-Provider** | Copilot · Ollama · Anthropic · OpenAI — failover chains with health tracking |
-| **Security Hardening** | Input sanitization, prompt injection defense (16 patterns), credential redaction |
-| **Terminal Dashboard** | ANSI live dashboard with task progress, agent sparkline, cost meter |
-| **AST Repo Map** | Symbol-level codebase mapping for 8 languages — smarter decomposition context |
-| **GitHub Issue Integration** | Fetch issues, auto-convert to build prompts — `haivemind issue owner/repo#123` |
-| **Per-Task Checkpoints** | Granular workspace snapshots at each task boundary with rollback |
-| **Cross-Project Learning** | Patterns learned in one project inform work across all projects |
-| **Streaming Diffs** | Real-time file change detection and diff broadcasting via WebSocket |
-| **Supervisor Agents** | Real-time agent monitoring, divergence detection, course correction, horizontal context sharing → concept by **CC** |
+| **Parallel Execution** | Dynamic concurrency (8→20), speculative execution, task splitting, live DAG with status colors & timers |
+| **Supervisor Agents** | Real-time output monitoring, 5 divergence detectors, kill-and-restart correction, horizontal context sharing — concept by **CC** |
+| **Smart Models** | T0→T1→T2→T3 escalation, learned epsilon-greedy routing, multi-provider failover (Copilot · Ollama · Anthropic · OpenAI) |
+| **Verify-Fix Loop** | Auto-generated tests, 3-round fix loop, progressive verification, human gates for approval |
+| **Intelligence** | Vector memory (HNSW), pattern bank, cross-project learning, AST repo map (8 languages), knowledge graph |
+| **Orchestration** | Planner mode, autopilot (reflect→plan→build), session checkpointing, workspace rollback, scheduling |
+| **Security** | Input sanitization, prompt injection defense (16 patterns), credential redaction (12 patterns) |
+| **Developer UX** | Chat panel, command palette, keyboard shortcuts, toast notifications, cost analytics, session export |
+| **Integration** | GitHub issues → prompts, webhooks (Slack/Discord), CLI mode, terminal dashboard, streaming diffs |
+| **Swarm** | 5 topology types (flat/hierarchical/ring/star/mesh), 3 consensus strategies, multi-runner (local/Docker/SSH) |
 
 ## Architecture
 
 ```mermaid
 graph TB
-  subgraph Client["Client (Vue 3 + Vite)"]
+  subgraph Client["Client · Vue 3 + Vite"]
     UI["DAG · Chat · Settings · Diff Viewer"]
   end
 
-  subgraph Server["Server (Express · 109 modules)"]
+  subgraph Server["Server · Express · 109 modules"]
     direction LR
     R["Routes (23)"]
     S["Services (52)"]
@@ -139,13 +111,11 @@ graph TB
 
   subgraph Engine["Orchestration Engine"]
     ORC["Orchestrator"] --> TK["TaskRunner"]
+    TK --> SUP["Supervisor"]
     TK --> AM["AgentManager"]
+    SUP -.->|"monitor + correct"| AM
     AM --> BE["Backends"]
-    BE --> CP["Copilot CLI"]
-    BE --> OL["Ollama"]
-    BE --> AN["Anthropic"]
-    BE --> OA["OpenAI"]
-    BE --> SW["Swarm"]
+    BE --> CP["Copilot"] & OL["Ollama"] & AN["Anthropic"] & OA["OpenAI"]
   end
 
   Client <-->|"WS + REST"| Server
@@ -157,27 +127,22 @@ graph TB
 
 | Layer | Modules |
 |-------|---------|
-| **Routes** | `health` · `sessions` · `backends` · `plugins` · `autopilot` · `intelligence` · `projects` (re-exporter → 15 domain modules below) |
-| **Project Routes** | `projectCore` · `webhooks` · `scheduling` · `notifications` · `security` · `templates` · `auditCollab` · `analytics` · `memory` · `resources` · `codeReview` · `events` · `sessionOps` · `taskManagement` · `agentConfig` |
-| **Services** | `sessions` · `analysis` · `recovery` · `shutdown` · `vectorMemory` · `patternBank` · `taskRouter` · `knowledgeGraph` · `providerFailover` · `promptGuard` · `credentialRedactor` · `cliDashboard` · `repoMap` · `githubIssues` · `taskCheckpoints` · `crossProjectLearning` · `streamingDiffs` · `taskSupervisor` + 34 domain services (52 total) |
+| **Routes** | `health` · `sessions` · `backends` · `plugins` · `autopilot` · `intelligence` · `projects` (→ 15 domain routers) |
+| **Services** | `sessions` · `taskSupervisor` · `vectorMemory` · `patternBank` · `taskRouter` · `knowledgeGraph` · `providerFailover` · `promptGuard` · `credentialRedactor` · `repoMap` · `githubIssues` · `streamingDiffs` + 40 more (52 total) |
 | **Backends** | `copilot` · `ollama` · `anthropic` · `openai` (abstract base + registry) |
 | **WebSocket** | `setup` · `broadcast` · `handlers` |
-| **State** | `state.js` — shared refs bag for cross-module access |
-| **Entry** | `index.js` — 142 lines of thin wiring |
+| **Entry** | `index.js` — 142 lines of thin wiring · `state.js` — shared refs |
 
 </details>
 
 ## CLI
 
 ```bash
-haivemind projects                              # List projects
 haivemind build my-app "Add JWT auth"           # Build something
-haivemind dashboard my-app "Add auth"           # Live terminal dashboard
 haivemind autopilot my-app --cycles=5           # Autonomous mode
-haivemind intelligence my-app                   # Learning stats
-haivemind issue my-app owner/repo#42             # Build from GitHub issue
+haivemind issue my-app owner/repo#42            # Build from GitHub issue
+haivemind dashboard my-app "Add auth"           # Live terminal dashboard
 haivemind providers                             # Provider health
-haivemind security-scan "text to check"         # Security scan
 npm test                                        # 1898 Playwright tests
 ```
 
@@ -185,7 +150,7 @@ npm test                                        # 1898 Playwright tests
 
 <p align="center">
   <img src="resources/platform-demo/workflow.png" alt="DAG workflow" width="700"><br>
-  <em>Live DAG — agents executing in parallel</em>
+  <em>Live DAG — agents executing in parallel with real-time supervisor monitoring</em>
 </p>
 
 ## Docs
@@ -202,28 +167,15 @@ npm test                                        # 1898 Playwright tests
 
 All 21 phases shipped. 77 test files. 1898 tests. ~54K lines. 100% self-built.
 
-| Phase | What |
-|-------|------|
-| Foundation | Parallel agents, DAG, chat, verify-fix, gates |
-| 1 — Reliability | Timeouts, error recovery, session locking |
-| 2 — Intelligence | Persistent skills, escalation control, reflection |
-| 3 — Extensibility | DAG rewriting, pluggable backends, swarm |
-| 4 — Hardening | Workspace analysis, cost ceilings, concurrency |
-| 5 — Autonomy | Shutdown/recovery, CLI, autopilot, plugins, Docker |
-| 6 — Production | CI, logging, streaming, diff viewer, WS channels, server decomposition |
-| 7 — Quality of Life | Command palette, keyboard shortcuts, swarm parallelism, toast notifications |
-| 8 — Collaboration | Session comparison, bulk actions, annotations, retry policies |
-| 9 — Developer Experience | Theme system, onboarding wizard, notification center, API keys |
-| 10 — Observability | Analytics, agent memory, resource monitor, event bus, rate limiting |
-| 11 — Integration | Webhooks, session replay, templates, CLI enhancements, cost budgets |
-| 12 — Automation | Task dependencies, retry/recovery, pipelines, agent profiles, dashboard |
-| 14 — Intelligence | Vector memory (HNSW), pattern bank, learned routing, knowledge graph |
-| 15 — Multi-Provider | Anthropic + OpenAI backends, provider failover chains |
-| 16 — Swarm Intelligence | 5 topology types, 3 consensus strategies |
-| 18 — Security | Input sanitization, prompt injection defense, credential redaction |
-| 19 — Enhanced CLI | Intelligence/provider/security commands, terminal dashboard |
-| 20 — Evolution | AST repo map, GitHub issues, per-task checkpoints, cross-project learning, streaming diffs |
-| 21 — Supervision | Real-time agent monitoring, divergence detection, course correction, horizontal context sharing (concept by **CC**) |
+| Phases | What |
+|--------|------|
+| Foundation + 1–3 | Parallel agents, DAG, chat, verify-fix, escalation, pluggable backends, swarm |
+| 4–6 | Workspace analysis, cost ceilings, CLI, autopilot, plugins, CI, logging, server decomposition |
+| 7–9 | Command palette, shortcuts, cost analytics, webhooks, retry policies, themes, onboarding, auth |
+| 10–12 | Analytics, agent memory, event bus, templates, pipelines, agent profiles, dashboard widgets |
+| 14–16 | Vector memory, pattern bank, learned routing, multi-provider failover, swarm intelligence |
+| 18–20 | Security hardening, terminal dashboard, AST repo map, GitHub issues, streaming diffs |
+| 21 | **Task Supervisor** — real-time agent monitoring, divergence detection, course correction (concept by **CC**) |
 
 ## Contributing
 
