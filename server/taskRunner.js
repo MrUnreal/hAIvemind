@@ -3,6 +3,10 @@ import { MSG, makeMsg } from '../shared/protocol.js';
 import { summarizeOutput, summaryToContext } from './outputSummarizer.js';
 
 /**
+ * @typedef {import('./services/taskSupervisor.js').default} TaskSupervisor
+ */
+
+/**
  * TaskRunner manages the DAG execution of tasks with dependency resolution,
  * retry logic, model tier escalation, dynamic DAG rewriting, speculative
  * execution, wave tracking, and automatic task splitting.
@@ -24,6 +28,12 @@ export default class TaskRunner {
     this.workDir = workDir;
     this.overrides = opts.overrides || null;
     this.orchestratorFn = opts.orchestratorFn || null; // For task splitting
+
+    /** @type {TaskSupervisor|null} Phase 21 — Asynchronous String supervisor */
+    this.supervisor = opts.supervisor || null;
+
+    /** Tasks killed by supervisor that need restart with enriched context */
+    this._supervisorKills = new Map(); // agentId → correction
 
     /** @type {Map<string, TaskState>} */
     this.taskStates = new Map();
@@ -50,6 +60,13 @@ export default class TaskRunner {
 
     /** Dynamic concurrency tracking */
     this._peakConcurrency = 0;
+
+    // Wire supervisor correction events
+    if (this.supervisor) {
+      this.supervisor.on('correction', (correction) => {
+        this._handleSupervisorCorrection(correction);
+      });
+    }
 
     // Validate plan structure
     if (!plan || !Array.isArray(plan.tasks)) {
@@ -497,14 +514,26 @@ export default class TaskRunner {
     this._broadcastTaskStatus(state);
 
     // Build extra context from failure reports — use structured summaries (Phase 5.1)
-    const extraContext = state.failureReports
+    let extraContext = state.failureReports
       .map(r => {
+        // Phase 21: Include supervisor correction context if available
+        if (r.supervisorContext) {
+          return r.supervisorContext;
+        }
         if (r.outputSummary) {
           return summaryToContext(r.outputSummary);
         }
         return `Previous failure: ${r.summary}\nSuggested fix: ${r.suggestedFix}`;
       })
       .join('\n\n');
+
+    // Phase 21: Inject shared context from concurrent agents via supervisor
+    if (this.supervisor) {
+      const sharedCtx = this.supervisor.getSharedContextForTask(state.task.id);
+      if (sharedCtx) {
+        extraContext += '\n\n## Context from concurrent tasks\n' + sharedCtx;
+      }
+    }
 
     try {
       const agent = await this.agentManager.spawn(
@@ -517,6 +546,23 @@ export default class TaskRunner {
       state.agentIds.push(agent.id);
 
       if (agent.status === 'success') {
+        // Phase 21: Progressive verification via supervisor
+        if (this.supervisor && agent.output.length > 0) {
+          const verification = this.supervisor.progressiveVerify(agent.id, agent.output);
+          if (!verification.passed && verification.issues.length > 0) {
+            console.log(`[taskRunner] Supervisor progressive check found ${verification.issues.length} issue(s) for "${state.task.label}": ${verification.issues[0]}`);
+            // Treat as soft warning — still mark success but log concerns
+            this.broadcast(makeMsg(MSG.SUPERVISOR_ALERT, {
+              agentId: agent.id,
+              taskId: state.task.id,
+              taskLabel: state.task.label,
+              category: 'progressive-verify',
+              severity: 'low',
+              message: `Task succeeded but has concerns: ${verification.issues.join('; ')}`,
+              detail: verification.summary,
+            }));
+          }
+        }
         state.status = 'success';
         state.completedAt = Date.now();
         this._broadcastTaskStatus(state);
@@ -777,6 +823,59 @@ Output ONLY valid JSON (no markdown):
     console.log('[taskRunner] Session complete:', anyBlocked ? 'PARTIAL (some blocked)' : 'SUCCESS');
     console.log('[taskRunner] Cost summary:', JSON.stringify(costSummary));
     console.log(`[taskRunner] Swarm stats: ${swarmStats.totalTasks} tasks, ${swarmStats.totalWaves} waves, peak ${swarmStats.peakConcurrency} concurrent, ${swarmStats.speculativeLaunches} speculative, ${swarmStats.taskSplits} splits, ${swarmStats.dagRewrites} rewrites`);
+  }
+
+  // ── Phase 21: Supervisor Correction Handler ──
+
+  /**
+   * Handle a correction from the TaskSupervisor.
+   * Actions: 'kill-and-restart' → kill the agent process, re-queue with enriched context
+   *          'escalate' → mark task for model escalation
+   *          'monitor' → no-op, just logged
+   * @param {object} correction
+   */
+  _handleSupervisorCorrection(correction) {
+    const { agentId, taskId, action, enrichedContext } = correction;
+
+    if (action === 'kill-and-restart') {
+      // Store correction context for the restart
+      this._supervisorKills.set(agentId, correction);
+
+      // Find and kill the agent process
+      const agent = this.agentManager.getAgent(agentId);
+      if (agent?.process && !agent.process.killed) {
+        console.log(`[taskRunner] 🎯 Supervisor kill: terminating agent ${agentId.slice(0, 8)} for task "${correction.taskLabel}"`);
+        try {
+          agent.process.kill('SIGTERM');
+          // Force kill fallback
+          setTimeout(() => {
+            try { agent.process?.kill('SIGKILL'); } catch { /* already dead */ }
+          }, 3000).unref();
+        } catch { /* already exited */ }
+      }
+
+      // The agent's close handler in AgentManager will fire, which feeds back into
+      // _handleFailure. The enriched context will be injected on the next retry
+      // via the failure report mechanism.
+      const state = this.taskStates.get(taskId);
+      if (state) {
+        state.failureReports.push({
+          failedTaskId: taskId,
+          summary: `Supervisor terminated agent: ${correction.reason}`,
+          suggestedFix: 'Retry with supervisor correction context',
+          category: `supervisor:${correction.alertCategory}`,
+          supervisorContext: enrichedContext,
+        });
+      }
+    } else if (action === 'escalate') {
+      // Force escalation — bump the retry count to trigger model tier increase
+      const state = this.taskStates.get(taskId);
+      if (state && state.retries < config.maxRetriesTotal - 1) {
+        state.retries = Math.max(state.retries, 2); // Jump to at least T1 territory
+        console.log(`[taskRunner] 🎯 Supervisor escalation: bumping task "${correction.taskLabel}" to retry ${state.retries}`);
+      }
+    }
+    // 'monitor' action is a no-op — alert was already logged
   }
 
   // ── Dynamic DAG Rewriting ──

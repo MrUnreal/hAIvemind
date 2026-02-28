@@ -9,6 +9,7 @@ import AgentManager from '../agentManager.js';
 import { decompose, verify } from '../orchestrator.js';
 import { decomposeMock } from '../mock.js';
 import TaskRunner from '../taskRunner.js';
+import TaskSupervisor from './taskSupervisor.js';
 import { createSnapshot } from '../snapshot.js';
 import { writeCheckpoint, deleteCheckpoint } from '../sessionCheckpoint.js';
 import { broadcast } from '../ws/broadcast.js';
@@ -198,6 +199,15 @@ export async function startSession(userPrompt, projectSlug, predefinedPlan) {
     }));
 
     const agentManager = new AgentManager(broadcast, DEMO, { skills, overrides, workspaceAnalysis });
+
+    // Phase 21: Create TaskSupervisor (middle management layer)
+    let supervisor = null;
+    const supervisorConfig = config.supervisor || {};
+    if (supervisorConfig.enabled !== false && !DEMO) {
+      supervisor = new TaskSupervisor(broadcast, supervisorConfig);
+      agentManager.supervisor = supervisor;
+    }
+
     const taskRunnerBroadcast = (msg) => {
       const parsed = parseMsg(msg);
       if (parsed?.type === MSG.SESSION_COMPLETE) return;
@@ -214,14 +224,22 @@ export async function startSession(userPrompt, projectSlug, predefinedPlan) {
     const taskRunner = new TaskRunner(plan, agentManager, taskRunnerBroadcast, workDir, {
       overrides,
       orchestratorFn: DEMO ? null : decompose,
+      supervisor,
     });
+
+    // Start supervisor before task execution
+    if (supervisor) supervisor.start();
 
     const earlyCtx = { sessionId, workDir, plan, agentManager, taskRunner, history: [] };
     activeContexts.set(projectSlug, earlyCtx);
 
     await taskRunner.run();
     const swarmStats = taskRunner.getSwarmStats();
+    const supervisorStats = supervisor ? supervisor.getStats() : null;
     taskRunner.cleanup();
+
+    // Phase 21: Stop supervisor after execution
+    if (supervisor) supervisor.stop();
 
     // Step 3: Verify & Fix Loop
     if (!DEMO) {
@@ -255,6 +273,7 @@ export async function startSession(userPrompt, projectSlug, predefinedPlan) {
       projectSlug,
       costSummary: costSummaryData,
       swarmStats,
+      supervisorStats,
     }));
 
     // Phase 7.8: Fire webhook notifications

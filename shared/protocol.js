@@ -83,6 +83,12 @@ export const MSG = {
   FILE_DIFF: 'file:diff',
   CROSS_PROJECT_LEARN: 'crossproject:learn',
   GITHUB_ISSUE_LOADED: 'github:issue:loaded',
+
+  // Phase 21 — Asynchronous String (Task Supervision)
+  SUPERVISOR_ALERT: 'supervisor:alert',
+  SUPERVISOR_DIGEST: 'supervisor:digest',
+  SUPERVISOR_CORRECTION: 'supervisor:correction',
+  SUPERVISOR_STATUS: 'supervisor:status',
 };
 
 export function makeMsg(type, payload) {

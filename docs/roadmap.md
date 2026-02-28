@@ -407,3 +407,18 @@ Currently single-user, no auth. Fine for local dev, but blocks team usage or hos
 | **20.2 — Per-Task Checkpoints** | ✅ | Granular workspace snapshots at each task boundary via `git write-tree`, per-task diff comparison, rollback to any checkpoint. Inspired by Cline. |
 | **20.3 — Cross-Project Learning** | ✅ | Global pattern index (`__global__` slug), pattern promotion with deduplication, cross-project context injection into orchestrator. Inspired by CrewAI. |
 | **20.4 — Streaming Diff Preview** | ✅ | Real-time file watcher with debouncing, git diff integration, file content caching, WebSocket diff broadcast. Inspired by Cline. |
+
+---
+
+## Phase 21 — Asynchronous String: Task Supervision ✅
+
+> Middle-management supervisor layer that monitors agent output in real-time, detects divergence, issues course corrections, and shares context horizontally across tasks. Concept by **CC**.
+
+| Sub-phase | Status | Details |
+|-----------|--------|---------|
+| **21.0 — Core Supervisor Service** | ✅ | `TaskSupervisor` class with agent registration, output ingestion, configurable rule check intervals, 11 env-configurable settings |
+| **21.1 — Divergence Detection** | ✅ | 5 detection categories: loop detection (repeated lines), error spiral (error rate threshold), progress stall (output timeout), scope drift (keyword relevance), off-topic (full scope check) |
+| **21.2 — Course Correction** | ✅ | Automatic kill-and-restart with enriched correction context, escalation after max corrections, deduplication of alerts within configurable window |
+| **21.3 — Upward Aggregation** | ✅ | Periodic digest broadcasts with per-agent health scores (0-100), compressed progress summaries, supervisor stats in SESSION_COMPLETE |
+| **21.4 — Horizontal Context Sharing** | ✅ | Export/route/interface extraction from agent output, `sharedContext` Map for cross-task access, automatic filtering (excludes own-task context) |
+| **21.5 — Progressive Verification** | ✅ | Lightweight post-task checks: syntax error detection, file change verification, test failure scanning, expected file coverage analysis |

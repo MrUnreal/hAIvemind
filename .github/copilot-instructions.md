@@ -150,14 +150,14 @@ git tag -l "haivemind/*" | ForEach-Object { git tag -d $_ } | Out-Null; git push
 |------|-------|
 | Server entry | `server/index.js` (142 lines, thin wiring) |
 | Routes | `server/routes/` (23 modules — 8 top-level + 15 project domain) |
-| Services | `server/services/` (51 modules) |
+| Services | `server/services/` (52 modules) |
 | WebSocket | `server/ws/` (3 modules) |
 | Backends | `server/backends/` (6 runners) |
 | Swarm | `server/swarm/` (6 runners) |
 | Middleware | `server/middleware/` (1 module — inputSanitizer) |
 | Shared state | `server/state.js` |
 | Client entry | `client/src/App.vue` |
-| Tests | `tests/` (76 files, 1853 tests, Playwright) |
+| Tests | `tests/` (77 files, 1898 tests, Playwright) |
 | Roadmap | `docs/roadmap.md` |
 | Architecture | `docs/architecture.md` |
 | Definition of Done | `docs/definition-of-done.md` |

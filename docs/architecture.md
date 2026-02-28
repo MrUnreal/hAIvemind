@@ -13,6 +13,7 @@ graph TB
   subgraph Backend["Express Backend (port 3000)"]
     IX["index.js<br/>Session lifecycle"]
     OR["Orchestrator<br/>Decompose / Verify"]
+    SV["Supervisor<br/>Real-time monitoring"]
     TR["TaskRunner<br/>DAG execution"]
     AM["AgentManager<br/>Spawn CLI agents"]
     WM["Workspace<br/>Project isolation"]
@@ -31,11 +32,16 @@ graph TB
   IX --> OR
   IX --> TR
   TR --> AM
+  TR --> SV
+  SV -.->|"monitor"| A1
+  SV -.->|"monitor"| A2
+  SV -.->|"monitor"| AN
   IX --> WM
 
   style Frontend fill:#1a1a2e,color:#e0e0e0,stroke:#4FC08D
   style Backend fill:#1a1a2e,color:#e0e0e0,stroke:#f5c542
   style CLI fill:#1a1a2e,color:#e0e0e0,stroke:#4a9eff
+  style SV fill:#e040fb,color:#fff
 ```
 
 ## Data Flow
@@ -151,6 +157,14 @@ sequenceDiagram
 | **promptGuard.js** | 16 injection patterns across 5 categories, risk scoring, output leak scanning |
 | **credentialRedactor.js** | 12 credential patterns (API keys, private keys, JWT, bearer tokens, DB URLs) |
 
+### Task Supervision — Asynchronous String (Phase 21)
+
+> Concept by **CC** — a middle-management supervisor layer between the orchestrator and executing agents.
+
+| Module | Role |
+|--------|------|
+| **taskSupervisor.js** | Real-time agent output monitoring, divergence detection (5 categories: loop/error-spiral/stall/scope-drift/off-topic), automatic course correction (kill-and-restart with enriched context), upward aggregation (health-scored digests), horizontal context sharing (export/route extraction across tasks), progressive verification (post-task lightweight checks) |
+
 ### Client
 
 | Component | Role |
@@ -201,6 +215,10 @@ All messages are JSON: `{ type: string, payload: object }`
 | `swarm:consensus` | `{ strategy, winnerId }` | Multi-agent consensus result |
 | `pattern:learned` | `{ type, category }` | New pattern recorded |
 | `routing:decision` | `{ model, reason }` | Learned routing applied |
+| `supervisor:alert` | `{ agentId, category, severity, message }` | Supervisor divergence alert |
+| `supervisor:digest` | `{ agents, overallHealth }` | Periodic supervisor progress digest |
+| `supervisor:correction` | `{ agentId, action, reason }` | Supervisor course correction issued |
+| `supervisor:status` | `{ active, agentCount, stats }` | Supervisor status update |
 
 ## Verify-Fix Loop
 

@@ -147,6 +147,21 @@ const config = {
     dir: env('HAIVEMIND_PLUGINS_DIR', 'plugins'),
     autoLoad: envBool('HAIVEMIND_PLUGINS_AUTOLOAD', true),
   },
+
+  // Phase 21 — Asynchronous String (Task Supervision)
+  supervisor: {
+    enabled: envBool('HAIVEMIND_SUPERVISOR_ENABLED', true),
+    ruleCheckIntervalMs: envInt('HAIVEMIND_SUPERVISOR_RULE_CHECK_MS', 10000),
+    digestIntervalMs: envInt('HAIVEMIND_SUPERVISOR_DIGEST_MS', 15000),
+    minOutputForCheck: envInt('HAIVEMIND_SUPERVISOR_MIN_OUTPUT', 500),
+    maxBufferLines: envInt('HAIVEMIND_SUPERVISOR_MAX_BUFFER', 200),
+    loopDetectionThreshold: envInt('HAIVEMIND_SUPERVISOR_LOOP_THRESHOLD', 3),
+    scopeDriftRatio: parseFloat(env('HAIVEMIND_SUPERVISOR_SCOPE_DRIFT', '0.5')),
+    progressStallMs: envInt('HAIVEMIND_SUPERVISOR_STALL_MS', 60000),
+    maxCorrectionsBeforeEscalate: envInt('HAIVEMIND_SUPERVISOR_MAX_CORRECTIONS', 2),
+    llmSpotChecks: envBool('HAIVEMIND_SUPERVISOR_LLM_CHECKS', false),
+    llmSpotCheckIntervalMs: envInt('HAIVEMIND_SUPERVISOR_LLM_CHECK_MS', 30000),
+  },
 };
 
 /**

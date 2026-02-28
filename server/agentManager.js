@@ -46,6 +46,10 @@ export default class AgentManager {
     this.costCeiling = opts.overrides?.costCeiling ?? null;
     this.backendName = opts.backend || config.defaultBackend || 'copilot';
     this.projectSlug = opts.projectSlug || null;
+
+    /** @type {import('./services/taskSupervisor.js').default|null} Phase 21 — Supervisor */
+    this.supervisor = opts.supervisor || null;
+
     /** @type {Map<string, Agent>} */
     this.agents = new Map();
 
@@ -314,6 +318,11 @@ export default class AgentManager {
     retryIndex = retryIndex ?? agent.retries;
     agent.process = child;
 
+    // Phase 21: Register agent with supervisor for monitoring
+    if (this.supervisor) {
+      this.supervisor.registerAgent(agent.id, task);
+    }
+
     return new Promise((resolve) => {
       /** @type {NodeJS.Timeout | null} */
       let timeoutId = null;
@@ -331,6 +340,8 @@ export default class AgentManager {
         agent.finishedAt = Date.now();
         agent.status = code === 0 ? 'success' : 'failed';
         agent.process = null;
+        // Phase 21: Unregister from supervisor
+        if (this.supervisor) this.supervisor.unregisterAgent(agent.id);
         console.log(`[agent:${agent.id.slice(0, 8)}] Exited with code ${code} → ${agent.status}`);
         this.broadcast(makeMsg(MSG.AGENT_STATUS, {
           agentId: agent.id, taskId: task.id, taskLabel: task.label,
@@ -391,6 +402,8 @@ export default class AgentManager {
         agent.output.push(chunk);
         this.broadcast(makeMsg(MSG.AGENT_OUTPUT, { agentId: agent.id, chunk, stream: 'stdout' }));
         appendStream(chunk);
+        // Phase 21: Feed to supervisor for real-time monitoring
+        if (this.supervisor) this.supervisor.ingestOutput(agent.id, chunk, 'stdout');
       });
 
       child.stderr.on('data', (data) => {
@@ -402,6 +415,8 @@ export default class AgentManager {
         agent.output.push(chunk);
         this.broadcast(makeMsg(MSG.AGENT_OUTPUT, { agentId: agent.id, chunk, stream: 'stderr' }));
         appendStream(chunk);
+        // Phase 21: Feed to supervisor for real-time monitoring
+        if (this.supervisor) this.supervisor.ingestOutput(agent.id, chunk, 'stderr');
       });
 
       child.on('close', onClose);

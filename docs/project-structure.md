@@ -67,7 +67,7 @@ hAIvemind/
 |------|-------------|
 | **inputSanitizer.js** | Express middleware: control char stripping, prototype pollution blocking, depth/array limiting |
 
-### Services (51 files)
+### Services (52 files)
 
 <details>
 <summary>Full service module listing</summary>
@@ -125,6 +125,7 @@ hAIvemind/
 | **taskCheckpoints.js** | Per-task workspace snapshots via git write-tree, granular rollback, diff comparison |
 | **crossProjectLearning.js** | Global pattern promotion/search across projects, cross-project context injection |
 | **streamingDiffs.js** | Real-time file watcher with debouncing, git diff integration, WebSocket diff broadcast |
+| **taskSupervisor.js** | Real-time agent monitoring, divergence detection (loop/error-spiral/stall/scope-drift/off-topic), course correction, health-scored digests, horizontal context sharing. Concept by **CC**. |
 
 </details>
 
