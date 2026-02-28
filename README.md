@@ -29,14 +29,16 @@ graph LR
   A["🗣️ Prompt"] --> B["🧠 Orchestrator"]
   B --> P["🔬 Planner"]
   P --> B
-  B --> C["🐝 Agent 1"]
-  B --> D["🐝 Agent 2"]
-  B --> E["🐝 Agent N"]
-  SV["👁️ Supervisor"] -.->|"monitor"| C
-  SV -.->|"monitor"| D
-  SV -.->|"monitor"| E
-  SV -->|"redirect"| B
+
+  subgraph SV["👁️ Supervisor — real-time monitoring"]
+    C["🐝 Agent 1"]
+    D["🐝 Agent 2"]
+    E["🐝 Agent N"]
+  end
+
+  B --> C & D & E
   C & D & E --> G["🧪 Verify"]
+  SV -.->|"correct"| B
   G -->|"Fail"| H["🔧 Fix"]
   H --> G
   G -->|"Gate"| K["🤝 Human"]
@@ -46,7 +48,7 @@ graph LR
 
   style B fill:#f5c542,color:#111
   style P fill:#e040fb,color:#fff
-  style SV fill:#e040fb,color:#fff
+  style SV fill:#f3e5f5,color:#111,stroke:#e040fb,stroke-width:2px
   style G fill:#4a9eff,color:#fff
   style K fill:#ff9800,color:#fff
   style I fill:#4caf50,color:#fff
