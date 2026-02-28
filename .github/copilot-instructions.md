@@ -157,7 +157,7 @@ git tag -l "haivemind/*" | ForEach-Object { git tag -d $_ } | Out-Null; git push
 | Middleware | `server/middleware/` (1 module — inputSanitizer) |
 | Shared state | `server/state.js` |
 | Client entry | `client/src/App.vue` |
-| Tests | `tests/` (77 files, 1898 tests, Playwright) |
+| Tests | `tests/` (78 files, 1915 tests, Playwright) |
 | Roadmap | `docs/roadmap.md` |
 | Architecture | `docs/architecture.md` |
 | Definition of Done | `docs/definition-of-done.md` |
