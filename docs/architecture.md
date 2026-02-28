@@ -36,6 +36,7 @@ graph TB
   SV -.->|"monitor"| A1
   SV -.->|"monitor"| A2
   SV -.->|"monitor"| AN
+  SV -->|"correct"| TR
   IX --> WM
 
   style Frontend fill:#1a1a2e,color:#e0e0e0,stroke:#4FC08D

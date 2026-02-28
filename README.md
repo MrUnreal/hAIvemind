@@ -32,8 +32,11 @@ graph LR
   B --> C["🐝 Agent 1"]
   B --> D["🐝 Agent 2"]
   B --> E["🐝 Agent N"]
-  C & D & E --> SV["👁️ Supervisor"]
-  SV --> G["🧪 Verify"]
+  SV["👁️ Supervisor"] -.->|"monitor"| C
+  SV -.->|"monitor"| D
+  SV -.->|"monitor"| E
+  SV -->|"redirect"| B
+  C & D & E --> G["🧪 Verify"]
   G -->|"Fail"| H["🔧 Fix"]
   H --> G
   G -->|"Gate"| K["🤝 Human"]
