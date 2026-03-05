@@ -1,0 +1,53 @@
+---
+description: hAIvemind — self-building AI coding orchestrator. Universal agent rules + project-specific overrides.
+alwaysApply: true
+---
+
+# hAIvemind Agent Rules
+
+This project follows universal coding agent rules defined in `AGENTS.md` at the repository root.
+
+## Core Rules (Always Active)
+
+1. **Explore before acting** — read the codebase before modifying it
+2. **Plan before implementing** — break tasks into steps
+3. **Verify your own work** — run tests, check errors after every change
+4. **Small incremental changes** — one logical change per step
+5. **Manage context** — stay focused, reference specific files
+6. **Communicate clearly** — ask when ambiguous, explain when acting
+7. **Write quality code** — follow existing conventions, handle errors
+8. **Use structured workflows** — spec → plan → implement → test → commit
+9. **Delegate and parallelize** — batch independent operations
+10. **Avoid anti-patterns** — no kitchen sinks, no skipping failures
+
+## hAIvemind-Specific Rules
+
+- **Self-building system.** Every session IS hAIvemind developing itself.
+- **Roadmap-driven.** All work from `docs/roadmap.md`. Check before starting.
+- **ESM only.** No `require()`. 2-space indent. Single quotes.
+- **Protocol-first.** New message types → `shared/protocol.js` before use.
+- **Module boundaries.** Routes = HTTP, Services = logic, WS = real-time.
+- **Test-first.** New features get tests. Run before committing.
+- **Stats are concrete.** "1915 tests" not "comprehensive test suite".
+- **README < 200 lines.** Cut something if adding something.
+
+## Key Architecture
+
+- `server/index.js` — thin wiring (<200 lines), no logic
+- `server/routes/` — HTTP handlers
+- `server/services/` — business logic (52 modules)
+- `server/ws/` — WebSocket real-time
+- `server/state.js` — shared state (no globals)
+- `shared/protocol.js` — message type definitions
+- `client/src/` — Vue 3 frontend
+- `tests/` — Playwright tests (78 files)
+
+## Multi-Agent Design (Rules 24-25)
+
+hAIvemind orchestrates multiple AI agents. When working on orchestration code:
+- Use typed schemas at every agent boundary
+- Design for failure first — retry logic, circuit breakers
+- Log intermediate state — what each agent received, decided, produced
+- Error-proof tool interfaces — specific failure messages
+
+See `AGENTS.md` for full rules with rationale.

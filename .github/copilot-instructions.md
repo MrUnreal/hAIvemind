@@ -2,6 +2,12 @@
 
 > These are standing orders for any Copilot session working on this codebase. Follow them automatically — don't wait to be asked.
 
+## Universal Rules
+
+This project follows the universal coding agent rules in `AGENTS.md` at the repo root. Those rules apply to every Copilot interaction. The rules below are hAIvemind-specific overrides and additions.
+
+Path-specific rules are in `.github/instructions/*.instructions.md` — they activate automatically when editing files in `server/`, `client/`, `tests/`, `docs/`, or `shared/`.
+
 ---
 
 ## Pre-Commit Checklist
