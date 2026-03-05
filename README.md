@@ -131,7 +131,7 @@ graph TB
 | **Services** | `sessions` · `taskSupervisor` · `vectorMemory` · `patternBank` · `taskRouter` · `knowledgeGraph` · `providerFailover` · `promptGuard` · `credentialRedactor` · `repoMap` · `githubIssues` · `streamingDiffs` + 40 more (52 total) |
 | **Backends** | `copilot` · `ollama` · `anthropic` · `openai` (abstract base + registry) |
 | **WebSocket** | `setup` · `broadcast` · `handlers` |
-| **Entry** | `index.js` — 142 lines of thin wiring · `state.js` — shared refs |
+| **Entry** | `index.js` — 148 lines of thin wiring · `state.js` — shared refs |
 
 </details>
 
